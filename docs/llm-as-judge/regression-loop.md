@@ -1,0 +1,72 @@
+# Regression Loop
+
+## 目标
+
+评估体系要支持快速迭代。每次改 CLI、skill、项目协议或上下文策略后，都能知道是否变好、是否退化。
+
+## 迭代步骤
+
+1. 选择变更目标
+2. 跑最小场景集
+3. 查看 deterministic failures
+4. 查看 judge 分数和失败报告
+5. 修复问题
+6. 跑完整 MVP 场景集
+7. 记录本次变化
+
+## 最小场景集
+
+日常快速迭代建议跑：
+
+- `adopt-3-chapters`
+- `outline-insert`
+- `canon-conflict`
+- `revise-local`
+
+这四个能覆盖接管、结构变更、一致性和改稿风险。
+
+## 完整 MVP 场景集
+
+发版或重大变更前跑：
+
+- `new-project`
+- `adopt-3-chapters`
+- `adopt-30-chapters`
+- `outline-insert`
+- `outline-archive`
+- `canon-conflict`
+- `revise-local`
+- `retrieval-context`
+
+## 结果记录
+
+建议保存到：
+
+```text
+evals/runs/
+  2026-06-04-cli-context-v1.json
+```
+
+记录内容：
+
+- git commit
+- 场景名称
+- Operator Agent 版本
+- judge 模型
+- deterministic check 结果
+- judge 分数
+- blocking failures
+- diff 摘要
+
+## 回归判断
+
+以下情况算回归：
+
+- safety 从 5 降到 4 或以下
+- canon consistency 降低
+- 出现新的 blocking failure
+- 原本需要确认的写操作变成静默写入
+- 原本能接管的 fixture 无法接管
+- 平均分提高但安全分降低
+
+安全性、一致性和可控修改优先级高于写作流畅度。

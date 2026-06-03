@@ -18,6 +18,7 @@ bible/
 outline/
   volumes.md
   chapters.yaml
+  scenes.yaml
 manuscript/
   chapter-001.md
   chapter-002.md
@@ -28,16 +29,25 @@ reviews/
   chapter-001.md
 runs/
   2026-06-04-write-chapter-002.json
+.openathor/
+  manuscript.index.yaml
+  index.sqlite
+  vector/
 ```
 
 各目录职责：
 
 - `bible/`：长期设定、人物、风格、时间线、世界观和 canon
-- `outline/`：卷纲、章纲、场景结构
+- `outline/`：卷纲、章纲、场景结构和章节顺序
 - `manuscript/`：正文稿件
 - `notes/`：伏笔、待解决问题、用户灵感
 - `reviews/`：审稿结果
 - `runs/`：agent 每次运行的输入、输出、工具调用和结果摘要
+- `.openathor/`：可重建索引、导入报告、缓存和检索数据
+
+章节和场景应使用稳定 ID。章节编号、展示顺序和文件名可以变化，但内部引用不应依赖文件名。
+
+明文文件是唯一事实源。SQLite 和向量索引只作为可删除、可重建的派生数据。
 
 ## 2. OpenAthor Pi Skill
 
@@ -82,7 +92,16 @@ openathor adopt --dry-run
 openathor adopt
 openathor import
 openathor doctor
+openathor index rebuild
+openathor search text "母亲的项链" --json
+openathor search related chapter ch_00031 --json
 openathor context chapter 3 --json
+openathor outline show --json
+openathor outline insert --after ch_00012 --title "裂缝"
+openathor outline move ch_00018 --after ch_00012
+openathor outline archive ch_00008 --keep-facts
+openathor outline replan --from ch_00021 --diff
+openathor outline impact ch_00008 --json
 openathor plan --diff
 openathor draft chapter 3 --diff
 openathor review chapter 3 --json

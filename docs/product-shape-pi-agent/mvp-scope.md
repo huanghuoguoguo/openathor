@@ -25,8 +25,15 @@
 - `openathor adopt --dry-run`
 - `openathor adopt`
 - `openathor doctor`
+- `openathor index rebuild`
+- `openathor search text`
 - `openathor skill install pi`
 - `openathor context`
+- `openathor outline show`
+- `openathor outline insert`
+- `openathor outline move`
+- `openathor outline archive`
+- `openathor outline impact`
 - `openathor plan`
 - `openathor draft`
 - `openathor review`
@@ -43,6 +50,8 @@ MVP 的成功标准不是“能不能生成很长的小说”，而是：
 - 用户可以在外部编辑器中持续编辑
 - agent 修改不会轻易覆盖用户内容
 - 已有小说可以被非侵入式接管
+- 章节插入、删除、移动不会破坏已有引用
+- SQLite 索引可以从明文文件重建
 - 每次写作和修改都有可追踪记录
 - bible、outline、manuscript、reviews 能形成闭环
 

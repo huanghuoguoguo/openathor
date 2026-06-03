@@ -45,6 +45,26 @@ OpenAthor 需要两类 skill：
 - 修改子文档后检查路由
 - 避免单文件膨胀
 
+## openathor-qa-evaluator
+
+用途：让 Codex 按 OpenAthor 的评估体系做 QA、judge 和回归判断。
+
+应触发的任务：
+
+- 设计评估场景
+- 审查 agent 运行结果
+- 判断某次改动是否回归
+- 给 LLM-as-judge 评分
+- 模拟真实用户或 QA agent
+
+核心行为：
+
+- 先读 `docs/llm-as-judge.md`
+- 能确定性检查的不要交给 judge
+- 先列 blocking failure，再打分
+- 安全性、canon 一致性和变更控制优先于文笔
+- 证据不足时标记 `needs_review`，不要编造评分
+
 ## 暂不创建的 skill
 
 以下 skill 属于产品交付资产，不在当前准备阶段贸然实现：

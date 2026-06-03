@@ -9,4 +9,12 @@
 - diff 的确认流程由 Pi Agent 负责，还是由 OpenAthor CLI 提供？
 - canon 同步应该默认自动写入，还是默认生成待确认 diff？
 - `chapters.yaml` 是否足够，还是需要更结构化的 scene card？
+- 章节 ID 是否采用顺序型 `ch_00012`，还是随机稳定 ID？
+- 插章后是否自动重命名文件，还是只更新 display order？
+- 删除章节默认归档多久，是否提供物理删除命令？
+- 故事资产关联使用 YAML 显式引用，还是后续生成派生 graph？
+- SQLite schema 是否进入 MVP 前必须完整定义？
+- 向量检索第一版只预留接口，还是实现一个本地可选后端？
+- 向量索引按章节、场景、段落还是资产粒度切分？
+- embeddings 由 OpenAthor 生成，还是交给 Pi Agent/外部模型生成？
 - 第一版是否需要 Git 集成？

@@ -10,6 +10,7 @@
 
 1. [Pre-development](pre-development.md)：开发前准备、文档规则、Codex 工作流、MVP 验收
 2. [Product Shape: Pi Agent First](product-shape-pi-agent.md)：Pi Agent 优先的产品形态
+3. [LLM-as-Judge Evaluation](llm-as-judge.md)：agent QA、场景回归和 judge 评分体系
 
 ## 文档组织约定
 

@@ -20,18 +20,28 @@
 - [ ] 局部改稿
 - [ ] 同步新增设定到 canon
 - [ ] 从中途重规划后续剧情
+- [ ] 插入章节
+- [ ] 删除或归档章节
+- [ ] 移动章节
+- [ ] 拆分或合并章节
 
 ## 项目协议
 
 - [ ] 定义 `openathor.yaml`
 - [ ] 定义 `bible/`
 - [ ] 定义 `outline/`
+- [ ] 定义 volume、chapter、scene 的稳定 ID
+- [ ] 定义章节 display order 和内部 ID 的关系
+- [ ] 定义故事资产引用关系
 - [ ] 定义 `manuscript/`
 - [ ] 定义 `notes/`
 - [ ] 定义 `reviews/`
 - [ ] 定义 `runs/`
 - [ ] 定义 `.openathor/manuscript.index.yaml`
+- [ ] 定义 `.openathor/index.sqlite` 的派生索引边界
+- [ ] 定义 `.openathor/vector/` 的可选检索索引边界
 - [ ] 定义 confirmed、pending、question 三类 canon 状态
+- [ ] 定义明文文件是唯一事实源
 
 ## CLI 合约
 
@@ -39,7 +49,16 @@
 - [ ] 定义 `openathor adopt --dry-run`
 - [ ] 定义 `openathor adopt`
 - [ ] 定义 `openathor doctor`
+- [ ] 定义 `openathor index rebuild`
+- [ ] 定义 `openathor search text`
+- [ ] 定义 `openathor search related`
 - [ ] 定义 `openathor context`
+- [ ] 定义 `openathor outline show`
+- [ ] 定义 `openathor outline insert`
+- [ ] 定义 `openathor outline move`
+- [ ] 定义 `openathor outline archive`
+- [ ] 定义 `openathor outline impact`
+- [ ] 定义 `openathor outline replan`
 - [ ] 定义 `openathor plan`
 - [ ] 定义 `openathor draft`
 - [ ] 定义 `openathor review`
@@ -68,6 +87,12 @@
 - [ ] 准备局部改稿样例
 - [ ] 准备 canon 冲突样例
 - [ ] 定义每个样例的期望输出
+- [ ] 定义 deterministic checks
+- [ ] 定义 LLM judge 输入格式
+- [ ] 定义 judge rubric
+- [ ] 定义 blocking failure 标准
+- [ ] 定义最小回归场景集
+- [ ] 定义完整 MVP 场景集
 
 ## 迭代管理
 

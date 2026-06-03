@@ -13,6 +13,7 @@
 3. [Codex Workflow](pre-development/codex-workflow.md)：用 Codex 推进项目的工作方式
 4. [Skill Plan](pre-development/skill-plan.md)：当前项目需要的本地 Codex skills
 5. [MVP Validation](pre-development/mvp-validation.md)：MVP 验收方式
+6. [LLM-as-Judge Evaluation](llm-as-judge.md)：agent QA、场景回归和 judge 评分体系
 
 ## 当前开发闸门
 
@@ -25,6 +26,7 @@
 - Pi Skill 行为规范
 - 接管已有小说流程
 - 验收样例和测试夹具策略
+- LLM-as-judge 评估体系
 - 迭代记录方式
 
 ## 推荐下一步
