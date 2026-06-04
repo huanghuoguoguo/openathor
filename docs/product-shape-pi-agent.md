@@ -25,11 +25,12 @@ OpenAthor 是一个面向 Pi Agent 的小说创作项目协议、Skill 包和 CL
 3. [Components](product-shape-pi-agent/components.md)：项目协议、Pi Skill、CLI、外部编辑器
 4. [Outline And Assets](product-shape-pi-agent/outline-and-assets.md)：大纲、章节、场景和资产关联管理
 5. [Storage And Retrieval](product-shape-pi-agent/storage-and-retrieval.md)：明文文件、SQLite 索引和向量检索的边界
-6. [Pi Agent Behavior](product-shape-pi-agent/pi-agent-behavior.md)：Pi Agent 应遵守的行为规范
-7. [Core Scenarios](product-shape-pi-agent/core-scenarios.md)：MVP 必须覆盖的核心用户场景
-8. [MVP Scope](product-shape-pi-agent/mvp-scope.md)：MVP 范围、非目标和成功标准
-9. [Principles](product-shape-pi-agent/principles.md)：产品原则
-10. [Open Questions](product-shape-pi-agent/open-questions.md)：待评估问题
+6. [Sub-agent Extension](product-shape-pi-agent/sub-agent-extension.md)：Pi sub-agent 可选增强层
+7. [Pi Agent Behavior](product-shape-pi-agent/pi-agent-behavior.md)：Pi Agent 应遵守的行为规范
+8. [Core Scenarios](product-shape-pi-agent/core-scenarios.md)：MVP 必须覆盖的核心用户场景
+9. [MVP Scope](product-shape-pi-agent/mvp-scope.md)：MVP 范围、非目标和成功标准
+10. [Principles](product-shape-pi-agent/principles.md)：产品原则
+11. [Open Questions](product-shape-pi-agent/open-questions.md)：待评估问题
 
 ## 当前结论
 

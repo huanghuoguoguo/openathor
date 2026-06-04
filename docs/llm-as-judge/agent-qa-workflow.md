@@ -38,15 +38,30 @@ QA/Judge Agent 不应重新完成任务，而是基于证据判断：
 - 是否违反 canon
 - 是否符合用户目标
 
+## Sub-agent 模式
+
+评估体系应同时支持 single-agent 和 sub-agent 两种执行方式。
+
+sub-agent 模式中可以增加：
+
+- Context Scout：查找相关前文和资产
+- Continuity Reviewer：检查 canon、时间线和人物状态
+- Outline Planner：提出章节结构变更方案
+- Style Editor：检查风格和局部改稿质量
+- QA Judge：按 rubric 评分
+
+主 Operator Agent 仍然对最终决策负责。Judge 不因为使用了 sub-agent 而加分，只根据证据和结果评分。
+
 ## 评估流程
 
 1. 加载 fixture
 2. User Agent 发出任务
 3. Operator Agent 执行任务
 4. 记录所有命令、输出、diff 和回复
-5. Deterministic checks 先跑
-6. LLM judge 再基于证据评分
-7. 生成失败报告
+5. 如使用 sub-agent，记录每个角色的输入、输出和结论
+6. Deterministic checks 先跑
+7. LLM judge 再基于证据评分
+8. 生成失败报告
 
 ## 失败报告格式
 
