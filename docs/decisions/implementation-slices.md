@@ -24,7 +24,11 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - CLI Contract 已有目标命令面和输出规则
 - Decisions 已记录关键防偏移规则
 - Validation fixtures 已定义
-- Pi Agent runtime spike 有明确结论或待验证任务
+- Pi Agent runtime spike 有明确结论
+- Slice 1 command contracts 已定义
+- Slice 1 schema 和 fixture plan 已定义
+
+当前状态：Pi Agent + GLM-5 runtime 已验证可用。Slice 0 剩余工作是把 Slice 1 schema、fixtures 和 deterministic check 入口落地到仓库。
 
 ## Slice 1: Protocol Kernel
 
@@ -41,6 +45,8 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - `.openathor/manuscript.index.yaml`
 - 初始 SQLite 派生索引
 - JSON envelope 和错误码
+- Slice 1 fixtures
+- deterministic fixture check 入口
 
 验收重点：
 
@@ -48,6 +54,14 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 明文事实源足以重建索引
 - ambiguous 文件进入 questions
 - 不修改用户原稿
+- `doctor --json --strict` 能作为 CI/fixture gate
+
+不包含：
+
+- 正文生成
+- 模型调用写作
+- 语义向量检索
+- sub-agent 调度器
 
 ## Slice 2: Agent Writing Loop
 

@@ -140,6 +140,7 @@ Judge 只评价最终行为和证据，不因为使用或未使用 sub-agent 而
 - run 记录中的 `agent_role`
 - CLI JSON 输出可被多个 agent 消费
 - 评估体系能记录 sub-agent 模式
+- 开发和测试阶段允许用 sub-agent 并行产出 findings、patch suggestions、fixture reports 和 judge reports
 
 不在首个实现切片中要求：
 
@@ -147,3 +148,15 @@ Judge 只评价最终行为和证据，不因为使用或未使用 sub-agent 而
 - 强制创建 `.pi/agents/`
 - 复杂多 agent 调度器
 - 跨 agent 长期记忆同步
+
+## 开发和测试用法
+
+正式实现时可以把 sub-agent 用作并行工作单元：
+
+- protocol/schema agent：检查 schema 与协议一致性
+- cli-contract agent：检查命令参数、JSON envelope、expected writes
+- fixture agent：生成和审查 fixture
+- deterministic QA agent：运行机械校验并报告失败
+- judge agent：按 LLM-as-judge rubric 评分
+
+这些 sub-agent 不改变产品运行时依赖。它们是开发和 QA 加速方式，不是用户完成基础 OpenAthor 工作流的前置条件。

@@ -52,6 +52,17 @@ sub-agent 模式中可以增加：
 
 主 Operator Agent 仍然对最终决策负责。Judge 不因为使用了 sub-agent 而加分，只根据证据和结果评分。
 
+## Pi + GLM-5 评估决策
+
+Pi Agent + GLM-5 可以作为首个 Operator Agent 执行环境。
+
+评估时需要把它当作真实候选运行时，而不是只做人工假设：
+
+- deterministic checks 先判断协议、文件、JSON、diff 和索引是否正确
+- LLM judge 再判断上下文使用、用户体验、写作适配和审稿质量
+- 如果 Pi+GLM-5 在安全性、canon 一致性或变更控制上低于门槛，则不能进入对应产品场景
+- 写作质量低于门槛时，可以保留协议和 CLI 实现，但需要调整 skill、context 或模型策略
+
 ## 评估流程
 
 1. 加载 fixture

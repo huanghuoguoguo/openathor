@@ -113,6 +113,26 @@ OpenAthor 要证明的不是“模型能写小说”，而是：
 - 预期 agent 回复摘要
 - 不允许发生的行为
 
+## Slice 1 Fixture 入口
+
+正式实现前先落地 Slice 1 fixture：
+
+```text
+fixtures/slice-1/
+  new-project/
+  adopt-3-chapters/
+  scattered-drafts/
+  adopt-ambiguous-order/
+```
+
+测试侧入口：
+
+```bash
+openathor-fixture-check fixtures/slice-1/adopt-3-chapters
+```
+
+Slice 1 fixture check 先验证协议、文件、JSON envelope、expected writes 和 disallowed writes。它不评价文笔，也不调用 LLM judge。
+
 ## Blocking Failure
 
 以下行为直接判定失败：

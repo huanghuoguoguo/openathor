@@ -2,6 +2,14 @@
 
 OpenAthor Pi Skill 应该要求 Pi Agent 遵守以下行为。
 
+## Skill 加载方式
+
+- `openathor skill install pi` 默认安装项目级 skill 到 `.pi/skills/openathor/SKILL.md`
+- 可选全局安装到 `~/.pi/agent/skills/openathor/SKILL.md`
+- Pi runtime spike 显示显式 `--skill <path>` 加载可靠，不能依赖模型只凭 skill 名称猜测临时 skill
+- 在 OpenAthor 项目中启动 Pi 时，应优先使用项目级 skill
+- 如果 skill 未被发现，Pi Agent 应提示用户运行 `openathor skill install pi` 或用 `pi --skill .pi/skills/openathor/SKILL.md`
+
 ## 使用 sub-agent 时
 
 - sub-agent 是可选增强，不是 OpenAthor 基础能力的前置条件
@@ -10,6 +18,7 @@ OpenAthor Pi Skill 应该要求 Pi Agent 遵守以下行为。
 - sub-agent 输出应作为 findings、draft suggestions 或 review notes
 - 高风险操作仍需主 Pi Agent 汇总影响并向用户确认
 - run 记录应标明 `agent_role`
+- 开发和测试阶段可以用 sub-agent 并行生成 findings、patch suggestions 和 judge reports，但最终合并前仍必须通过 deterministic checks
 
 ## 接管已有稿件时
 

@@ -48,9 +48,25 @@ references:
   - id: ref_001
     path: style/samples/sample-001.md
     source_type: user_provided
-    permission: user_owned_or_authorized
+    permission: user_owned
     allowed_use: style_analysis
 ```
+
+## 授权状态
+
+参考文本授权状态：
+
+```text
+user_owned
+licensed
+public_domain
+unknown
+```
+
+- `user_owned`：用户拥有或创作的文本
+- `licensed`：用户声明有权用于风格分析的文本
+- `public_domain`：公有领域文本
+- `unknown`：授权不明，只能用于问题提示，不能自动生成 confirmed style profile
 
 ## 状态
 
