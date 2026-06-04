@@ -1,6 +1,6 @@
 # Readiness Checklist
 
-在以下事项没有完成前，不进入产品代码实现。
+在 Slice 1 开工门禁没有完成前，不进入产品代码实现。
 
 这个 checklist 不是为了把产品压成临时最小版本，而是为了确保实现开始时不会发生产品需求偏移、架构偏移，或为了局部命令写出未来要推倒的数据模型。
 
@@ -37,9 +37,14 @@
 
 ## 目标用户故事
 
+### Slice 1 开工门禁
+
 - [x] 从零创建新小说项目
 - [x] 接管已经写了一半的小说
 - [x] 从散稿目录识别正文、设定、灵感和废稿
+
+### 后续切片准备项
+
 - [x] 继续写下一章
 - [x] 审查已有章节
 - [x] 局部改稿
@@ -56,6 +61,8 @@
 
 ## 项目协议
 
+### Slice 1 开工门禁
+
 - [x] 定义 `openathor.yaml`
 - [x] 定义 `bible/`
 - [x] 定义 `outline/`
@@ -71,13 +78,20 @@
 - [x] 定义 `.openathor/vector/` 的可选检索索引边界
 - [x] 定义 confirmed、pending、question 三类 canon 状态
 - [x] 定义明文文件是唯一事实源
-- [ ] 定义 `style/` 和 style profile 协议
-- [ ] 定义风格参考文本授权状态
-- [ ] 补充协议 schema 示例和 fixtures
+- [x] 决策 Slice 1 schema 和 fixture 目录
+- [ ] 落地 Slice 1 schema 文件
+- [ ] 落地 Slice 1 fixtures
+
+### 后续切片准备项
+
+- [x] 定义 `style/` 和 style profile 协议
+- [x] 定义风格参考文本授权状态
 
 参考：[Project Protocol](../project-protocol.md)
 
 ## CLI 合约
+
+### Slice 1 开工门禁
 
 - [x] 定义目标命令面
 - [x] 定义实现切片顺序
@@ -85,19 +99,26 @@
 - [x] 定义 diff 输出格式
 - [x] 定义写入安全等级
 - [x] 定义错误码和错误消息原则
+- [x] 定义 Slice 1 命令级合约
+- [x] 补充 Slice 1 命令参数 schema
+- [x] 补充 Slice 1 expected writes
+- [x] 补充 Slice 1 fixture contract
+
+### 后续切片准备项
+
 - [ ] 定义 `openathor style analyze`
 - [ ] 定义 `openathor style profile show`
 - [ ] 定义 `openathor style check`
-- [ ] 补充每个命令的参数 schema
-- [ ] 补充每个命令的 expected writes
-- [ ] 补充每个命令的 fixture contract
+- [ ] 补充 Slice 2+ 命令级合约
 
 参考：[CLI Contract](../cli-contract.md)
 
 ## Pi Skill
 
-- [ ] 定义 Pi Skill 安装位置
-- [ ] 定义 Pi Skill 文件格式
+### Slice 1 开工门禁
+
+- [x] 定义 Pi Skill 安装位置
+- [x] 定义 Pi Skill 文件格式
 - [x] 定义 Pi Agent 识别项目的方式
 - [x] 定义 Pi Agent 写作前上下文读取顺序
 - [x] 定义 Pi Agent 何时必须询问用户
@@ -105,29 +126,41 @@
 - [x] 定义 sub-agent 是可选增强而非基础依赖
 - [x] 定义预留 sub-agent 角色
 - [x] 定义 run 记录中的 `agent_role`
-- [ ] 完成 Pi Agent runtime spike：确认 skill、CLI 调用、JSON 读取和 diff 确认流程可行
+- [x] 完成 Pi Agent runtime spike：确认模型调用、显式 skill 加载、CLI/JSON 读取和受控编辑流程可行
+
+### 后续切片准备项
+
+- [ ] 落地 OpenAthor Pi Skill 文件
 
 参考：
 
 - [Pi Agent Behavior](../product-shape-pi-agent/pi-agent-behavior.md)
 - [Sub-agent Extension](../product-shape-pi-agent/sub-agent-extension.md)
+- [Pi Runtime Spike](pi-runtime-spike.md)
 
 ## 验收和测试
 
+### Slice 1 开工门禁
+
 - [x] 定义新建项目验收样例
 - [x] 定义 3 章已有小说接管样例
-- [x] 定义 30 章长篇接管样例
 - [x] 定义散稿目录样例
+- [x] 定义 blocking failure 标准
+- [x] 定义 deterministic checks
+- [x] 决策 Slice 1 fixture 目录和 expected 输出格式
+- [x] 决策自动化 deterministic check 脚本入口
+- [ ] 落地 Slice 1 fixture 目录和 expected 输出
+- [ ] 实现自动化 deterministic check 脚本入口
+
+### 后续切片准备项
+
+- [x] 定义 30 章长篇接管样例
 - [x] 定义局部改稿样例
 - [x] 定义 canon 冲突样例
 - [x] 定义结构变更样例
 - [x] 定义长篇检索样例
-- [x] 定义 blocking failure 标准
-- [x] 定义 deterministic checks
 - [x] 定义 LLM judge 输入格式
 - [x] 定义 judge rubric
-- [ ] 落地 fixture 目录和 expected 输出
-- [ ] 定义自动化 deterministic check 脚本入口
 
 参考：
 
@@ -136,12 +169,17 @@
 
 ## 迭代管理
 
+### Slice 1 开工门禁
+
 - [x] 每次产品决策有记录位置
 - [x] 每个实现任务能追溯到用户故事、协议、CLI 合约和验证
 - [x] 产品和架构防偏移规则已定义
 - [x] 实现切片规则已定义
-- [ ] 每个开放问题有 owner 或下一步
-- [ ] GitHub issue -> PR -> CI -> squash merge 流程已启用
+- [x] 每个开放问题有 owner 或下一步
+- [x] GitHub issue -> PR -> CI -> squash merge 流程已启用
+
+### 仓库治理
+
 - [ ] `main` 分支保护已启用
 
 参考：[Decisions](../decisions.md)

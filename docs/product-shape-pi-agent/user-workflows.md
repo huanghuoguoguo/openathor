@@ -91,6 +91,26 @@ chapters:
 openathor skill install pi
 ```
 
+默认安装位置：
+
+```text
+.pi/skills/openathor/SKILL.md
+```
+
+可选全局安装位置：
+
+```text
+~/.pi/agent/skills/openathor/SKILL.md
+```
+
+项目级安装优先，因为它能随小说项目一起被 Pi 发现，也能让不同小说项目使用不同版本的 OpenAthor skill。
+
+如果 Pi 没有自动发现项目级 skill，用户可以显式启动：
+
+```bash
+pi --skill .pi/skills/openathor/SKILL.md
+```
+
 安装后，Pi Agent 能理解：
 
 - OpenAthor 项目结构

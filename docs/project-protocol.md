@@ -16,6 +16,7 @@
 4. [Canon Model](project-protocol/canon-model.md)：confirmed、pending、question 的 canon 规则
 5. [Manuscript Index](project-protocol/manuscript-index.md)：接管已有稿件的索引格式
 6. [Style Profiles](project-protocol/style-profiles.md)：风格画像、参考文本和授权状态
+7. [Schema And Fixtures](project-protocol/schema-and-fixtures.md)：Slice 1 schema 和 fixture 决策
 
 ## 当前结论
 

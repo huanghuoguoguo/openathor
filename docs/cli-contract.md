@@ -11,9 +11,10 @@
 ## 阅读顺序
 
 1. [Command Index](cli-contract/command-index.md)：目标命令面和实现切片
-2. [Output Formats](cli-contract/output-formats.md)：JSON、diff 和结构化输出
-3. [Write Safety](cli-contract/write-safety.md)：写操作、dry-run、diff 和冲突保护
-4. [Errors](cli-contract/errors.md)：错误码、退出码和恢复建议
+2. [Slice 1 Protocol Kernel](cli-contract/slice-1-protocol-kernel.md)：首个实现切片的命令级合约
+3. [Output Formats](cli-contract/output-formats.md)：JSON、diff 和结构化输出
+4. [Write Safety](cli-contract/write-safety.md)：写操作、dry-run、diff 和冲突保护
+5. [Errors](cli-contract/errors.md)：错误码、退出码和恢复建议
 
 ## 当前结论
 

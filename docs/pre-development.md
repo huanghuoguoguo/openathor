@@ -13,10 +13,11 @@
 3. [Codex Workflow](pre-development/codex-workflow.md)：用 Codex 推进项目的工作方式
 4. [Skill Plan](pre-development/skill-plan.md)：当前项目需要的本地 Codex skills
 5. [Target Validation](pre-development/target-validation.md)：目标产品形态的验收方式
-6. [Project Protocol](project-protocol.md)：项目协议
-7. [CLI Contract](cli-contract.md)：CLI 合约
-8. [Decisions](decisions.md)：产品和架构决策
-9. [LLM-as-Judge Evaluation](llm-as-judge.md)：agent QA、场景回归和 judge 评分体系
+6. [Pi Runtime Spike](pre-development/pi-runtime-spike.md)：Pi + GLM-5 运行时验证结论
+7. [Project Protocol](project-protocol.md)：项目协议
+8. [CLI Contract](cli-contract.md)：CLI 合约
+9. [Decisions](decisions.md)：产品和架构决策
+10. [LLM-as-Judge Evaluation](llm-as-judge.md)：agent QA、场景回归和 judge 评分体系
 
 ## 当前开发闸门
 
