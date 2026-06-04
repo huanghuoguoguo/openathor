@@ -2,6 +2,15 @@
 
 OpenAthor Pi Skill 应该要求 Pi Agent 遵守以下行为。
 
+## 使用 sub-agent 时
+
+- sub-agent 是可选增强，不是 OpenAthor 基础能力的前置条件
+- 主 Pi Agent 对最终用户回复和文件修改负责
+- sub-agent 不应直接写用户正文或 confirmed canon
+- sub-agent 输出应作为 findings、draft suggestions 或 review notes
+- 高风险操作仍需主 Pi Agent 汇总影响并向用户确认
+- run 记录应标明 `agent_role`
+
 ## 接管已有稿件时
 
 - 先调用 `openathor adopt --dry-run --json`，不要直接改用户文件

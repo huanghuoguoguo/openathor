@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required files
+        run: |
+          test -f README.md
+          test -f AGENTS.md
+          test -f docs/index.md
+
+      - name: Check markdown files are non-empty
+        run: |
+          while IFS= read -r file; do
+            test -s "$file"
+          done < <(find . -path ./.git -prune -o -name '*.md' -type f -print)
+
+      - name: Check docs route pages
+        run: |
+          test -d docs/pre-development
+          test -d docs/product-shape-pi-agent
+          test -d docs/llm-as-judge
+          test -d docs/development-workflow

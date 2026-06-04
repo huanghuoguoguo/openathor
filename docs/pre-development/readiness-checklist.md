@@ -77,6 +77,9 @@
 - [ ] 定义 Pi Agent 写作前上下文读取顺序
 - [ ] 定义 Pi Agent 何时必须询问用户
 - [ ] 定义 Pi Agent 如何处理用户手写内容
+- [ ] 定义 sub-agent 是可选增强而非 MVP 依赖
+- [ ] 定义预留 sub-agent 角色
+- [ ] 定义 run 记录中的 `agent_role`
 
 ## 验收和测试
 
@@ -100,3 +103,5 @@
 - [ ] 每个开放问题有 owner 或下一步
 - [ ] 每个实现任务能追溯到用户故事
 - [ ] 每个 MVP 范围变更都同步更新文档路由
+- [ ] GitHub issue -> PR -> CI -> squash merge 流程已启用
+- [ ] `main` 分支保护已启用

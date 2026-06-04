@@ -57,16 +57,16 @@ When implementation begins, every feature should trace back to:
 
 ## Commit & Pull Request Guidelines
 
-This directory is not currently a Git repository, so no commit history or project-specific convention exists.
+GitHub is the collaboration source of truth. Every change should start with an issue, continue on a branch, and merge through a pull request.
 
-When Git is initialized, prefer short imperative commit messages such as:
+Use short imperative commit messages such as:
 
 ```text
 docs: add project protocol draft
 skills: add OpenAthor documentation maintainer
 ```
 
-Pull requests should include a concise summary, changed docs or behavior, linked issues if any, and validation notes. For UI work in the future, include screenshots or terminal output where relevant.
+Pull requests must link an issue, include a concise summary, document validation, and pass CI before merge. `main` is protected; use squash merge only.
 
 ## Agent-Specific Instructions
 
