@@ -25,6 +25,10 @@ notes/
   hooks.md
   unresolved.md
   import-questions.md
+style/
+  profiles.yaml
+  references.yaml
+  samples/
 reviews/
   chapter-001.md
 runs/
@@ -43,6 +47,7 @@ runs/
 - `outline/`：卷、章节、场景和故事结构
 - `manuscript/`：标准化正文目录
 - `notes/`：灵感、未解决问题、导入问题和非 canon 材料
+- `style/`：用户授权参考文本、风格画像和风格来源记录
 - `reviews/`：审稿和改稿建议
 - `runs/`：agent 每次运行的输入、输出、工具调用、diff 和摘要
 - `.openathor/`：导入报告、稿件索引、SQLite、向量索引和缓存

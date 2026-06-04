@@ -25,6 +25,10 @@ manuscript/
 notes/
   hooks.md
   unresolved.md
+style/
+  profiles.yaml
+  references.yaml
+  samples/
 reviews/
   chapter-001.md
 runs/
@@ -41,6 +45,7 @@ runs/
 - `outline/`：卷纲、章纲、场景结构和章节顺序
 - `manuscript/`：正文稿件
 - `notes/`：伏笔、待解决问题、用户灵感
+- `style/`：用户授权参考文本、风格画像和风格来源记录
 - `reviews/`：审稿结果
 - `runs/`：agent 每次运行的输入、输出、工具调用和结果摘要
 - `.openathor/`：可重建索引、导入报告、缓存和检索数据
@@ -96,6 +101,9 @@ openathor index rebuild
 openathor search text "母亲的项链" --json
 openathor search related chapter ch_00031 --json
 openathor context chapter 3 --json
+openathor style analyze refs/style-sample.md --json
+openathor style profile show --json
+openathor style check chapter 5 --json
 openathor outline show --json
 openathor outline insert --after ch_00012 --title "裂缝"
 openathor outline move ch_00018 --after ch_00012
