@@ -19,6 +19,7 @@ docs
 - `docs/index.md` 存在
 - Markdown 文件不能为空
 - 重要顶层文档有同名子目录
+- `project-protocol`、`cli-contract`、`decisions` 等核心 route 有同名子目录
 
 ## 后续扩展
 

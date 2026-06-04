@@ -40,4 +40,4 @@ Detailed content belongs in the same-name child folder.
 - Do not duplicate long sections across docs.
 - Prefer small focused files over a single large file.
 - Preserve the Pi Agent first product decision unless the user changes it.
-- Keep MVP scope and later expansion clearly separated.
+- Keep target scope, implementation slices, and later expansion clearly separated.

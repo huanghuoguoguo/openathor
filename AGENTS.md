@@ -7,6 +7,9 @@ This repository is currently in pre-development. There is no product source code
 - `docs/index.md` is the documentation entry point.
 - `docs/pre-development.md` routes to planning, readiness, Codex workflow, and validation docs.
 - `docs/product-shape-pi-agent.md` routes to the Pi Agent first product-shape docs.
+- `docs/project-protocol.md` routes to the OpenAthor project protocol docs.
+- `docs/cli-contract.md` routes to the agent-facing CLI contract docs.
+- `docs/decisions.md` routes to product and architecture decision docs.
 - `docs/<topic>/` contains detailed child documents for each top-level route page.
 - `.codex/skills/` contains project-local Codex skills for PM iteration and documentation maintenance.
 
@@ -30,6 +33,7 @@ find .codex -maxdepth 4 -type f -print
 ```
 
 Before adding product code, update the readiness checklist in `docs/pre-development/readiness-checklist.md`.
+Product implementation must trace to `docs/project-protocol.md`, `docs/cli-contract.md`, and `docs/decisions.md`.
 
 ## Coding Style & Naming Conventions
 
@@ -46,7 +50,7 @@ Keep project-local skills under `.codex/skills/<skill-name>/SKILL.md`.
 
 ## Testing Guidelines
 
-Testing strategy is not defined yet. For now, validation is documentation-driven and should be captured in `docs/pre-development/mvp-validation.md`.
+Testing strategy is not defined yet. For now, validation is documentation-driven and should be captured in `docs/pre-development/target-validation.md`.
 
 When implementation begins, every feature should trace back to:
 

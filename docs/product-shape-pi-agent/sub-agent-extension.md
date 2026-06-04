@@ -2,7 +2,7 @@
 
 ## 产品判断
 
-Pi sub-agent 应作为可选增强层预留，不作为 MVP 硬依赖。
+Pi sub-agent 应作为可选增强层预留，不作为基础能力硬依赖。
 
 OpenAthor 的底层能力必须先由 Project Protocol、Pi Skill 和 CLI 保证。sub-agent 只能增强并行处理、审稿分工、长篇接管和评估流程，不能成为用户完成基础写作任务的前置条件。
 
@@ -18,9 +18,9 @@ OpenAthor 的底层能力必须先由 Project Protocol、Pi Skill 和 CLI 保证
 
 如果 Pi 运行环境支持 sub-agent，OpenAthor 可以把这些工作拆给专门角色，提升质量和速度。
 
-## 不作为 MVP 依赖
+## 不作为基础依赖
 
-MVP 必须在没有 sub-agent 的情况下成立：
+核心产品闭环必须在没有 sub-agent 的情况下成立：
 
 ```text
 User
@@ -84,7 +84,7 @@ User
 - 重规划后续剧情
 - canon 冲突审查
 - LLM-as-judge 评估
-- 发版前跑完整 MVP 场景集
+- 发版前跑完整目标场景集
 
 ## 不适合 sub-agent 的场景
 
@@ -141,7 +141,7 @@ Judge 只评价最终行为和证据，不因为使用或未使用 sub-agent 而
 - CLI JSON 输出可被多个 agent 消费
 - 评估体系能记录 sub-agent 模式
 
-不在 MVP 实现：
+不在首个实现切片中要求：
 
 - 自动安装 Pi sub-agent 扩展
 - 强制创建 `.pi/agents/`

@@ -1,0 +1,27 @@
+# OpenAthor CLI Contract
+
+本文档是 OpenAthor CLI 合约的路由页。详细内容拆分在 `docs/cli-contract/` 下。
+
+## 目标
+
+定义 Pi Agent 调用 OpenAthor 的稳定 agent-facing API。CLI 合约必须先服务目标产品形态，再服务具体实现切片。
+
+实现可以先覆盖一部分命令，但命令命名、输出 envelope、错误码、写入安全和 diff 规则不能为了局部便利偏离目标合约。
+
+## 阅读顺序
+
+1. [Command Index](cli-contract/command-index.md)：目标命令面和实现切片
+2. [Output Formats](cli-contract/output-formats.md)：JSON、diff 和结构化输出
+3. [Write Safety](cli-contract/write-safety.md)：写操作、dry-run、diff 和冲突保护
+4. [Errors](cli-contract/errors.md)：错误码、退出码和恢复建议
+
+## 当前结论
+
+OpenAthor CLI 是 agent-facing 工具层：
+
+- 所有 agent-facing 命令支持 `--json`
+- 高风险写操作支持 `--dry-run` 或 `--diff`
+- 命令输出必须包含 stable ID、source files、warnings 和 writes
+- 错误必须结构化，方便 Pi Agent 向用户解释和恢复
+- CLI 负责确定性项目操作，skill 只负责任务路由和行为约束
+- agent 不应直接修改 SQLite、向量索引或派生缓存

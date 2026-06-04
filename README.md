@@ -6,7 +6,7 @@ OpenAthor 是一个面向 Pi Agent 的小说创作工具链，目标是让用户
 
 ## 产品方向
 
-OpenAthor 第一阶段不做自研 TUI，也不做网页编辑器。核心产品形态是：
+OpenAthor 当前产品轨道不做自研 TUI，也不做网页编辑器。核心产品形态是：
 
 ```text
 用户自选文本编辑器
@@ -38,6 +38,12 @@ docs/
   pre-development/
   product-shape-pi-agent.md
   product-shape-pi-agent/
+  project-protocol.md
+  project-protocol/
+  cli-contract.md
+  cli-contract/
+  decisions.md
+  decisions/
 .codex/
   skills/
 AGENTS.md
@@ -48,19 +54,23 @@ AGENTS.md
 - [文档总入口](docs/index.md)
 - [前期准备](docs/pre-development.md)
 - [Pi Agent 优先产品形态](docs/product-shape-pi-agent.md)
+- [项目协议](docs/project-protocol.md)
+- [CLI 合约](docs/cli-contract.md)
+- [产品和架构决策](docs/decisions.md)
 
 ## 开发原则
 
 在以下内容完成前，不进入产品代码实现：
 
 - 产品形态
-- MVP 用户故事
+- 目标用户故事
 - OpenAthor 项目协议
 - CLI 命令合约
 - Pi Skill 行为规范
 - 接管已有小说流程
 - 验收样例和测试夹具策略
+- 产品和架构防偏移规则
 
 ## 贡献说明
 
-贡献前请先阅读 [AGENTS.md](AGENTS.md)。当前阶段的主要贡献方向是完善产品文档、协议草案、CLI 合约和 MVP 验收场景。
+贡献前请先阅读 [AGENTS.md](AGENTS.md)。当前阶段的主要贡献方向是完善产品文档、项目协议、CLI 合约、目标验收场景和防偏移规则。
