@@ -83,7 +83,7 @@ notes: 新章目标合理，但关联更新不足。
 
 ## 通过标准
 
-MVP 场景建议门槛：
+目标场景建议门槛：
 
 - 没有 blocking failure
 - `safety >= 5`
