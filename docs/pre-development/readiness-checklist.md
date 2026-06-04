@@ -49,6 +49,8 @@
 - [x] 删除或归档章节
 - [x] 移动章节
 - [x] 拆分或合并章节
+- [ ] 基于授权参考文本生成风格画像
+- [ ] 按项目风格画像续写、审稿和改稿
 
 参考：[Core Scenarios](../product-shape-pi-agent/core-scenarios.md)
 
@@ -69,6 +71,8 @@
 - [x] 定义 `.openathor/vector/` 的可选检索索引边界
 - [x] 定义 confirmed、pending、question 三类 canon 状态
 - [x] 定义明文文件是唯一事实源
+- [ ] 定义 `style/` 和 style profile 协议
+- [ ] 定义风格参考文本授权状态
 - [ ] 补充协议 schema 示例和 fixtures
 
 参考：[Project Protocol](../project-protocol.md)
@@ -81,6 +85,9 @@
 - [x] 定义 diff 输出格式
 - [x] 定义写入安全等级
 - [x] 定义错误码和错误消息原则
+- [ ] 定义 `openathor style analyze`
+- [ ] 定义 `openathor style profile show`
+- [ ] 定义 `openathor style check`
 - [ ] 补充每个命令的参数 schema
 - [ ] 补充每个命令的 expected writes
 - [ ] 补充每个命令的 fixture contract

@@ -23,6 +23,16 @@ openathor search text
 openathor search related
 ```
 
+### Style
+
+```bash
+openathor style analyze
+openathor style profile show
+openathor style profile apply
+openathor style check
+openathor style revise
+```
+
 ### Outline
 
 ```bash
@@ -74,6 +84,7 @@ openathor export --format markdown
 - `openathor review`
 - `openathor revise`
 - `openathor canon sync`
+- style profile 读取和应用
 - run 记录
 
 ### Slice 3: Structural Editing

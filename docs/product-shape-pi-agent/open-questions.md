@@ -20,4 +20,8 @@
 - Pi sub-agent 适配应支持哪些具体扩展或文件格式？
 - `.pi/agents/` 是否作为后续标准输出目录？
 - sub-agent 是否允许写文件，还是只能返回 findings？
+- 风格参考文本的授权状态如何记录和提示？
+- 风格画像应保存到 `bible/style.md`，还是单独 `style/profiles.yaml` 为事实源？
+- `style check` 是首个完整纵切必须做，还是先由 LLM judge 评估？
+- 如何处理用户要求“模仿某个在世作家”的请求？
 - 第一版是否需要 Git 集成？

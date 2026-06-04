@@ -135,6 +135,38 @@ Pi Agent 应该：
 5. 把需要保留的事实转入 canon 或 pending canon
 6. 让用户确认后续章节是否需要重规划
 
+## 场景九：建立风格画像
+
+用户说：
+
+```text
+分析 refs/style-sample.md，把它作为这本书的风格参考。
+```
+
+Pi Agent 应该：
+
+1. 确认参考文本是用户提供或授权使用的文本
+2. 调用 `openathor style analyze refs/style-sample.md --json`
+3. 生成抽象风格画像，而不是复制原文表达
+4. 将结果以 diff 形式写入 `style/profiles.yaml` 或 `bible/style.md`
+5. 让用户确认哪些风格规则进入 confirmed profile
+
+## 场景十：按项目文风续写或改稿
+
+用户说：
+
+```text
+把第 5 章改得更冷静克制，但保持前 4 章的文风。
+```
+
+Pi Agent 应该：
+
+1. 调用 `openathor context chapter 5 --json`
+2. 调用 `openathor style check chapter 5 --json`
+3. 基于 confirmed style profile 生成局部 diff
+4. 不复制参考文本原句
+5. 说明本次改动调整了哪些风格维度
+
 ## 尚需补齐的真实场景
 
 这些场景不一定全部进入第一版，但必须在设计时提前留口：

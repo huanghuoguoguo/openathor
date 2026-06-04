@@ -17,6 +17,8 @@ item_    item
 hook_    hook or foreshadowing
 ev_      timeline event
 theme_   theme or style rule
+style_   style profile
+ref_     style reference
 run_     agent run
 ```
 

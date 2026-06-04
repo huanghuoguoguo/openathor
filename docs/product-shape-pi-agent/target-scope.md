@@ -44,6 +44,8 @@ OpenAthor 当前产品轨道是 Pi Agent first。
 - 继续写下一章
 - 审查已有章节
 - 局部改稿
+- 基于用户授权参考文本生成风格画像
+- 按项目风格画像续写、审稿和改稿
 - 同步新增设定到 canon
 - 识别 canon 冲突
 - 从中途重规划后续剧情
@@ -63,6 +65,7 @@ OpenAthor 当前产品轨道是 Pi Agent first。
 - SQLite 索引可以从明文文件重建
 - 每次写作和修改都有可追踪记录
 - bible、outline、manuscript、reviews 和 runs 能形成闭环
+- 续写和改稿能读取项目 style profile
 
 更具体地说：
 

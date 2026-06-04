@@ -25,12 +25,13 @@ OpenAthor 是一个面向 Pi Agent 的小说创作项目协议、Skill 包和 CL
 3. [Components](product-shape-pi-agent/components.md)：项目协议、Pi Skill、CLI、外部编辑器
 4. [Outline And Assets](product-shape-pi-agent/outline-and-assets.md)：大纲、章节、场景和资产关联管理
 5. [Storage And Retrieval](product-shape-pi-agent/storage-and-retrieval.md)：明文文件、SQLite 索引和向量检索的边界
-6. [Sub-agent Extension](product-shape-pi-agent/sub-agent-extension.md)：Pi sub-agent 可选增强层
-7. [Pi Agent Behavior](product-shape-pi-agent/pi-agent-behavior.md)：Pi Agent 应遵守的行为规范
-8. [Core Scenarios](product-shape-pi-agent/core-scenarios.md)：目标产品必须覆盖的核心用户场景
-9. [Target Scope](product-shape-pi-agent/target-scope.md)：目标范围、当前不做和首个完整纵切
-10. [Principles](product-shape-pi-agent/principles.md)：产品原则
-11. [Open Questions](product-shape-pi-agent/open-questions.md)：待评估问题
+6. [Style Guidance](product-shape-pi-agent/style-guidance.md)：参考文本、风格画像和文风控制
+7. [Sub-agent Extension](product-shape-pi-agent/sub-agent-extension.md)：Pi sub-agent 可选增强层
+8. [Pi Agent Behavior](product-shape-pi-agent/pi-agent-behavior.md)：Pi Agent 应遵守的行为规范
+9. [Core Scenarios](product-shape-pi-agent/core-scenarios.md)：目标产品必须覆盖的核心用户场景
+10. [Target Scope](product-shape-pi-agent/target-scope.md)：目标范围、当前不做和首个完整纵切
+11. [Principles](product-shape-pi-agent/principles.md)：产品原则
+12. [Open Questions](product-shape-pi-agent/open-questions.md)：待评估问题
 
 ## 当前结论
 
