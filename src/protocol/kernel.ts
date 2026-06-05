@@ -129,9 +129,6 @@ import {
 } from "./writing-operations.js";
 import { ensureTrailingNewline } from "./text-format.js";
 import {
-  VECTOR_DIMENSIONS,
-  cosineSimilarity,
-  deterministicEmbedding,
   extractSearchTerms,
   findTextMatches,
   normalizeLimit,
@@ -139,6 +136,23 @@ import {
   relatedScore,
   snippetAround,
 } from "./text-analysis.js";
+import {
+  buildVectorIndex,
+  searchCandidatePaths,
+  semanticVectorMatches,
+} from "./retrieval-files.js";
+import {
+  contextData,
+  contextWindow,
+  normalizeContextMaxChars,
+  truncateText,
+  type ContextSourceText,
+} from "./context-pack.js";
+import {
+  defaultMarkdownExportPath,
+  exportableManuscriptChapters,
+  markdownExportData,
+} from "./export-markdown.js";
 import {
   buildStyleProfile,
   extractStyleRules,
@@ -167,8 +181,8 @@ import {
   createProjectConfig,
   skeletonWrites,
 } from "./project-layout.js";
-import { shortHash, slugAscii } from "./identifiers.js";
-import { isTextCandidate, SKIPPED_TEXT_SCAN_DIRS } from "./text-path.js";
+import { shortHash } from "./identifiers.js";
+import { isTextCandidate } from "./text-path.js";
 import type {
   AdoptOptions,
   AssetSyncPlan,
@@ -208,7 +222,6 @@ import type {
   StyleProfileShowOptions,
   StyleReviseOptions,
   VectorIndex,
-  VectorIndexDocument,
   WritingProposalKind,
   WritingProposalOptions,
 } from "./model.js";
@@ -536,9 +549,7 @@ export async function runExport(options: ExportOptions = {}): Promise<CommandRes
   const outPath = options.out?.trim() || defaultMarkdownExportPath(inspection.config);
   ensureSafeRelativePath(outPath, "--out");
 
-  const chapters = inspection.manuscriptIndex.chapters
-    .filter((chapter) => chapter.status !== "archived")
-    .sort((a, b) => a.display_order - b.display_order || a.id.localeCompare(b.id));
+  const chapters = exportableManuscriptChapters(inspection.manuscriptIndex.chapters);
   const sourceMap = new Map<string, EnvelopeSource>();
   addKnownSource(sourceMap, inspection.sources, "openathor.yaml");
   addKnownSource(sourceMap, inspection.sources, "outline/chapters.yaml");
@@ -584,21 +595,14 @@ export async function runExport(options: ExportOptions = {}): Promise<CommandRes
     sources: [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path)),
     writes: dryRun ? [] : writes,
     warnings: inspection.warnings,
-    data: {
-      dry_run: dryRun,
+    data: markdownExportData({
+      dryRun,
       format,
-      out_path: outPath,
-      chapter_count: chapters.length,
-      chapters: chapters.map((chapter) => ({
-        id: chapter.id,
-        display_order: chapter.display_order,
-        title: chapter.title,
-        source_path: chapter.source_path,
-        status: chapter.status,
-      })),
-      char_count: totalChars,
-      planned_writes: dryRun ? writes : [],
-    },
+      outPath,
+      chapters,
+      totalChars,
+      writes,
+    }),
   };
 }
 
@@ -670,7 +674,7 @@ export async function runStyleProfileShow(
 ): Promise<CommandResult> {
   const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
   const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
-  const maxChars = normalizeMaxChars(options.maxChars).section;
+  const maxChars = normalizeContextMaxChars(options.maxChars).section;
   const sourceMap = new Map<string, EnvelopeSource>();
 
   for (const source of inspection.sources) {
@@ -1859,7 +1863,7 @@ export async function runContext(options: ContextOptions = {}): Promise<CommandR
   const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
   const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
   const scope = options.scope ?? "project";
-  const maxChars = normalizeMaxChars(options.maxChars);
+  const maxChars = normalizeContextMaxChars(options.maxChars);
   const baseSources = new Map<string, EnvelopeSource>();
 
   for (const source of inspection.sources) {
@@ -1962,76 +1966,26 @@ export async function runContext(options: ContextOptions = {}): Promise<CommandR
     sources: [...baseSources.values()].sort((a, b) => a.path.localeCompare(b.path)),
     writes: [],
     warnings,
-    data: {
-      context_pack: {
-        version: PROTOCOL_VERSION,
-        generated_at: new Date().toISOString(),
-        scope,
-        target: targetChapter
-          ? {
-              input: options.target,
-              id: targetChapter.id,
-              display_order: targetChapter.display_order,
-              title: targetChapter.title,
-              source_path: targetChapter.source_path,
-            }
-          : null,
-        max_chars: {
-          section: maxChars.section,
-          note: maxChars.note,
-          target_chapter: maxChars.targetChapter,
-          neighbor_chapter: maxChars.neighborChapter,
-        },
-        run_record: "not_written_read_only",
-      },
-      project: {
-        id: inspection.config.project.id,
-        title: inspection.config.project.title,
-        language: inspection.config.project.language,
-        protocol_version: inspection.config.protocol_version,
-      },
-      outline: {
-        chapter_count: inspection.chapters.chapters.length,
-        chapters: inspection.chapters.chapters,
-        target: targetChapter
-          ? {
-              id: targetChapter.id,
-              display_order: targetChapter.display_order,
-              title: targetChapter.title,
-            }
-          : null,
-      },
-      canon: {
-        confirmed: confirmedCanon,
-        pending: pendingCanon,
-        questions: inspection.manuscriptIndex.questions ?? [],
-      },
+    data: contextData({
+      generatedAt: new Date().toISOString(),
+      scope,
+      targetInput: options.target,
+      targetChapter,
+      maxChars,
+      config: inspection.config,
+      chapters: inspection.chapters,
+      manuscriptIndex: inspection.manuscriptIndex,
+      confirmedCanon,
+      pendingCanon,
       style,
-      style_profiles: {
-        profiles: styleProfiles,
-        references: styleReferences,
-      },
-      assets: {
-        world,
-        characters,
-        timeline,
-      },
+      styleProfiles,
+      styleReferences,
+      world,
+      characters,
+      timeline,
       notes,
-      manuscript: {
-        source_mode: inspection.manuscriptIndex.source_mode,
-        indexed_chapters: inspection.manuscriptIndex.chapters.map((chapter) => ({
-          id: chapter.id,
-          display_order: chapter.display_order,
-          title: chapter.title,
-          source_path: chapter.source_path,
-          status: chapter.status,
-          origin: chapter.origin,
-          confidence: chapter.confidence,
-          content_hash: chapter.content_hash,
-        })),
-        context_chapters: manuscript,
-      },
-    },
+      manuscriptContext: manuscript,
+    }),
   };
 }
 
@@ -3619,21 +3573,12 @@ export async function runSearchSemantic(
 
   const limit = normalizeLimit(options.limit, 10);
   const maxChars = normalizeSnippetChars(options.maxChars);
-  const queryTerms = extractSearchTerms(query);
-  const queryVector = deterministicEmbedding(queryTerms.length > 0 ? queryTerms : [query]);
-  const matches = vectorIndex.documents
-    .map((document) => ({
-      path: document.path,
-      hash: document.hash,
-      kind: document.kind,
-      title: document.title,
-      score: cosineSimilarity(queryVector, document.vector),
-      shared_terms: document.terms.filter((term) => queryTerms.includes(term)).slice(0, 12),
-      snippet: snippetAround(document.preview, 0, 0, maxChars),
-    }))
-    .filter((match) => match.score > 0)
-    .sort((a, b) => b.score - a.score || a.path.localeCompare(b.path, "zh-Hans-CN"))
-    .slice(0, limit);
+  const { queryTerms, matches } = semanticVectorMatches(
+    vectorIndex,
+    query,
+    maxChars,
+    limit,
+  );
 
   const sources = [
     { path: vectorRel, hash: await sha256File(vectorPath) },
@@ -4663,182 +4608,6 @@ function uniqueWarnings(warnings: EnvelopeWarning[]): EnvelopeWarning[] {
   return result;
 }
 
-async function searchCandidatePaths(
-  projectRoot: string,
-  inspection: Awaited<ReturnType<typeof inspectProject>>,
-): Promise<string[]> {
-  const candidates = new Set<string>();
-
-  for (const chapter of inspection.manuscriptIndex.chapters) {
-    candidates.add(chapter.source_path);
-  }
-
-  for (const relPath of [
-    "bible/canon.md",
-    "bible/canon.pending.md",
-    "bible/style.md",
-    "outline/chapters.yaml",
-    "outline/scenes.yaml",
-    "outline/volumes.yaml",
-  ]) {
-    candidates.add(relPath);
-  }
-
-  for (const dir of [inspection.config.paths.notes, inspection.config.paths.reviews]) {
-    for (const relPath of await listTextFiles(projectRoot, dir)) {
-      candidates.add(relPath);
-    }
-  }
-
-  for (const relPath of await listProjectTextFiles(projectRoot)) {
-    candidates.add(relPath);
-  }
-
-  const existing = [];
-  for (const relPath of candidates) {
-    if (isSafeRelativePath(relPath) && (await pathExists(path.join(projectRoot, relPath)))) {
-      existing.push(relPath);
-    }
-  }
-
-  return existing.sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
-}
-
-async function buildVectorIndex(
-  projectRoot: string,
-  inspection: Awaited<ReturnType<typeof inspectProject>>,
-): Promise<VectorIndex> {
-  const documents: VectorIndexDocument[] = [];
-  const relPaths = await searchCandidatePaths(projectRoot, inspection);
-  const indexedBySource = new Map(
-    inspection.manuscriptIndex.chapters.map((chapter) => [chapter.source_path, chapter]),
-  );
-
-  for (const relPath of relPaths) {
-    const fullPath = path.join(projectRoot, relPath);
-    const text = await readFile(fullPath, "utf8");
-    const terms = extractSearchTerms(text);
-
-    if (terms.length === 0) {
-      continue;
-    }
-
-    const indexedChapter = indexedBySource.get(relPath);
-    documents.push({
-      path: relPath,
-      hash: await sha256File(fullPath),
-      kind: indexedChapter ? "chapter" : vectorDocumentKind(relPath),
-      title: indexedChapter?.title ?? firstMarkdownHeading(text),
-      terms: terms.slice(0, 40),
-      vector: deterministicEmbedding(terms),
-      preview: snippetAround(text.replace(/\s+/g, " ").trim(), 0, 0, 360),
-    });
-  }
-
-  return {
-    schema_version: "openathor.vector_index.v1",
-    generated_at: new Date().toISOString(),
-    method: "deterministic_hash_embedding_v1",
-    dimensions: VECTOR_DIMENSIONS,
-    documents,
-  };
-}
-
-function vectorDocumentKind(relPath: string): string {
-  if (relPath.startsWith("bible/")) {
-    return "bible";
-  }
-  if (relPath.startsWith("outline/")) {
-    return "outline";
-  }
-  if (relPath.startsWith("notes/")) {
-    return "note";
-  }
-  if (relPath.startsWith("style/")) {
-    return "style";
-  }
-  if (relPath.startsWith("reviews/")) {
-    return "review";
-  }
-  return "text";
-}
-
-async function listProjectTextFiles(projectRoot: string): Promise<string[]> {
-  const files: string[] = [];
-
-  async function visit(current: string): Promise<void> {
-    const entries = await readdir(current, { withFileTypes: true });
-
-    for (const entry of entries) {
-      if (SKIPPED_TEXT_SCAN_DIRS.has(entry.name)) {
-        continue;
-      }
-
-      const fullPath = path.join(current, entry.name);
-
-      if (entry.isDirectory()) {
-        await visit(fullPath);
-        continue;
-      }
-
-      if (!entry.isFile()) {
-        continue;
-      }
-
-      const relPath = toPosix(path.relative(projectRoot, fullPath));
-      if (isSearchableTextPath(relPath)) {
-        files.push(relPath);
-      }
-    }
-  }
-
-  await visit(projectRoot);
-  return files;
-}
-
-async function listTextFiles(projectRoot: string, relDir: string): Promise<string[]> {
-  const root = path.join(projectRoot, relDir);
-  const files: string[] = [];
-
-  if (!(await pathExists(root))) {
-    return files;
-  }
-
-  async function visit(current: string): Promise<void> {
-    const entries = await readdir(current, { withFileTypes: true });
-
-    for (const entry of entries) {
-      const fullPath = path.join(current, entry.name);
-
-      if (entry.isDirectory()) {
-        await visit(fullPath);
-        continue;
-      }
-
-      if (!entry.isFile()) {
-        continue;
-      }
-
-      const relPath = toPosix(path.relative(projectRoot, fullPath));
-      if (isSearchableTextPath(relPath)) {
-        files.push(relPath);
-      }
-    }
-  }
-
-  await visit(root);
-  return files;
-}
-
-function isSearchableTextPath(relPath: string): boolean {
-  return (
-    isTextCandidate(relPath) ||
-    relPath.endsWith(".yaml") ||
-    relPath.endsWith(".yml") ||
-    relPath.endsWith(".json")
-  );
-}
-
 function resolveContextChapter(
   target: string | undefined,
   chapters: ChapterOutline,
@@ -4876,50 +4645,6 @@ function resolveContextChapter(
   }
 
   return indexedChapter;
-}
-
-function contextWindow(chapters: IndexedChapter[], targetOrder: number): IndexedChapter[] {
-  return chapters
-    .filter((chapter) => Math.abs(chapter.display_order - targetOrder) <= 1)
-    .sort((a, b) => a.display_order - b.display_order);
-}
-
-function truncateText(text: string, maxChars: number): {
-  text: string;
-  truncated: boolean;
-} {
-  if (text.length <= maxChars) {
-    return {
-      text,
-      truncated: false,
-    };
-  }
-
-  return {
-    text: text.slice(0, maxChars),
-    truncated: true,
-  };
-}
-
-function normalizeMaxChars(maxChars: number | undefined): {
-  section: number;
-  note: number;
-  targetChapter: number;
-  neighborChapter: number;
-} {
-  const base = Number.isFinite(maxChars) && maxChars && maxChars > 500 ? maxChars : 6000;
-
-  return {
-    section: Math.max(500, Math.floor(base / 3)),
-    note: Math.max(300, Math.floor(base / 5)),
-    targetChapter: base,
-    neighborChapter: Math.max(500, Math.floor(base / 2)),
-  };
-}
-
-function defaultMarkdownExportPath(config: ProjectConfig): string {
-  const filename = `${slugAscii(config.project.title) || "manuscript"}.md`;
-  return `exports/${filename}`;
 }
 
 async function findProjectRoot(start: string): Promise<string> {
