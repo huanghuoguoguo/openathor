@@ -109,6 +109,26 @@ import {
   splitWrites,
 } from "./outline-split.js";
 import {
+  buildConfirmedDraftPlan,
+  buildConfirmedRevisionPlan,
+  buildWritingProposalPlan,
+  confirmedDraftResultData,
+  confirmedDraftRunRecord,
+  confirmedDraftUpdates,
+  confirmedRevisionResultData,
+  confirmedRevisionRunRecord,
+  confirmedRevisionUpdates,
+  nextDraftTargetPreview,
+  proposalCommandName,
+  proposalNeedsChapter,
+  writingProposalData,
+  writingProposalPath,
+  writingProposalRunRecord,
+  writingProposalText,
+  type WritingTarget,
+} from "./writing-operations.js";
+import { ensureTrailingNewline } from "./text-format.js";
+import {
   STYLE_RULE_STOP_WORDS,
   VECTOR_DIMENSIONS,
   cosineSimilarity,
@@ -120,7 +140,7 @@ import {
   relatedScore,
   snippetAround,
 } from "./text-analysis.js";
-import { firstMarkdownHeading, titleFromTask } from "./title.js";
+import { firstMarkdownHeading } from "./title.js";
 import { isPlainRecord, optionalString, stringArray, uniqueLimited } from "./value.js";
 import { PI_SKILL_TEXT } from "../skills/pi-skill.js";
 import {
@@ -3650,12 +3670,15 @@ export async function runWritingProposal(
   const contextData = context.data as {
     context_pack: {
       scope: string;
-      target: { id: string; display_order: number; title: string; source_path: string } | null;
+      target: WritingTarget | null;
     };
   };
   const proposalTarget =
     options.kind === "draft" && options.target === "next"
-      ? await nextDraftTargetPreview(projectRoot, task)
+      ? nextDraftTargetPreview(
+          await inspectProject(projectRoot, { includeIndexWarning: true }),
+          task,
+        )
       : contextData.context_pack.target;
   const conflicts = detectCanonConflicts(context.data, task);
 
@@ -3673,71 +3696,51 @@ export async function runWritingProposal(
   }
 
   const stamp = runStamp();
-  const runRelPath = `runs/run_${stamp}_${options.kind}.json`;
-  const proposalRelPath = proposalPath(options.kind, stamp, proposalTarget);
-  const writes: EnvelopeWrite[] = [
-    {
-      path: runRelPath,
-      change_type: "created",
-      reason: `${options.kind}_run_record`,
-    },
-    {
-      path: proposalRelPath,
-      change_type: (await pathExists(path.join(projectRoot, proposalRelPath)))
-        ? "modified"
-        : "created",
-      reason: `${options.kind}_proposal`,
-    },
-  ];
+  const proposalRelPath = writingProposalPath(options.kind, stamp, proposalTarget);
+  const plan = buildWritingProposalPlan({
+    kind: options.kind,
+    stamp,
+    target: proposalTarget,
+    proposalExists: await pathExists(path.join(projectRoot, proposalRelPath)),
+  });
 
   if (!dryRun) {
-    const runRecord = {
-      agent_role: "openathor-cli",
-      command: proposalCommandName(options.kind),
-      created_at: new Date().toISOString(),
+    const runRecord = writingProposalRunRecord({
+      plan,
       task,
       target: proposalTarget,
       sources: context.sources ?? [],
-      writes,
-      mode: "proposal",
-      user_confirmation_required: true,
-    };
-    await writeYaml(projectRoot, runRelPath, runRecord);
+      createdAt: new Date().toISOString(),
+    });
+    await writeYaml(projectRoot, plan.runRelPath, runRecord);
 
+    const proposalText = writingProposalText({
+      kind: options.kind,
+      task,
+      stamp,
+      target: proposalTarget,
+    });
     if (options.kind === "canon_sync") {
-      await appendText(
-          projectRoot,
-          proposalRelPath,
-          canonPendingProposalText(task, stamp, proposalTarget),
-        );
-      } else {
-        await writeText(
-          projectRoot,
-          proposalRelPath,
-          proposalMarkdown(options.kind, task, stamp, proposalTarget),
-        );
-      }
+      await appendText(projectRoot, plan.proposalRelPath, proposalText);
+    } else {
+      await writeText(projectRoot, plan.proposalRelPath, proposalText);
+    }
   }
 
   return {
     projectRoot,
     projectId: context.projectId,
     sources: context.sources,
-    writes: dryRun ? [] : writes,
+    writes: dryRun ? [] : plan.writes,
     warnings: context.warnings,
-    data: {
-      dry_run: dryRun,
-      mode: "proposal",
-      command: proposalCommandName(options.kind),
+    data: writingProposalData({
+      dryRun,
+      kind: options.kind,
       task,
       target: proposalTarget,
-      context_pack: contextData.context_pack,
-      planned_writes: dryRun ? writes : [],
-      proposal_path: proposalRelPath,
-      run_path: runRelPath,
-      user_confirmation_required: true,
-      next_agent_action: proposalNextAction(options.kind),
-    },
+      contextPack: contextData.context_pack,
+      plan,
+    }),
   };
 }
 
@@ -3777,138 +3780,53 @@ async function runConfirmedWriting(
   }
 
   const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
-  const plannedChapter = nextDraftablePlannedChapter(inspection);
-  const nextOrder = plannedChapter?.display_order ?? nextDisplayOrder(inspection.manuscriptIndex);
-  const chapterId =
-    plannedChapter?.id ?? uniqueNewChapterId(nextOrder, inspection.manuscriptIndex);
-  const title =
-    firstMarkdownHeading(text) ??
-    titleFromTask(task) ??
-    plannedChapter?.title ??
-    inspection.config.project.title ??
-    `Chapter ${nextOrder}`;
-  const sourcePath = `manuscript/chapter-${String(nextOrder).padStart(3, "0")}.md`;
-  const fullSourcePath = path.join(projectRoot, sourcePath);
-  const stamp = runStamp();
-  const runRelPath = `runs/run_${stamp}_draft_confirmed.json`;
-  const writes: EnvelopeWrite[] = [
-    {
-      path: sourcePath,
-      change_type: "created",
-      reason: "confirmed_draft_chapter",
-    },
-    {
-      path: "outline/chapters.yaml",
-      change_type: "modified",
-      reason: "confirmed_draft_chapter_outline",
-    },
-    {
-      path: ".openathor/manuscript.index.yaml",
-      change_type: "modified",
-      reason: "confirmed_draft_chapter_index",
-    },
-    {
-      path: runRelPath,
-      change_type: "created",
-      reason: "confirmed_draft_run_record",
-    },
-  ];
+  const plan = buildConfirmedDraftPlan(inspection, task, text, runStamp());
+  const fullSourcePath = path.join(projectRoot, plan.sourcePath);
 
   if (await pathExists(fullSourcePath)) {
     throw new OpenAthorError(
       "OA_MANUSCRIPT_TARGET_EXISTS",
-      `Refusing to overwrite existing manuscript file ${sourcePath}.`,
+      `Refusing to overwrite existing manuscript file ${plan.sourcePath}.`,
       { exitCode: 3 },
     );
   }
 
   if (!dryRun) {
-    await writeText(projectRoot, sourcePath, ensureTrailingNewline(text));
+    await writeText(projectRoot, plan.sourcePath, ensureTrailingNewline(text));
     const contentHash = await sha256File(fullSourcePath);
-    const updatedChapters: ChapterOutline = {
-      chapters: plannedChapter
-        ? inspection.chapters.chapters.map((chapter) =>
-            chapter.id === plannedChapter.id
-              ? {
-                  ...chapter,
-                  title,
-                  status: "drafted" as const,
-                  manuscript_path: sourcePath,
-                }
-              : chapter,
-          )
-        : [
-            ...inspection.chapters.chapters,
-            {
-              id: chapterId,
-              display_order: nextOrder,
-              title,
-              status: "drafted" as const,
-              manuscript_path: sourcePath,
-            },
-          ],
-    };
-    const updatedIndex: ManuscriptIndex = {
-      ...inspection.manuscriptIndex,
-      generated_at: new Date().toISOString(),
-      chapters: [
-        ...inspection.manuscriptIndex.chapters,
-        {
-          id: chapterId,
-          display_order: nextOrder,
-          title,
-          source_path: sourcePath,
-          status: "drafted",
-          origin: "created",
-          content_hash: contentHash,
-          detected_title: title,
-          confidence: "high",
-        },
-      ],
-    };
+    const generatedAt = new Date().toISOString();
+    const { chapters: updatedChapters, manuscriptIndex: updatedIndex } =
+      confirmedDraftUpdates({
+        state: inspection,
+        plan,
+        contentHash,
+        generatedAt,
+    });
     await writeYaml(projectRoot, "outline/chapters.yaml", updatedChapters);
     await writeYaml(projectRoot, ".openathor/manuscript.index.yaml", updatedIndex);
-    await writeYaml(projectRoot, runRelPath, {
-      agent_role: "openathor-cli",
-      command: "openathor draft",
-      created_at: new Date().toISOString(),
-      task,
-      mode: "confirmed_write",
-      filled_planned_chapter: plannedChapter !== null,
-      target: {
-        id: chapterId,
-        display_order: nextOrder,
-        title,
-        source_path: sourcePath,
-      },
-      writes,
-      sources: inspection.sources,
-      user_confirmation_required: false,
-    });
+    await writeYaml(
+      projectRoot,
+      plan.runRelPath,
+      confirmedDraftRunRecord({
+        task,
+        sources: inspection.sources,
+        plan,
+        createdAt: generatedAt,
+      }),
+    );
   }
 
   return {
     projectRoot,
     projectId: inspection.config.project.id,
     sources: inspection.sources,
-    writes: dryRun ? [] : writes,
+    writes: dryRun ? [] : plan.writes,
     warnings: inspection.warnings,
-    data: {
-      dry_run: dryRun,
-      mode: "confirmed_write",
-      command: "openathor draft",
+    data: confirmedDraftResultData({
+      dryRun,
       task,
-      filled_planned_chapter: plannedChapter !== null,
-      target: {
-        id: chapterId,
-        display_order: nextOrder,
-        title,
-        source_path: sourcePath,
-      },
-      planned_writes: dryRun ? writes : [],
-      run_path: runRelPath,
-      user_confirmation_required: false,
-    },
+      plan,
+    }),
   };
 }
 
@@ -3960,104 +3878,49 @@ async function runConfirmedRevision(
   }
 
   const stamp = runStamp();
-  const runRelPath = `runs/run_${stamp}_revise_confirmed.json`;
-  const writes: EnvelopeWrite[] = [
-    {
-      path: chapter.source_path,
-      change_type: "modified",
-      reason: "confirmed_revision",
-    },
-    {
-      path: "outline/chapters.yaml",
-      change_type: "modified",
-      reason: "confirmed_revision_outline",
-    },
-    {
-      path: ".openathor/manuscript.index.yaml",
-      change_type: "modified",
-      reason: "confirmed_revision_index",
-    },
-    {
-      path: runRelPath,
-      change_type: "created",
-      reason: "confirmed_revision_run_record",
-    },
-  ];
-  const title = firstMarkdownHeading(text) ?? chapter.title;
+  const plan = buildConfirmedRevisionPlan({
+    chapter,
+    text,
+    baseHash: options.baseHash,
+    stamp,
+  });
 
   if (!dryRun) {
     await writeText(projectRoot, chapter.source_path, ensureTrailingNewline(text));
     const contentHash = await sha256File(fullSourcePath);
-    const updatedChapters: ChapterOutline = {
-      chapters: inspection.chapters.chapters.map((outlineChapter) =>
-        outlineChapter.id === chapter.id
-          ? {
-              ...outlineChapter,
-              title,
-              status: "revised",
-              manuscript_path: chapter.source_path,
-            }
-          : outlineChapter,
-      ),
-    };
-    const updatedIndex: ManuscriptIndex = {
-      ...inspection.manuscriptIndex,
-      generated_at: new Date().toISOString(),
-      chapters: inspection.manuscriptIndex.chapters.map((indexedChapter) =>
-        indexedChapter.id === chapter.id
-          ? {
-              ...indexedChapter,
-              title,
-              status: "revised",
-              content_hash: contentHash,
-              detected_title: title,
-            }
-          : indexedChapter,
-      ),
-    };
+    const generatedAt = new Date().toISOString();
+    const { chapters: updatedChapters, manuscriptIndex: updatedIndex } =
+      confirmedRevisionUpdates({
+        state: inspection,
+        plan,
+        contentHash,
+        generatedAt,
+      });
     await writeYaml(projectRoot, "outline/chapters.yaml", updatedChapters);
     await writeYaml(projectRoot, ".openathor/manuscript.index.yaml", updatedIndex);
-    await writeYaml(projectRoot, runRelPath, {
-      agent_role: "openathor-cli",
-      command: "openathor revise",
-      created_at: new Date().toISOString(),
-      task,
-      mode: "confirmed_write",
-      target: {
-        id: chapter.id,
-        display_order: chapter.display_order,
-        title,
-        source_path: chapter.source_path,
-      },
-      base_hash: options.baseHash,
-      writes,
-      sources: inspection.sources,
-      user_confirmation_required: false,
-    });
+    await writeYaml(
+      projectRoot,
+      plan.runRelPath,
+      confirmedRevisionRunRecord({
+        task,
+        plan,
+        sources: inspection.sources,
+        createdAt: generatedAt,
+      }),
+    );
   }
 
   return {
     projectRoot,
     projectId: inspection.config.project.id,
     sources: inspection.sources,
-    writes: dryRun ? [] : writes,
+    writes: dryRun ? [] : plan.writes,
     warnings: inspection.warnings,
-    data: {
-      dry_run: dryRun,
-      mode: "confirmed_write",
-      command: "openathor revise",
+    data: confirmedRevisionResultData({
+      dryRun,
       task,
-      target: {
-        id: chapter.id,
-        display_order: chapter.display_order,
-        title,
-        source_path: chapter.source_path,
-      },
-      base_hash: options.baseHash,
-      planned_writes: dryRun ? writes : [],
-      run_path: runRelPath,
-      user_confirmation_required: false,
-    },
+      plan,
+    }),
   };
 }
 
@@ -5576,48 +5439,6 @@ function normalizeMaxChars(maxChars: number | undefined): {
   };
 }
 
-function nextDisplayOrder(index: ManuscriptIndex): number {
-  const currentMax = index.chapters.reduce(
-    (max, chapter) => Math.max(max, chapter.display_order),
-    0,
-  );
-  return currentMax + 1;
-}
-
-function nextDraftablePlannedChapter(
-  inspection: Awaited<ReturnType<typeof inspectProject>>,
-): ChapterOutlineEntry | null {
-  const indexedIds = new Set(inspection.manuscriptIndex.chapters.map((chapter) => chapter.id));
-
-  return (
-    [...inspection.chapters.chapters]
-      .sort((a, b) => a.display_order - b.display_order || a.id.localeCompare(b.id))
-      .find(
-        (chapter) =>
-          chapter.status === "planned" &&
-          !chapter.manuscript_path &&
-          !indexedIds.has(chapter.id),
-      ) ?? null
-  );
-}
-
-function uniqueNewChapterId(order: number, index: ManuscriptIndex): string {
-  const existing = new Set(index.chapters.map((chapter) => chapter.id));
-  let candidate = `ch_${String(order).padStart(3, "0")}`;
-  let suffix = 2;
-
-  while (existing.has(candidate)) {
-    candidate = `ch_${String(order).padStart(3, "0")}_${suffix}`;
-    suffix += 1;
-  }
-
-  return candidate;
-}
-
-function ensureTrailingNewline(text: string): string {
-  return text.endsWith("\n") ? text : `${text}\n`;
-}
-
 function defaultMarkdownExportPath(config: ProjectConfig): string {
   const filename = `${slugAscii(config.project.title) || "manuscript"}.md`;
   return `exports/${filename}`;
@@ -5728,158 +5549,6 @@ async function appendText(root: string, relPath: string, text: string): Promise<
   const filePath = path.join(root, relPath);
   const existing = (await pathExists(filePath)) ? await readFile(filePath, "utf8") : "";
   await writeFile(filePath, `${existing}${existing.endsWith("\n") ? "" : "\n"}${text}`, "utf8");
-}
-
-function proposalNeedsChapter(options: Pick<WritingProposalOptions, "kind" | "target">): boolean {
-  if (options.kind === "draft" && options.target === "next") {
-    return false;
-  }
-
-  return options.kind === "draft" || options.kind === "review" || options.kind === "revise";
-}
-
-function proposalCommandName(kind: WritingProposalKind): string {
-  if (kind === "canon_sync") {
-    return "openathor canon sync";
-  }
-
-  return `openathor ${kind}`;
-}
-
-async function nextDraftTargetPreview(
-  projectRoot: string,
-  task: string,
-): Promise<{ id: string; display_order: number; title: string; source_path: string }> {
-  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
-  const plannedChapter = nextDraftablePlannedChapter(inspection);
-  const nextOrder = plannedChapter?.display_order ?? nextDisplayOrder(inspection.manuscriptIndex);
-  const chapterId =
-    plannedChapter?.id ?? uniqueNewChapterId(nextOrder, inspection.manuscriptIndex);
-  const title =
-    titleFromTask(task) ??
-    plannedChapter?.title ??
-    inspection.config.project.title ??
-    `Chapter ${nextOrder}`;
-
-  return {
-    id: chapterId,
-    display_order: nextOrder,
-    title,
-    source_path: `manuscript/chapter-${String(nextOrder).padStart(3, "0")}.md`,
-  };
-}
-
-function proposalPath(
-  kind: WritingProposalKind,
-  stamp: string,
-  target: { id: string; display_order: number; title: string; source_path: string } | null,
-): string {
-  const targetPart = target ? `${target.id}_` : "";
-
-  if (kind === "plan") {
-    return `notes/plan-${targetPart}${stamp}.md`;
-  }
-
-  if (kind === "draft") {
-    return `notes/draft-${targetPart}${stamp}.md`;
-  }
-
-  if (kind === "review") {
-    return `reviews/review-${targetPart}${stamp}.md`;
-  }
-
-  if (kind === "revise") {
-    return `reviews/revise-${targetPart}${stamp}.md`;
-  }
-
-  return "bible/canon.pending.md";
-}
-
-function proposalMarkdown(
-  kind: WritingProposalKind,
-  task: string,
-  stamp: string,
-  target: { id: string; display_order: number; title: string; source_path: string } | null,
-): string {
-  return [
-    `# ${proposalTitle(kind)}`,
-    "",
-    `- run: ${stamp}`,
-    `- mode: proposal`,
-    `- target: ${target ? `${target.id} (${target.title})` : "project"}`,
-    `- source_path: ${target?.source_path ?? ""}`,
-    `- user_confirmation_required: true`,
-    "",
-    "## User Task",
-    "",
-    task,
-    "",
-    "## Agent Instructions",
-    "",
-    proposalNextAction(kind),
-    "",
-  ].join("\n");
-}
-
-function canonPendingProposalText(
-  task: string,
-  stamp: string,
-  target: { id: string; display_order: number; title: string; source_path: string } | null,
-): string {
-  return [
-    "",
-    `## pending_${stamp}: Canon Sync Proposal`,
-    "",
-    "- status: pending",
-    `- source_ref: ${target?.id ?? "project"}`,
-    `- source: ${target?.source_path ?? "context"}`,
-    "- user_confirmation_required: true",
-    "",
-    "Task:",
-    "",
-    task,
-    "",
-  ].join("\n");
-}
-
-function proposalTitle(kind: WritingProposalKind): string {
-  if (kind === "plan") {
-    return "Plan Proposal";
-  }
-
-  if (kind === "draft") {
-    return "Draft Task Package";
-  }
-
-  if (kind === "review") {
-    return "Review Notes";
-  }
-
-  if (kind === "revise") {
-    return "Revision Proposal";
-  }
-
-  return "Canon Sync Proposal";
-}
-
-function proposalNextAction(kind: WritingProposalKind): string {
-  if (kind === "plan") {
-    return "Use the context pack to propose outline or scene-level next steps for user confirmation.";
-  }
-
-  if (kind === "draft") {
-    return "Use the context pack to draft text in the conversation or prepare a diff only after user confirmation.";
-  }
-
-  if (kind === "review") {
-    return "Fill this review with prioritized issues grounded in the context pack and manuscript source.";
-  }
-
-  if (kind === "revise") {
-    return "Prepare a local diff proposal; do not rewrite manuscript files without explicit user confirmation.";
-  }
-
-  return "Extract candidate facts into pending canon only; do not modify confirmed canon without user confirmation.";
 }
 
 function runStamp(): string {
