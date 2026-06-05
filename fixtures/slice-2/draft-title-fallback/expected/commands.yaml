@@ -11,6 +11,11 @@ commands:
     expect_data:
       target.title: 隧道尽头
       target.source_path: manuscript/chapter-003.md
+  - run: openathor draft chapter next --task "第三章：旧站台回声" --text "站台的灯一盏盏亮起，铁轨尽头没有车声。" --confirm-write --json
+    ok: true
+    expect_data:
+      target.title: 旧站台回声
+      target.source_path: manuscript/chapter-004.md
   - run: openathor doctor --json
     ok: true
   - run: openathor index rebuild --json
