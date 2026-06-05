@@ -22,7 +22,6 @@ import {
   writeAssetSyncConfirmed,
 } from "./asset-sync.js";
 import { normalizeAssetSyncPackagePath, readAssetSyncPackage } from "./asset-sync-package.js";
-import { detectCanonConflicts } from "./canon-conflict.js";
 import type {
   EnvelopeSource,
   EnvelopeWarning,
@@ -87,25 +86,6 @@ import {
   splitSources,
   splitWrites,
 } from "./outline-split.js";
-import {
-  buildConfirmedDraftPlan,
-  buildConfirmedRevisionPlan,
-  buildWritingProposalPlan,
-  confirmedDraftResultData,
-  confirmedDraftRunRecord,
-  confirmedDraftUpdates,
-  confirmedRevisionResultData,
-  confirmedRevisionRunRecord,
-  confirmedRevisionUpdates,
-  nextDraftTargetPreview,
-  proposalCommandName,
-  proposalNeedsChapter,
-  writingProposalData,
-  writingProposalPath,
-  writingProposalRunRecord,
-  writingProposalText,
-  type WritingTarget,
-} from "./writing-operations.js";
 import { ensureTrailingNewline } from "./text-format.js";
 import {
   extractSearchTerms,
@@ -120,16 +100,7 @@ import {
   searchCandidatePaths,
   semanticVectorMatches,
 } from "./retrieval-files.js";
-import {
-  contextData,
-  contextWindow,
-  normalizeContextMaxChars,
-} from "./context-pack.js";
-import {
-  readAssetAuditSources,
-  readContextSource,
-  readNotesContext,
-} from "./context-sources.js";
+import { readAssetAuditSources } from "./context-sources.js";
 import {
   defaultMarkdownExportPath,
   exportableManuscriptChapters,
@@ -170,7 +141,6 @@ import type {
   ChapterOutlineEntry,
   ClassifiedFile,
   CommandResult,
-  ContextOptions,
   DoctorOptions,
   ExportOptions,
   IndexedChapter,
@@ -192,11 +162,10 @@ import type {
   SearchTextOptions,
   SkillInstallOptions,
   VectorIndex,
-  WritingProposalKind,
-  WritingProposalOptions,
 } from "./model.js";
 
 export type { CommandResult } from "./model.js";
+export { runContext } from "./context-commands.js";
 export {
   runStyleAnalyze,
   runStyleCheck,
@@ -204,6 +173,7 @@ export {
   runStyleProfileShow,
   runStyleRevise,
 } from "./style-commands.js";
+export { runWritingProposal } from "./writing-commands.js";
 
 export async function runInit(options: InitOptions): Promise<CommandResult> {
   const projectRoot = path.resolve(options.targetPath ?? process.cwd());
@@ -825,136 +795,6 @@ export async function runAssetsSync(
         ? "Run openathor index rebuild --json, then openathor assets audit --json and refresh context before continuing the longform draft."
         : "Show this pending asset sync to the user, then rerun with --confirm --base-hash only after explicit approval.",
     },
-  };
-}
-
-export async function runContext(options: ContextOptions = {}): Promise<CommandResult> {
-  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
-  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
-  const scope = options.scope ?? "project";
-  const maxChars = normalizeContextMaxChars(options.maxChars);
-  const baseSources = new Map<string, EnvelopeSource>();
-
-  for (const source of inspection.sources) {
-    baseSources.set(source.path, source);
-  }
-
-  const confirmedCanon = await readContextSource(
-    projectRoot,
-    "bible/canon.md",
-    maxChars.section,
-    baseSources,
-  );
-  const pendingCanon = await readContextSource(
-    projectRoot,
-    "bible/canon.pending.md",
-    maxChars.section,
-    baseSources,
-  );
-  const style = await readContextSource(
-    projectRoot,
-    "bible/style.md",
-    maxChars.section,
-    baseSources,
-  );
-  const world = await readContextSource(
-    projectRoot,
-    "bible/world.md",
-    maxChars.section,
-    baseSources,
-  );
-  const characters = await readContextSource(
-    projectRoot,
-    "bible/characters.md",
-    maxChars.section,
-    baseSources,
-  );
-  const timeline = await readContextSource(
-    projectRoot,
-    "bible/timeline.md",
-    maxChars.section,
-    baseSources,
-  );
-  const styleProfiles = await readContextSource(
-    projectRoot,
-    "style/profiles.yaml",
-    maxChars.section,
-    baseSources,
-  );
-  const styleReferences = await readContextSource(
-    projectRoot,
-    "style/references.yaml",
-    maxChars.section,
-    baseSources,
-  );
-  const notes = await readNotesContext(
-    projectRoot,
-    inspection.config.paths.notes,
-    maxChars.note,
-    baseSources,
-  );
-  const targetChapter =
-    scope === "chapter"
-      ? resolveContextChapter(
-          options.target,
-          inspection.chapters,
-          inspection.manuscriptIndex,
-        )
-      : null;
-  const nearbyChapters =
-    scope === "chapter" && targetChapter
-      ? contextWindow(inspection.manuscriptIndex.chapters, targetChapter.display_order)
-      : [];
-  const manuscript = [];
-
-  for (const chapter of nearbyChapters) {
-    manuscript.push({
-      ...chapter,
-      content: await readContextSource(
-        projectRoot,
-        chapter.source_path,
-        chapter.id === targetChapter?.id ? maxChars.targetChapter : maxChars.neighborChapter,
-        baseSources,
-      ),
-    });
-  }
-
-  const warnings = [...inspection.warnings];
-
-  if (scope === "project" && inspection.manuscriptIndex.chapters.length === 0) {
-    warnings.push({
-      code: "OA_CONTEXT_EMPTY_PROJECT",
-      message: "The project has no indexed chapters yet.",
-      severity: "low",
-    });
-  }
-
-  return {
-    projectRoot,
-    projectId: inspection.config.project.id,
-    sources: [...baseSources.values()].sort((a, b) => a.path.localeCompare(b.path)),
-    writes: [],
-    warnings,
-    data: contextData({
-      generatedAt: new Date().toISOString(),
-      scope,
-      targetInput: options.target,
-      targetChapter,
-      maxChars,
-      config: inspection.config,
-      chapters: inspection.chapters,
-      manuscriptIndex: inspection.manuscriptIndex,
-      confirmedCanon,
-      pendingCanon,
-      style,
-      styleProfiles,
-      styleReferences,
-      world,
-      characters,
-      timeline,
-      notes,
-      manuscriptContext: manuscript,
-    }),
   };
 }
 
@@ -2311,287 +2151,6 @@ export async function runSearchSemantic(
       query_terms: queryTerms.slice(0, 20),
       matches,
     },
-  };
-}
-
-export async function runWritingProposal(
-  options: WritingProposalOptions,
-): Promise<CommandResult> {
-  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
-  const dryRun = options.dryRun ?? false;
-  const task = options.task?.trim();
-
-  if (!task) {
-    throw new OpenAthorError(
-      "OA_TASK_REQUIRED",
-      `${proposalCommandName(options.kind)} requires --task <text>.`,
-      { exitCode: 2 },
-    );
-  }
-
-  if (options.confirmWrite) {
-    return runConfirmedWriting(options, projectRoot, task, dryRun);
-  }
-
-  const context = await runContext({
-    cwd: projectRoot,
-    scope: proposalNeedsChapter(options) ? "chapter" : "project",
-    target: proposalNeedsChapter(options) ? options.target : undefined,
-  });
-  const contextData = context.data as {
-    context_pack: {
-      scope: string;
-      target: WritingTarget | null;
-    };
-  };
-  const proposalTarget =
-    options.kind === "draft" && options.target === "next"
-      ? nextDraftTargetPreview(
-          await inspectProject(projectRoot, { includeIndexWarning: true }),
-          task,
-        )
-      : contextData.context_pack.target;
-  const conflicts = detectCanonConflicts(context.data, task);
-
-  if (conflicts.length > 0) {
-    throw new OpenAthorError(
-      "OA_CANON_CONFLICT",
-      `User task conflicts with ${conflicts.length} confirmed canon rule(s).`,
-      {
-        exitCode: 4,
-        hints: conflicts.map((conflict) =>
-          `${conflict.source}: ${conflict.statement}`,
-        ),
-      },
-    );
-  }
-
-  const stamp = runStamp();
-  const proposalRelPath = writingProposalPath(options.kind, stamp, proposalTarget);
-  const plan = buildWritingProposalPlan({
-    kind: options.kind,
-    stamp,
-    target: proposalTarget,
-    proposalExists: await pathExists(path.join(projectRoot, proposalRelPath)),
-  });
-
-  if (!dryRun) {
-    const runRecord = writingProposalRunRecord({
-      plan,
-      task,
-      target: proposalTarget,
-      sources: context.sources ?? [],
-      createdAt: new Date().toISOString(),
-    });
-    await writeYaml(projectRoot, plan.runRelPath, runRecord);
-
-    const proposalText = writingProposalText({
-      kind: options.kind,
-      task,
-      stamp,
-      target: proposalTarget,
-    });
-    if (options.kind === "canon_sync") {
-      await appendText(projectRoot, plan.proposalRelPath, proposalText);
-    } else {
-      await writeText(projectRoot, plan.proposalRelPath, proposalText);
-    }
-  }
-
-  return {
-    projectRoot,
-    projectId: context.projectId,
-    sources: context.sources,
-    writes: dryRun ? [] : plan.writes,
-    warnings: context.warnings,
-    data: writingProposalData({
-      dryRun,
-      kind: options.kind,
-      task,
-      target: proposalTarget,
-      contextPack: contextData.context_pack,
-      plan,
-    }),
-  };
-}
-
-async function runConfirmedWriting(
-  options: WritingProposalOptions,
-  projectRoot: string,
-  task: string,
-  dryRun: boolean,
-): Promise<CommandResult> {
-  if (options.kind === "revise") {
-    return runConfirmedRevision(options, projectRoot, task, dryRun);
-  }
-
-  if (options.kind !== "draft") {
-    throw new OpenAthorError(
-      "OA_CONFIRMED_WRITE_UNSUPPORTED",
-      "Confirmed writes are currently supported only for draft chapter next and revise chapter.",
-      { exitCode: 2 },
-    );
-  }
-
-  if (options.target !== "next") {
-    throw new OpenAthorError(
-      "OA_CONFIRMED_WRITE_UNSUPPORTED",
-      "Confirmed draft writes currently require target 'next' to avoid overwriting existing manuscript files.",
-      { exitCode: 2 },
-    );
-  }
-
-  const text = options.text?.trim();
-  if (!text) {
-    throw new OpenAthorError(
-      "OA_DRAFT_TEXT_REQUIRED",
-      "Confirmed draft writes require --text <manuscript text>.",
-      { exitCode: 2 },
-    );
-  }
-
-  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
-  const plan = buildConfirmedDraftPlan(inspection, task, text, runStamp());
-  const fullSourcePath = path.join(projectRoot, plan.sourcePath);
-
-  if (await pathExists(fullSourcePath)) {
-    throw new OpenAthorError(
-      "OA_MANUSCRIPT_TARGET_EXISTS",
-      `Refusing to overwrite existing manuscript file ${plan.sourcePath}.`,
-      { exitCode: 3 },
-    );
-  }
-
-  if (!dryRun) {
-    await writeText(projectRoot, plan.sourcePath, ensureTrailingNewline(text));
-    const contentHash = await sha256File(fullSourcePath);
-    const generatedAt = new Date().toISOString();
-    const { chapters: updatedChapters, manuscriptIndex: updatedIndex } =
-      confirmedDraftUpdates({
-        state: inspection,
-        plan,
-        contentHash,
-        generatedAt,
-    });
-    await writeYaml(projectRoot, "outline/chapters.yaml", updatedChapters);
-    await writeYaml(projectRoot, ".openathor/manuscript.index.yaml", updatedIndex);
-    await writeYaml(
-      projectRoot,
-      plan.runRelPath,
-      confirmedDraftRunRecord({
-        task,
-        sources: inspection.sources,
-        plan,
-        createdAt: generatedAt,
-      }),
-    );
-  }
-
-  return {
-    projectRoot,
-    projectId: inspection.config.project.id,
-    sources: inspection.sources,
-    writes: dryRun ? [] : plan.writes,
-    warnings: inspection.warnings,
-    data: confirmedDraftResultData({
-      dryRun,
-      task,
-      plan,
-    }),
-  };
-}
-
-async function runConfirmedRevision(
-  options: WritingProposalOptions,
-  projectRoot: string,
-  task: string,
-  dryRun: boolean,
-): Promise<CommandResult> {
-  const text = options.text?.trim();
-  if (!text) {
-    throw new OpenAthorError(
-      "OA_REVISE_TEXT_REQUIRED",
-      "Confirmed revision writes require --text <manuscript text>.",
-      { exitCode: 2 },
-    );
-  }
-
-  if (!options.baseHash) {
-    throw new OpenAthorError(
-      "OA_BASE_HASH_REQUIRED",
-      "Confirmed revision writes require --base-hash <sha256:...>.",
-      { exitCode: 2 },
-    );
-  }
-
-  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
-  const chapter = resolveContextChapter(
-    options.target,
-    inspection.chapters,
-    inspection.manuscriptIndex,
-  );
-  const fullSourcePath = path.join(projectRoot, chapter.source_path);
-  const currentHash = await sha256File(fullSourcePath);
-
-  if (currentHash !== options.baseHash) {
-    throw new OpenAthorError(
-      "OA_MANUSCRIPT_CHANGED",
-      `Refusing to revise ${chapter.id} because the source hash changed.`,
-      {
-        exitCode: 3,
-        hints: [
-          `Expected ${options.baseHash}.`,
-          `Current ${currentHash}.`,
-          "Regenerate context and ask the user to confirm the latest text.",
-        ],
-      },
-    );
-  }
-
-  const stamp = runStamp();
-  const plan = buildConfirmedRevisionPlan({
-    chapter,
-    text,
-    baseHash: options.baseHash,
-    stamp,
-  });
-
-  if (!dryRun) {
-    await writeText(projectRoot, chapter.source_path, ensureTrailingNewline(text));
-    const contentHash = await sha256File(fullSourcePath);
-    const generatedAt = new Date().toISOString();
-    const { chapters: updatedChapters, manuscriptIndex: updatedIndex } =
-      confirmedRevisionUpdates({
-        state: inspection,
-        plan,
-        contentHash,
-        generatedAt,
-      });
-    await writeYaml(projectRoot, "outline/chapters.yaml", updatedChapters);
-    await writeYaml(projectRoot, ".openathor/manuscript.index.yaml", updatedIndex);
-    await writeYaml(
-      projectRoot,
-      plan.runRelPath,
-      confirmedRevisionRunRecord({
-        task,
-        plan,
-        sources: inspection.sources,
-        createdAt: generatedAt,
-      }),
-    );
-  }
-
-  return {
-    projectRoot,
-    projectId: inspection.config.project.id,
-    sources: inspection.sources,
-    writes: dryRun ? [] : plan.writes,
-    warnings: inspection.warnings,
-    data: confirmedRevisionResultData({
-      dryRun,
-      task,
-      plan,
-    }),
   };
 }
 
