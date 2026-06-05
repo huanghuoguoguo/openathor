@@ -8,7 +8,9 @@
 
 `openathor search semantic` 提供可选派生向量索引检索。当前实现使用本地 deterministic hash embedding，不调用模型服务；索引由 `openathor index rebuild --vector` 从明文事实源重建。
 
-search 命令只读，不写用户文件。
+`openathor assets audit` 提供长篇资产连续性审计。它把 `bible/characters.md`、`bible/timeline.md`、`notes/hooks.md`、`outline/chapters.yaml` 和正文提及放在一起扫描，用来发现资产没有沉淀、outline link 悬空、正文出现人物但大纲未关联等漂移风险。
+
+search 和 assets audit 命令只读，不写用户文件。
 
 ## `openathor search text`
 
@@ -174,3 +176,58 @@ openathor search semantic <query> [--json] [--limit <count>] [--max-chars <count
 - `OA_SEARCH_QUERY_REQUIRED`
 - `OA_VECTOR_INDEX_NOT_FOUND`
 - `OA_VECTOR_INDEX_INVALID`
+
+## `openathor assets audit`
+
+### 参数
+
+```bash
+openathor assets audit [--json] [--max-chars <count>]
+```
+
+### Output data
+
+`data.audit` 包含：
+
+- `version`
+- `generated_at`
+- `method`
+- `read_only`
+- `asset_files`
+- `assets`
+- `counts`
+- `outline_link_issues`
+- `chapter_entity_coverage`
+- `summary_drift`
+- `unlinked_characters`
+
+`counts` 至少包含：
+
+- `chapters`
+- `indexed_chapters`
+- `characters`
+- `timeline_events`
+- `hooks`
+- `unresolved_outline_links`
+- `character_link_drifts`
+- `summary_drift_candidates`
+
+### Warnings
+
+- `OA_ASSET_LINK_UNRESOLVED`：outline link 指向不存在的 story asset。
+- `OA_ASSET_CHARACTER_LINK_DRIFT`：正文或章节摘要提到已登记人物，但该章节 outline links 未关联。
+- `OA_ASSET_SUMMARY_DRIFT`：章节摘要词项和正文弱匹配，需要人工复核。
+
+这些 warning 是确定性审计结果，不会自动修改正文、outline 或 confirmed canon。
+
+### Expected writes
+
+无。
+
+`writes` 必须为空。
+
+### 当前限制
+
+- `assets audit` 只做 Markdown/YAML 文本扫描，不做完整语义事实推理。
+- 人物、timeline 和 hook 优先通过稳定 ID 前缀和 Markdown 标题识别。
+- `summary_drift` 是复核提示，不代表自动判定正文错误。

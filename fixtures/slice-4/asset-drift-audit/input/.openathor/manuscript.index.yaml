@@ -1,0 +1,33 @@
+version: "0.1"
+generated_at: 2026-06-05T09:39:08.471Z
+source_mode: created
+chapters:
+  - id: ch_00001
+    display_order: 1
+    title: 钥匙
+    source_path: manuscript/chapter-001.md
+    status: drafted
+    origin: created
+    content_hash: sha256:00485c56583f1bca84a3e33df5abf022213b19be140a3c9f6954f392854cd2fb
+    detected_title: 钥匙
+    confidence: high
+  - id: ch_00002
+    display_order: 2
+    title: 借阅记录
+    source_path: manuscript/chapter-002.md
+    status: drafted
+    origin: created
+    content_hash: sha256:6ea11fabe98889b05cfd9eb1a79c7eabf3da60d40fb5e7e51d1abaea99226690
+    detected_title: 借阅记录
+    confidence: high
+  - id: ch_00003
+    display_order: 3
+    title: 仓门后的脚印
+    source_path: manuscript/chapter-003.md
+    status: drafted
+    origin: created
+    content_hash: sha256:52a167dcbc16ed4015fb1f6b4d6eab12de1ee2d1900920084a1178d3980a42e0
+    detected_title: 仓门后的脚印
+    confidence: high
+unclassified: []
+questions: []

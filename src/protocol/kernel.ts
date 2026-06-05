@@ -157,6 +157,11 @@ type StyleProfileShowOptions = {
   maxChars?: number;
 };
 
+type AssetsAuditOptions = {
+  cwd?: string;
+  maxChars?: number;
+};
+
 type ContextOptions = {
   cwd?: string;
   scope?: "project" | "chapter";
@@ -293,6 +298,14 @@ type CanonConflict = {
   statement: string;
   user_request: string;
   matched_terms: string[];
+};
+
+type AssetEntity = {
+  id: string | null;
+  name: string;
+  source_path: string;
+  line: number;
+  kind: "character" | "timeline_event" | "hook" | "world";
 };
 
 type ResolvedOutlineChapter = {
@@ -867,6 +880,238 @@ export async function runStyleProfileShow(
       manual_style: manualStyle,
       profiles,
       references,
+    },
+  };
+}
+
+export async function runAssetsAudit(
+  options: AssetsAuditOptions = {},
+): Promise<CommandResult> {
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
+  const maxChars = normalizeSnippetChars(options.maxChars);
+  const sourceMap = new Map<string, EnvelopeSource>();
+
+  for (const source of inspection.sources) {
+    sourceMap.set(source.path, source);
+  }
+
+  const assetFiles = await readAssetAuditSources(projectRoot, sourceMap);
+  const characters = extractMarkdownEntities(
+    assetFiles.characters.text,
+    "bible/characters.md",
+    "character",
+  );
+  const timelineEvents = extractMarkdownEntities(
+    assetFiles.timeline.text,
+    "bible/timeline.md",
+    "timeline_event",
+  );
+  const hooks = extractMarkdownEntities(
+    assetFiles.hooks.text,
+    "notes/hooks.md",
+    "hook",
+  );
+  const worldEntities = extractMarkdownEntities(
+    assetFiles.world.text,
+    "bible/world.md",
+    "world",
+  );
+  const knownCharacters = assetLookup(characters);
+  const knownTimelineEvents = assetLookup(timelineEvents);
+  const knownHooks = assetLookup(hooks);
+  const linkedAssetRefs = new Set<string>();
+  const outlineLinkIssues = [];
+  const chapterEntityCoverage = [];
+  const summaryDrift = [];
+
+  for (const chapter of [...inspection.chapters.chapters].sort(
+    (a, b) => a.display_order - b.display_order,
+  )) {
+    const indexedChapter =
+      inspection.manuscriptIndex.chapters.find((candidate) => candidate.id === chapter.id) ??
+      null;
+    const sourcePath = indexedChapter?.source_path ?? chapter.manuscript_path ?? null;
+    const chapterText = sourcePath
+      ? await readFile(path.join(projectRoot, sourcePath), "utf8")
+      : "";
+    const fullText = [chapter.title, chapter.summary ?? "", chapterText].join("\n");
+    const mentionedCharacters = characters
+      .filter((entity) => fullText.includes(entity.name))
+      .map((entity) => entity.name);
+    const linkedCharacters = stringLinks(chapter.links?.characters);
+    const linkedCharacterNames = linkedCharacters.map(
+      (name) => knownCharacters.get(name)?.name ?? name,
+    );
+    const missingCharacterLinks = mentionedCharacters.filter(
+      (name) => !linkedCharacters.includes(name) && !linkedCharacterNames.includes(name),
+    );
+
+    for (const name of linkedCharacters) {
+      addLinkedAssetRef(linkedAssetRefs, knownCharacters.get(name), name);
+      if (!knownCharacters.has(name)) {
+        outlineLinkIssues.push({
+          type: "unknown_character",
+          chapter_id: chapter.id,
+          display_order: chapter.display_order,
+          link: name,
+          message: `Chapter ${chapter.id} links unknown character ${name}.`,
+        });
+      }
+    }
+
+    for (const name of stringLinks(chapter.links?.timeline_events)) {
+      addLinkedAssetRef(linkedAssetRefs, knownTimelineEvents.get(name), name);
+      if (!knownTimelineEvents.has(name)) {
+        outlineLinkIssues.push({
+          type: "unknown_timeline_event",
+          chapter_id: chapter.id,
+          display_order: chapter.display_order,
+          link: name,
+          message: `Chapter ${chapter.id} links unknown timeline event ${name}.`,
+        });
+      }
+    }
+
+    for (const name of stringLinks(chapter.links?.hooks)) {
+      addLinkedAssetRef(linkedAssetRefs, knownHooks.get(name), name);
+      if (!knownHooks.has(name)) {
+        outlineLinkIssues.push({
+          type: "unknown_hook",
+          chapter_id: chapter.id,
+          display_order: chapter.display_order,
+          link: name,
+          message: `Chapter ${chapter.id} links unknown hook ${name}.`,
+        });
+      }
+    }
+
+    if (mentionedCharacters.length > 0 || linkedCharacters.length > 0) {
+      chapterEntityCoverage.push({
+        id: chapter.id,
+        display_order: chapter.display_order,
+        title: chapter.title,
+        source_path: sourcePath,
+        linked_characters: linkedCharacters,
+        linked_character_names: linkedCharacterNames,
+        mentioned_characters: mentionedCharacters,
+        missing_character_links: missingCharacterLinks,
+      });
+    }
+
+    if (chapter.summary && chapterText) {
+      const summaryTerms = extractAssetAuditTerms(chapter.summary).slice(0, 20);
+      const normalizedChapterText = chapterText.toLowerCase();
+      const missingTerms = summaryTerms.filter(
+        (term) => !normalizedChapterText.includes(term),
+      );
+
+      if (summaryTerms.length >= 6 && missingTerms.length / summaryTerms.length >= 0.85) {
+        summaryDrift.push({
+          id: chapter.id,
+          display_order: chapter.display_order,
+          title: chapter.title,
+          source_path: sourcePath,
+          summary_missing_terms: missingTerms.slice(0, 12),
+          summary_excerpt: snippetAround(chapter.summary, 0, 0, maxChars),
+        });
+      }
+    }
+  }
+
+  const unlinkedCharacters = characters
+    .filter(
+      (entity) =>
+        !linkedAssetRefs.has(entity.name) && (!entity.id || !linkedAssetRefs.has(entity.id)),
+    )
+    .map((entity) => ({
+      name: entity.name,
+      id: entity.id,
+      source_path: entity.source_path,
+      line: entity.line,
+    }));
+  const warnings = [...inspection.warnings];
+
+  if (outlineLinkIssues.length > 0) {
+    warnings.push({
+      code: "OA_ASSET_LINK_UNRESOLVED",
+      message: `Found ${outlineLinkIssues.length} outline link(s) that do not resolve to known longform assets.`,
+      severity: "medium",
+    });
+  }
+
+  const missingCoverageCount = chapterEntityCoverage.reduce(
+    (count, chapter) => count + chapter.missing_character_links.length,
+    0,
+  );
+  if (missingCoverageCount > 0) {
+    warnings.push({
+      code: "OA_ASSET_CHARACTER_LINK_DRIFT",
+      message: `Found ${missingCoverageCount} character mention(s) in chapter context without matching outline links.`,
+      severity: "low",
+    });
+  }
+
+  if (summaryDrift.length > 0) {
+    warnings.push({
+      code: "OA_ASSET_SUMMARY_DRIFT",
+      message: `Found ${summaryDrift.length} chapter summary candidate(s) whose terms are weakly represented in manuscript text.`,
+      severity: "low",
+    });
+  }
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources: [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path)),
+    writes: [],
+    warnings,
+    data: {
+      audit: {
+        version: PROTOCOL_VERSION,
+        generated_at: new Date().toISOString(),
+        method: "deterministic_asset_outline_text_scan",
+        read_only: true,
+        asset_files: Object.fromEntries(
+          Object.entries(assetFiles).map(([key, value]) => [
+            key,
+            {
+              path: value.path,
+              hash: value.hash,
+              present: value.hash !== null,
+              char_count: value.text.length,
+            },
+          ]),
+        ),
+        assets: {
+          characters,
+          timeline_events: timelineEvents,
+          hooks,
+          world: worldEntities,
+        },
+        counts: {
+          chapters: inspection.chapters.chapters.length,
+          indexed_chapters: inspection.manuscriptIndex.chapters.length,
+          characters: characters.length,
+          timeline_events: timelineEvents.length,
+          hooks: hooks.length,
+          world_entries: worldEntities.length,
+          unresolved_outline_links: outlineLinkIssues.length,
+          character_link_drifts: missingCoverageCount,
+          summary_drift_candidates: summaryDrift.length,
+          unlinked_characters: unlinkedCharacters.length,
+        },
+        outline_link_issues: outlineLinkIssues,
+        chapter_entity_coverage: chapterEntityCoverage,
+        summary_drift: summaryDrift,
+        unlinked_characters: unlinkedCharacters,
+      },
+      recommendations: [
+        "Run this audit after Pi writes or revises longform assets.",
+        "Resolve unknown outline links before relying on chapter context.",
+        "When chapter text introduces recurring people, add them to bible/characters.md and outline links.",
+        "Treat summary drift as a review prompt, not an automatic edit.",
+      ],
     },
   };
 }
@@ -4370,6 +4615,175 @@ async function readNotesContext(
   }
 
   return result;
+}
+
+async function readAssetAuditSources(
+  projectRoot: string,
+  sources: Map<string, EnvelopeSource>,
+): Promise<{
+  world: Awaited<ReturnType<typeof readContextSource>>;
+  characters: Awaited<ReturnType<typeof readContextSource>>;
+  timeline: Awaited<ReturnType<typeof readContextSource>>;
+  hooks: Awaited<ReturnType<typeof readContextSource>>;
+  canon: Awaited<ReturnType<typeof readContextSource>>;
+  pendingCanon: Awaited<ReturnType<typeof readContextSource>>;
+}> {
+  const maxChars = Number.MAX_SAFE_INTEGER;
+
+  return {
+    world: await readContextSource(projectRoot, "bible/world.md", maxChars, sources),
+    characters: await readContextSource(projectRoot, "bible/characters.md", maxChars, sources),
+    timeline: await readContextSource(projectRoot, "bible/timeline.md", maxChars, sources),
+    hooks: await readContextSource(projectRoot, "notes/hooks.md", maxChars, sources),
+    canon: await readContextSource(projectRoot, "bible/canon.md", maxChars, sources),
+    pendingCanon: await readContextSource(
+      projectRoot,
+      "bible/canon.pending.md",
+      maxChars,
+      sources,
+    ),
+  };
+}
+
+function extractMarkdownEntities(
+  text: string,
+  sourcePath: string,
+  kind: AssetEntity["kind"],
+): AssetEntity[] {
+  const entities = [];
+  const seen = new Set<string>();
+  const lines = text.split(/\r?\n/);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    const heading = line.match(/^#{2,6}\s+(.+)$/u)?.[1]?.trim();
+    const idHeading = heading?.match(/^([a-z][a-z0-9_:-]{2,})\s*[:：]\s*(.+)$/iu);
+    const idBullet = line.match(/^[-*]\s+([a-z][a-z0-9_:-]{2,})\s*[:：]\s*(.+)$/iu);
+    const headingRawId = heading?.match(/^([a-z][a-z0-9_:-]{2,})\b/iu)?.[1] ?? null;
+    const headingId =
+      headingRawId && isAssetIdForKind(headingRawId, kind) ? headingRawId : null;
+    const id =
+      idHeading && isAssetIdForKind(idHeading[1], kind)
+        ? idHeading[1]
+        : idBullet && isAssetIdForKind(idBullet[1], kind)
+          ? idBullet[1]
+          : headingId;
+    const name = cleanAssetName(
+      (idHeading && isAssetIdForKind(idHeading[1], kind) ? idHeading[2] : null) ??
+        (idBullet && isAssetIdForKind(idBullet[1], kind) ? idBullet[2] : null) ??
+        headingId ??
+        heading ??
+        "",
+    );
+
+    if (!name || isGenericAssetHeading(name)) {
+      continue;
+    }
+
+    const key = `${kind}:${name}`;
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    entities.push({
+      id,
+      name,
+      source_path: sourcePath,
+      line: index + 1,
+      kind,
+    });
+  }
+
+  return entities.slice(0, 200);
+}
+
+function cleanAssetName(value: string): string {
+  return value
+    .replace(/\([^)]*\)/g, "")
+    .replace(/（[^）]*）/g, "")
+    .replace(/【[^】]*】/g, "")
+    .replace(/\[[^\]]*\]/g, "")
+    .replace(/^[#*\-\s]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isGenericAssetHeading(value: string): boolean {
+  return /^(人物档案|次要人物|时间线|历史事件|故事时间线|待填充时间节点|世界观设定|时代背景|城市地理|技术特征|社会环境|悬念钩子|role|traits|current_state|basic|notes?|hooks?|unresolved|pending|confirmed canon|characters?|timeline|world|style)$/i.test(
+    value,
+  );
+}
+
+function isAssetIdForKind(id: string, kind: AssetEntity["kind"]): boolean {
+  if (kind === "character") {
+    return id.startsWith("char_");
+  }
+  if (kind === "timeline_event") {
+    return id.startsWith("ev_");
+  }
+  if (kind === "hook") {
+    return id.startsWith("hook_");
+  }
+
+  return /^(loc|org|item|world)_/.test(id);
+}
+
+function assetLookup(entities: AssetEntity[]): Map<string, AssetEntity> {
+  const lookup = new Map<string, AssetEntity>();
+
+  for (const entity of entities) {
+    lookup.set(entity.name, entity);
+    if (entity.id) {
+      lookup.set(entity.id, entity);
+    }
+  }
+
+  return lookup;
+}
+
+function addLinkedAssetRef(
+  linkedAssetRefs: Set<string>,
+  entity: AssetEntity | undefined,
+  original: string,
+): void {
+  linkedAssetRefs.add(original);
+
+  if (entity) {
+    linkedAssetRefs.add(entity.name);
+    if (entity.id) {
+      linkedAssetRefs.add(entity.id);
+    }
+  }
+}
+
+function stringLinks(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item) => item.length > 0);
+}
+
+function extractAssetAuditTerms(text: string): string[] {
+  const terms = new Set<string>();
+  const normalized = text.toLowerCase();
+
+  for (const token of normalized.match(/[a-z0-9_]{3,}/g) ?? []) {
+    if (!SEARCH_STOP_WORDS.has(token)) {
+      terms.add(token);
+    }
+  }
+
+  for (const token of normalized.match(/[\p{Script=Han}]{2,}/gu) ?? []) {
+    if (!SEARCH_STOP_WORDS.has(token)) {
+      terms.add(token);
+    }
+  }
+
+  return [...terms].sort((a, b) => a.localeCompare(b, "zh-Hans-CN")).slice(0, 80);
 }
 
 async function searchCandidatePaths(

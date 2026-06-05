@@ -11,6 +11,13 @@ commands:
     expect_data:
       profile_source: style/profiles.yaml
     expect_data_path: profiles.text
+  - run: openathor assets audit --json
+    ok: true
+    expect_data:
+      audit.counts.characters: 2
+      audit.counts.unresolved_outline_links: 0
+      audit.counts.character_link_drifts: 0
+      audit.counts.summary_drift_candidates: 0
   - run: openathor search text "苏禾" --json
     ok: true
     expect_data_path: matches
