@@ -604,21 +604,27 @@ outlineCommand
 
 outlineCommand
   .command("replan")
-  .description("Propose a replan boundary without changing files.")
+  .description("Propose or confirm replanning future outline chapters.")
   .requiredOption("--from <target>", "chapter id or display order where replanning starts")
   .requiredOption("--task <text>", "replan task")
+  .option("--from-package <path>", "structured replan package JSON/YAML path")
   .option("--json", "emit JSON")
+  .option("--confirm", "write confirmed replan if the outline hash matches")
   .option("--dry-run", "emit the proposal without changing files")
   .option("--diff", "show structured future diff without changing files")
+  .option("--base-hash <hash>", "expected current outline/chapters.yaml hash")
   .option("--max-chars <count>", "maximum characters per summary")
   .action(
     async (
       options: {
         from: string;
         task: string;
+        fromPackage?: string;
         json?: boolean;
+        confirm?: boolean;
         dryRun?: boolean;
         diff?: boolean;
+        baseHash?: string;
         maxChars?: string;
       },
     ) => {
@@ -628,8 +634,11 @@ outlineCommand
         runOutlineReplan({
           from: options.from,
           task: options.task,
+          fromPackage: options.fromPackage,
+          confirm: options.confirm,
           dryRun: options.dryRun,
           diff: options.diff,
+          baseHash: options.baseHash,
           maxChars: options.maxChars ? Number(options.maxChars) : undefined,
         }),
       );

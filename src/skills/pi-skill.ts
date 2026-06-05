@@ -133,7 +133,13 @@ Confirmed merge is allowed only after explicit user confirmation and fresh sourc
 openathor outline merge <id-or-order> <next-id-or-order> --title "<title>" --confirm --base-hash "sha256:..." --next-base-hash "sha256:..." --json
 \`\`\`
 
-Confirmed replan is not implemented. Do not edit outline/index manually to simulate it.
+Confirmed replan can replace only planned future outline chapters from a structured package. It does not rewrite manuscript files or replace drafted/revised chapters:
+
+\`\`\`bash
+openathor outline replan --from <id-or-order> --task "<task>" --from-package <replan-package.yaml|json> --confirm --base-hash "sha256:..." --json
+\`\`\`
+
+Use the latest \`outline/chapters.yaml\` hash as \`--base-hash\`. If the replan boundary includes drafted/revised chapters, use archive/split/merge/revise flows instead of forcing replan.
 
 Before archiving or deleting a chapter:
 

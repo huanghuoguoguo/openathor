@@ -545,8 +545,13 @@ async function dispatchCommand(
       cwd,
       from: parsed.options.from,
       task: parsed.options.task,
+      fromPackage: parsed.options.fromPackage,
+      confirm: parsed.options.confirm,
       dryRun: parsed.options.dryRun,
       diff: parsed.options.diff,
+      baseHash: parsed.options.baseHash
+        ? await resolveFixtureHash(cwd, parsed.options.baseHash)
+        : undefined,
       maxChars: parsed.options.maxChars,
     });
   }
@@ -711,6 +716,7 @@ function parseCommand(command: string): {
     confirmWrite?: boolean;
     baseHash?: string;
     nextBaseHash?: string;
+    fromPackage?: string;
     from?: string;
     after?: string;
     atLine?: number;
@@ -798,6 +804,12 @@ function parseCommand(command: string): {
     if (token === "--from") {
       index += 1;
       options.from = unescapeFixtureArgument(tokens[index]);
+      continue;
+    }
+
+    if (token === "--from-package") {
+      index += 1;
+      options.fromPackage = unescapeFixtureArgument(tokens[index]);
       continue;
     }
 
@@ -1114,7 +1126,7 @@ function parseCommand(command: string): {
     };
   }
 
-  if (positional[0] === "outline" && positional[1] === "replan") {
+    if (positional[0] === "outline" && positional[1] === "replan") {
     return {
       display: "openathor outline replan",
       name: "outline replan",

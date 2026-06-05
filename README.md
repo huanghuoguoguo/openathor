@@ -48,6 +48,7 @@ node dist/cli.js outline split 1 --at-line 12 --title-before "前半章" --title
 node dist/cli.js outline merge 1 2 --title "合并章" --json
 node dist/cli.js outline merge 1 2 --title "合并章" --confirm --base-hash "sha256:..." --next-base-hash "sha256:..." --json
 node dist/cli.js outline replan --from 3 --task "重规划后续剧情" --json
+node dist/cli.js outline replan --from 3 --task "重规划后续剧情" --from-package notes/replan-package.yaml --confirm --base-hash "sha256:..." --json
 node dist/cli.js outline archive 1 --confirm --base-hash "sha256:..." --json
 node dist/cli.js search text "关键词" --json
 node dist/cli.js search related chapter 1 --json

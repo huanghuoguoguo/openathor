@@ -1,0 +1,12 @@
+chapters:
+  - title: 调车场疑影
+    summary: 林岚去旧站台后的调车场核对匿名电话来源，不提前揭露父亲真相。
+    links:
+      hooks:
+        - hook-old-platform-call
+  - title: 广播回声
+    summary: 旧站台广播出现第二次回声，把调查引向管理员留下的巡查簿。
+    links:
+      hooks:
+        - hook-old-platform-call
+        - hook-patrol-ledger

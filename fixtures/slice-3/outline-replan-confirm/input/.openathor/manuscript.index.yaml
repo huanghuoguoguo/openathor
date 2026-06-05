@@ -1,0 +1,24 @@
+version: "0.1"
+generated_at: "2026-06-05T00:00:00.000Z"
+source_mode: created
+chapters:
+  - id: ch_001
+    display_order: 1
+    title: 雨夜
+    source_path: manuscript/chapter-001.md
+    status: drafted
+    origin: created
+    content_hash: sha256:30a98a83e95db85658d99a02a6bb24b2c861504fdea14d14531310083aa9386a
+    detected_title: 雨夜
+    confidence: high
+  - id: ch_002
+    display_order: 2
+    title: 追问
+    source_path: manuscript/chapter-002.md
+    status: drafted
+    origin: created
+    content_hash: sha256:4720562eea7686930ddfaf2c694d490eb1e1fb9ed4c55d696467686c795373a5
+    detected_title: 追问
+    confidence: high
+unclassified: []
+questions: []

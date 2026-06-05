@@ -214,7 +214,7 @@
 - [x] 确定性相关检索：`openathor search related`
 - [x] 可选派生向量检索：`openathor index rebuild --vector` + `openathor search semantic`
 - [x] 写作后资产沉淀：`openathor assets sync`
-- [ ] confirmed replan
+- [x] confirmed replan for planned future outline chapters
 - [x] LLM-as-judge 自动化 smoke：证据包结构校验和 deterministic replay 已接入 `npm test`
 - [x] 真实 Pi Agent/Operator Agent transcript 可本地附加到单个 evidence package
 - [x] LLM judge scores 可本地附加到单个 evidence package

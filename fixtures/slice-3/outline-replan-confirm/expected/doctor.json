@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "checks": {
+    "openathor_yaml": true,
+    "outline_chapters": true,
+    "manuscript_index": true,
+    "source_paths_exist": true,
+    "manuscript_index_matches_outline": true
+  }
+}
