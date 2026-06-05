@@ -155,6 +155,15 @@ type OutlineImpactOptions = {
   maxChars?: number;
 };
 
+type OutlineInsertOptions = {
+  cwd?: string;
+  after?: string;
+  title?: string;
+  confirm?: boolean;
+  dryRun?: boolean;
+  diff?: boolean;
+};
+
 type OutlineArchiveOptions = {
   cwd?: string;
   target?: string;
@@ -857,6 +866,153 @@ export async function runOutlineImpact(
   };
 }
 
+export async function runOutlineInsert(
+  options: OutlineInsertOptions = {},
+): Promise<CommandResult> {
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
+  const after = resolveOutlineTarget(
+    options.after,
+    inspection.chapters,
+    inspection.manuscriptIndex,
+  );
+  const title = options.title?.trim();
+
+  if (!title) {
+    throw new OpenAthorError(
+      "OA_OUTLINE_TITLE_REQUIRED",
+      "openathor outline insert requires --title <title>.",
+      { exitCode: 2 },
+    );
+  }
+
+  const dryRun = options.dryRun ?? false;
+  const confirm = options.confirm ?? false;
+  const diff = options.diff ?? false;
+  const previewOnly = dryRun || diff || !confirm;
+  const insertOrder = after.display_order + 1;
+  const chapterId = uniqueNewOutlineChapterId(
+    insertOrder,
+    inspection.chapters,
+    inspection.manuscriptIndex,
+  );
+  const stamp = runStamp();
+  const runRelPath = `runs/run_${stamp}_outline_insert.json`;
+  const shiftsIndexedChapters = inspection.manuscriptIndex.chapters.some(
+    (chapter) => chapter.display_order >= insertOrder,
+  );
+  const plannedWrites = insertWrites(runRelPath, shiftsIndexedChapters);
+  const affectedChapters = insertAffectedChapters(
+    inspection.chapters,
+    inspection.manuscriptIndex,
+    insertOrder,
+  );
+  const insertedChapter: {
+    id: string;
+    display_order: number;
+    title: string;
+    status: ChapterOutlineEntry["status"];
+    manuscript_path: string | null;
+  } = {
+    id: chapterId,
+    display_order: insertOrder,
+    title,
+    status: "planned" as const,
+    manuscript_path: null,
+  };
+  const data = {
+    dry_run: dryRun,
+    mode: previewOnly ? (diff ? "diff" : "proposal") : "confirmed_write",
+    command: "openathor outline insert",
+    after: outlineTargetData(after, null),
+    inserted: insertedChapter,
+    result: insertResult(insertedChapter, affectedChapters, false),
+    user_confirmation_required: !confirm,
+    planned_writes: previewOnly ? plannedWrites : [],
+    diff: insertDiff(after, insertedChapter, affectedChapters),
+    next_agent_action: previewOnly
+      ? "Show the planned structural change to the user and rerun with --confirm only after explicit approval."
+      : "Run openathor outline show --json and refresh context before drafting the inserted chapter.",
+  };
+
+  if (previewOnly) {
+    return {
+      projectRoot,
+      projectId: inspection.config.project.id,
+      sources: insertSources(inspection.sources),
+      writes: [],
+      warnings: inspection.warnings,
+      data,
+    };
+  }
+
+  const updatedChapters: ChapterOutline = {
+    chapters: [
+      ...inspection.chapters.chapters.map((chapter) =>
+        chapter.display_order >= insertOrder
+          ? {
+              ...chapter,
+              display_order: chapter.display_order + 1,
+            }
+          : chapter,
+      ),
+      {
+        id: chapterId,
+        display_order: insertOrder,
+        title,
+        status: "planned" as const,
+      },
+    ].sort((a, b) => a.display_order - b.display_order || a.id.localeCompare(b.id)),
+  };
+
+  await writeYaml(projectRoot, "outline/chapters.yaml", updatedChapters);
+
+  if (shiftsIndexedChapters) {
+    const updatedIndex: ManuscriptIndex = {
+      ...inspection.manuscriptIndex,
+      generated_at: new Date().toISOString(),
+      chapters: inspection.manuscriptIndex.chapters
+        .map((chapter) =>
+          chapter.display_order >= insertOrder
+            ? {
+                ...chapter,
+                display_order: chapter.display_order + 1,
+              }
+            : chapter,
+        )
+        .sort((a, b) => a.display_order - b.display_order || a.id.localeCompare(b.id)),
+    };
+
+    await writeYaml(projectRoot, ".openathor/manuscript.index.yaml", updatedIndex);
+  }
+  await writeYaml(projectRoot, runRelPath, {
+    agent_role: "openathor-cli",
+    command: "openathor outline insert",
+    created_at: new Date().toISOString(),
+    mode: "confirmed_write",
+    after: outlineTargetData(after, null),
+    inserted: insertedChapter,
+    affected_chapters: affectedChapters,
+    manuscript_file_created: false,
+    writes: plannedWrites,
+    sources: insertSources(inspection.sources),
+    user_confirmation_required: false,
+  });
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources: insertSources(inspection.sources),
+    writes: plannedWrites,
+    warnings: inspection.warnings,
+    data: {
+      ...data,
+      planned_writes: [],
+      result: insertResult(insertedChapter, affectedChapters, true),
+    },
+  };
+}
+
 export async function runOutlineArchive(
   options: OutlineArchiveOptions = {},
 ): Promise<CommandResult> {
@@ -1230,6 +1386,158 @@ function outlineTargetData(
     outline_status: target.outline_status,
     index_status: target.index_status,
   };
+}
+
+function insertResult(
+  insertedChapter: {
+    id: string;
+    display_order: number;
+    title: string;
+    status: ChapterOutlineEntry["status"];
+    manuscript_path: string | null;
+  },
+  affectedChapters: Array<{
+    id: string;
+    title: string;
+    from_display_order: number;
+    to_display_order: number;
+    source_path: string | null;
+  }>,
+  applied: boolean,
+): {
+  applied: boolean;
+  inserted_chapter: typeof insertedChapter;
+  affected_chapters: typeof affectedChapters;
+  manuscript_file_created: false;
+  manuscript_files_moved: false;
+} {
+  return {
+    applied,
+    inserted_chapter: insertedChapter,
+    affected_chapters: affectedChapters,
+    manuscript_file_created: false,
+    manuscript_files_moved: false,
+  };
+}
+
+function insertAffectedChapters(
+  chapters: ChapterOutline,
+  manuscriptIndex: ManuscriptIndex,
+  insertOrder: number,
+): Array<{
+  id: string;
+  title: string;
+  from_display_order: number;
+  to_display_order: number;
+  source_path: string | null;
+}> {
+  const indexedById = new Map(
+    manuscriptIndex.chapters.map((chapter) => [chapter.id, chapter]),
+  );
+
+  return chapters.chapters
+    .filter((chapter) => chapter.display_order >= insertOrder)
+    .sort((a, b) => a.display_order - b.display_order)
+    .map((chapter) => ({
+      id: chapter.id,
+      title: chapter.title,
+      from_display_order: chapter.display_order,
+      to_display_order: chapter.display_order + 1,
+      source_path: indexedById.get(chapter.id)?.source_path ?? chapter.manuscript_path ?? null,
+    }));
+}
+
+function insertWrites(runRelPath: string, shiftsIndexedChapters: boolean): EnvelopeWrite[] {
+  const writes: EnvelopeWrite[] = [
+    {
+      path: "outline/chapters.yaml",
+      change_type: "modified",
+      reason: "outline_insert_planned_chapter",
+    },
+  ];
+
+  if (shiftsIndexedChapters) {
+    writes.push({
+      path: ".openathor/manuscript.index.yaml",
+      change_type: "modified",
+      reason: "outline_insert_display_order_shift",
+    });
+  }
+
+  writes.push({
+    path: runRelPath,
+    change_type: "created",
+    reason: "outline_insert_run_record",
+  });
+
+  return writes;
+}
+
+function insertDiff(
+  after: ResolvedOutlineChapter,
+  insertedChapter: {
+    id: string;
+    display_order: number;
+    title: string;
+    status: ChapterOutlineEntry["status"];
+    manuscript_path: string | null;
+  },
+  affectedChapters: Array<{
+    id: string;
+    title: string;
+    from_display_order: number;
+    to_display_order: number;
+    source_path: string | null;
+  }>,
+): {
+  summary: string;
+  changes: Array<{
+    path: string;
+    field: string;
+    from: string | number | null;
+    to: string | number | null;
+  }>;
+} {
+  return {
+    summary:
+      "Insert a planned chapter in outline metadata; keep existing chapter ids and manuscript files in place.",
+    changes: [
+      {
+        path: "outline/chapters.yaml",
+        field: `insert_after[${after.id}]`,
+        from: null,
+        to: insertedChapter.id,
+      },
+      {
+        path: "outline/chapters.yaml",
+        field: `chapters[${insertedChapter.id}].display_order`,
+        from: null,
+        to: insertedChapter.display_order,
+      },
+      ...affectedChapters.map((chapter) => ({
+        path: "outline/chapters.yaml",
+        field: `chapters[${chapter.id}].display_order`,
+        from: chapter.from_display_order,
+        to: chapter.to_display_order,
+      })),
+      ...affectedChapters
+        .filter((chapter) => chapter.source_path)
+        .map((chapter) => ({
+          path: ".openathor/manuscript.index.yaml",
+          field: `chapters[${chapter.id}].display_order`,
+          from: chapter.from_display_order,
+          to: chapter.to_display_order,
+        })),
+    ],
+  };
+}
+
+function insertSources(sources: EnvelopeSource[]): EnvelopeSource[] {
+  const relevant = new Set(["outline/chapters.yaml", ".openathor/manuscript.index.yaml"]);
+
+  return sources
+    .filter((source) => relevant.has(source.path))
+    .sort((a, b) => a.path.localeCompare(b.path));
 }
 
 function archiveResult(
@@ -2642,6 +2950,26 @@ function nextDisplayOrder(index: ManuscriptIndex): number {
 
 function uniqueNewChapterId(order: number, index: ManuscriptIndex): string {
   const existing = new Set(index.chapters.map((chapter) => chapter.id));
+  let candidate = `ch_${String(order).padStart(3, "0")}`;
+  let suffix = 2;
+
+  while (existing.has(candidate)) {
+    candidate = `ch_${String(order).padStart(3, "0")}_${suffix}`;
+    suffix += 1;
+  }
+
+  return candidate;
+}
+
+function uniqueNewOutlineChapterId(
+  order: number,
+  chapters: ChapterOutline,
+  manuscriptIndex: ManuscriptIndex,
+): string {
+  const existing = new Set([
+    ...chapters.chapters.map((chapter) => chapter.id),
+    ...manuscriptIndex.chapters.map((chapter) => chapter.id),
+  ]);
   let candidate = `ch_${String(order).padStart(3, "0")}`;
   let suffix = 2;
 

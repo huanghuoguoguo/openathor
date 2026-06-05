@@ -16,6 +16,7 @@ import {
   runInit,
   runOutlineArchive,
   runOutlineImpact,
+  runOutlineInsert,
   runOutlineShow,
   runSearchRelated,
   runSearchText,
@@ -430,6 +431,17 @@ async function dispatchCommand(
     });
   }
 
+  if (parsed.name === "outline insert") {
+    return runOutlineInsert({
+      cwd,
+      after: parsed.options.after,
+      title: parsed.options.title,
+      confirm: parsed.options.confirm,
+      dryRun: parsed.options.dryRun,
+      diff: parsed.options.diff,
+    });
+  }
+
   if (parsed.name === "outline archive") {
     return runOutlineArchive({
       cwd,
@@ -495,6 +507,7 @@ function parseCommand(command: string): {
     | "search related"
     | "outline show"
     | "outline impact"
+    | "outline insert"
     | "outline archive"
     | "plan"
     | "draft"
@@ -521,6 +534,7 @@ function parseCommand(command: string): {
     text?: string;
     confirmWrite?: boolean;
     baseHash?: string;
+    after?: string;
   };
 } {
   const tokens = command.match(/"[^"]*"|'[^']*'|\S+/g)?.map((token) =>
@@ -627,6 +641,12 @@ function parseCommand(command: string): {
       continue;
     }
 
+    if (token === "--after") {
+      index += 1;
+      options.after = tokens[index];
+      continue;
+    }
+
     positional.push(token);
   }
 
@@ -710,6 +730,14 @@ function parseCommand(command: string): {
       display: "openathor outline impact",
       name: "outline impact",
       pathArg: positional[2],
+      options,
+    };
+  }
+
+  if (positional[0] === "outline" && positional[1] === "insert") {
+    return {
+      display: "openathor outline insert",
+      name: "outline insert",
       options,
     };
   }

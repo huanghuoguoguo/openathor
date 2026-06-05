@@ -69,7 +69,8 @@
 - [x] 用户确认后写入下一章新正文：`openathor draft chapter next --confirm-write`
 - [x] 确认写入新章标题 fallback：优先 Markdown H1，其次任务中的书名号/引号标题、项目标题、章节序号
 - [x] 用户确认后改写已有章节正文：`openathor revise chapter --confirm-write --base-hash`
-- [x] 结构编辑最小闭环：`openathor outline show/impact/archive`
+- [x] 结构编辑最小闭环：`openathor outline show/impact/insert/archive`
+- [x] 用户确认后插入 planned 章节元数据：`openathor outline insert --confirm`
 - [x] LLM-as-judge 自动化 smoke：`openathor-judge-smoke`
 
 ## 项目协议
@@ -194,10 +195,11 @@
 
 当前实现状态：
 
-- [x] 结构编辑最小闭环：`openathor outline show/impact/archive`
+- [x] 结构编辑最小闭环：`openathor outline show/impact/insert/archive`
+- [x] 插章 planned 元数据闭环：`openathor outline insert`
 - [x] 确定性文本检索：`openathor search text`
 - [x] 确定性相关检索：`openathor search related`
-- [ ] 插章、移章、拆分、合并和重规划
+- [ ] 移章、拆分、合并和重规划
 - [ ] 向量语义检索
 - [x] LLM-as-judge 自动化 smoke：证据包结构校验和 deterministic replay 已接入 `npm test`
 - [x] 真实 Pi Agent/Operator Agent transcript 可本地附加到单个 evidence package

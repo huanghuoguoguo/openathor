@@ -1,0 +1,32 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor outline insert --after 1 --title "站台疑影" --json
+    ok: true
+    expect_data:
+      mode: proposal
+      inserted.title: 站台疑影
+      inserted.display_order: 2
+      result.applied: false
+      result.manuscript_file_created: false
+  - run: openathor outline insert --after 1 --title "站台疑影" --confirm --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      inserted.title: 站台疑影
+      inserted.display_order: 2
+      result.applied: true
+      result.manuscript_file_created: false
+  - run: openathor outline show --json
+    ok: true
+    expect_data:
+      outline.chapter_count: 3
+  - run: openathor context chapter 3 --json
+    ok: true
+    expect_data:
+      context_pack.target.display_order: 3
+      context_pack.target.source_path: 正文/002-追问.md
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true
