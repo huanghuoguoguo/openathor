@@ -10,6 +10,8 @@ import {
 import path from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { PROTOCOL_VERSION } from "./constants.js";
+import { isAssetIdForKind, isLegacyAssetIdForKind } from "./asset-ids.js";
+import { normalizeAssetSyncPackagePath, readAssetSyncPackage } from "./asset-sync-package.js";
 import { detectCanonConflicts } from "./canon-conflict.js";
 import type {
   EnvelopeSource,
@@ -41,6 +43,7 @@ import {
   snippetAround,
 } from "./text-analysis.js";
 import { firstMarkdownHeading, titleFromTask } from "./title.js";
+import { isPlainRecord, optionalString, stringArray, uniqueLimited } from "./value.js";
 import { PI_SKILL_TEXT } from "../skills/pi-skill.js";
 import type {
   AdoptOptions,
@@ -6308,40 +6311,6 @@ function isGenericAssetHeading(value: string): boolean {
   );
 }
 
-function isAssetIdForKind(id: string, kind: AssetEntity["kind"]): boolean {
-  const normalized = id.toLowerCase();
-  if (isLegacyAssetIdForKind(normalized, kind)) {
-    return true;
-  }
-
-  if (kind === "character") {
-    return /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(normalized);
-  }
-  if (kind === "timeline_event") {
-    return normalized.startsWith("event-");
-  }
-  if (kind === "hook") {
-    return normalized.startsWith("hook-");
-  }
-
-  return /^(loc|org|item|world)[_-]/.test(normalized);
-}
-
-function isLegacyAssetIdForKind(id: string, kind: AssetEntity["kind"]): boolean {
-  const normalized = id.toLowerCase();
-  if (kind === "character") {
-    return normalized.startsWith("char_");
-  }
-  if (kind === "timeline_event") {
-    return normalized.startsWith("ev_");
-  }
-  if (kind === "hook") {
-    return normalized.startsWith("hook_");
-  }
-
-  return /^(loc|org|item|world)_/.test(normalized);
-}
-
 function assetLookup(entities: AssetEntity[]): Map<string, AssetEntity> {
   const lookup = new Map<string, AssetEntity>();
 
@@ -6658,235 +6627,6 @@ function extractAssetAuditCoverageTerms(text: string): string[] {
 
 function normalizeAssetAuditText(text: string): string {
   return text.toLowerCase().replace(/\s+/g, "");
-}
-
-async function readAssetSyncPackage(
-  projectRoot: string,
-  safeRelPath: string,
-): Promise<AssetSyncPackage> {
-  const fullPath = path.join(projectRoot, safeRelPath);
-
-  if (!(await pathExists(fullPath))) {
-    throw new OpenAthorError(
-      "OA_ASSETS_SYNC_PACKAGE_NOT_FOUND",
-      `Asset sync package not found: ${safeRelPath}`,
-      { exitCode: 2 },
-    );
-  }
-
-  const text = await readFile(fullPath, "utf8");
-  let parsed: unknown;
-
-  try {
-    parsed =
-      safeRelPath.endsWith(".json") || safeRelPath.endsWith(".jsonc")
-        ? JSON.parse(text)
-        : parseYaml(text);
-  } catch (error) {
-    throw new OpenAthorError(
-      "OA_ASSETS_SYNC_PACKAGE_INVALID",
-      `Cannot parse asset sync package ${safeRelPath}: ${String(error)}`,
-      { exitCode: 3 },
-    );
-  }
-
-  return normalizeAssetSyncPackage(parsed);
-}
-
-function normalizeAssetSyncPackagePath(relPath: string | undefined): string {
-  if (!relPath?.trim()) {
-    throw new OpenAthorError(
-      "OA_ASSETS_SYNC_PACKAGE_REQUIRED",
-      "openathor assets sync requires --from <asset-package.json|yaml>.",
-      { exitCode: 2 },
-    );
-  }
-
-  const safeRelPath = toPosix(relPath.trim());
-  ensureSafeRelativePath(safeRelPath, "--from");
-
-  return safeRelPath;
-}
-
-function normalizeAssetSyncPackage(value: unknown): AssetSyncPackage {
-  if (!isPlainRecord(value)) {
-    throw new OpenAthorError(
-      "OA_ASSETS_SYNC_PACKAGE_INVALID",
-      "Asset sync package must be a JSON/YAML object.",
-      { exitCode: 3 },
-    );
-  }
-
-  const record = value;
-  const chapterRecord = isPlainRecord(record.chapter) ? record.chapter : {};
-  const linksRecord = isPlainRecord(chapterRecord.links) ? chapterRecord.links : {};
-  const pkg: AssetSyncPackage = {
-    characters: normalizeAssetSyncCharacters(record.characters),
-    timeline_events: normalizeAssetSyncTimelineEvents(record.timeline_events),
-    hooks: normalizeAssetSyncHooks(record.hooks),
-    chapter: {
-      summary: optionalString(chapterRecord.summary),
-      links: {
-        characters: stringArray(linksRecord.characters),
-        timeline_events: stringArray(linksRecord.timeline_events),
-        hooks: stringArray(linksRecord.hooks),
-      },
-    },
-  };
-
-  const linkedCharacterIds = new Set(pkg.chapter.links.characters);
-  const linkedTimelineIds = new Set(pkg.chapter.links.timeline_events);
-  const linkedHookIds = new Set(pkg.chapter.links.hooks);
-
-  for (const character of pkg.characters) {
-    linkedCharacterIds.add(character.id);
-  }
-  for (const event of pkg.timeline_events) {
-    linkedTimelineIds.add(event.id);
-  }
-  for (const hook of pkg.hooks) {
-    linkedHookIds.add(hook.id);
-  }
-
-  pkg.chapter.links = {
-    characters: [...linkedCharacterIds],
-    timeline_events: [...linkedTimelineIds],
-    hooks: [...linkedHookIds],
-  };
-
-  return pkg;
-}
-
-function normalizeAssetSyncCharacters(value: unknown): AssetSyncCharacter[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.map((item, index) => {
-    if (!isPlainRecord(item)) {
-      throw invalidAssetSyncItem("characters", index, "must be an object");
-    }
-
-    const id = requiredAssetSyncId(item.id, "character", "characters", index);
-    const name = requiredAssetSyncString(item.name, "characters", index, "name");
-
-    return {
-      id,
-      name,
-      role: optionalString(item.role),
-      traits: stringArray(item.traits),
-      current_state: optionalString(item.current_state),
-      notes: stringArray(item.notes),
-    };
-  });
-}
-
-function normalizeAssetSyncTimelineEvents(value: unknown): AssetSyncTimelineEvent[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.map((item, index) => {
-    if (!isPlainRecord(item)) {
-      throw invalidAssetSyncItem("timeline_events", index, "must be an object");
-    }
-
-    const id = requiredAssetSyncId(item.id, "timeline_event", "timeline_events", index);
-
-    return {
-      id,
-      title:
-        optionalString(item.title) ??
-        optionalString(item.name) ??
-        requiredAssetSyncString(item.summary, "timeline_events", index, "title"),
-      summary: optionalString(item.summary),
-      notes: stringArray(item.notes),
-    };
-  });
-}
-
-function normalizeAssetSyncHooks(value: unknown): AssetSyncHook[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.map((item, index) => {
-    if (!isPlainRecord(item)) {
-      throw invalidAssetSyncItem("hooks", index, "must be an object");
-    }
-
-    const id = requiredAssetSyncId(item.id, "hook", "hooks", index);
-
-    return {
-      id,
-      title:
-        optionalString(item.title) ??
-        optionalString(item.name) ??
-        requiredAssetSyncString(item.summary, "hooks", index, "title"),
-      status: optionalString(item.status),
-      summary: optionalString(item.summary),
-      notes: stringArray(item.notes),
-    };
-  });
-}
-
-function requiredAssetSyncId(
-  value: unknown,
-  kind: AssetEntity["kind"],
-  section: string,
-  index: number,
-): string {
-  const id = requiredAssetSyncString(value, section, index, "id");
-  if (!isAssetIdForKind(id, kind)) {
-    throw invalidAssetSyncItem(section, index, `id ${id} is not valid for ${kind}`);
-  }
-
-  return id;
-}
-
-function requiredAssetSyncString(
-  value: unknown,
-  section: string,
-  index: number,
-  field: string,
-): string {
-  const text = optionalString(value);
-  if (!text) {
-    throw invalidAssetSyncItem(section, index, `requires ${field}`);
-  }
-
-  return text;
-}
-
-function invalidAssetSyncItem(section: string, index: number, reason: string): OpenAthorError {
-  return new OpenAthorError(
-    "OA_ASSETS_SYNC_PACKAGE_INVALID",
-    `Invalid asset sync package item ${section}.${index}: ${reason}.`,
-    { exitCode: 3 },
-  );
-}
-
-function optionalString(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const text = value.trim();
-  return text.length > 0 ? text : null;
-}
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function stringArray(value: unknown): string[] {
-  const values = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
-  return uniqueLimited(
-    values
-      .map((item) => (typeof item === "string" ? item.trim() : ""))
-      .filter((item) => item.length > 0),
-    100,
-  );
 }
 
 function buildAssetSyncPlan(
@@ -8094,24 +7834,6 @@ function styleDriftFindings(
 
 function countPatternHits(text: string, pattern: RegExp): number {
   return text.match(pattern)?.length ?? 0;
-}
-
-function uniqueLimited(values: string[], limit: number): string[] {
-  const seen = new Set<string>();
-  const result = [];
-
-  for (const value of values) {
-    if (seen.has(value)) {
-      continue;
-    }
-    seen.add(value);
-    result.push(value);
-    if (result.length >= limit) {
-      break;
-    }
-  }
-
-  return result;
 }
 
 function uniqueWarnings(warnings: EnvelopeWarning[]): EnvelopeWarning[] {

@@ -3,6 +3,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import type { EnvelopeSource } from "./envelope.js";
 import { isSafeRelativePath, sha256File, toPosix } from "./paths.js";
+import { isPlainRecord } from "./value.js";
 
 export type StyleReferenceCopyMatch = {
   reference_path: string;
@@ -113,10 +114,6 @@ function normalizeCopyCheckText(text: string): string {
 
 function asRecordArray(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.filter(isPlainRecord) : [];
-}
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 async function pathExists(filePath: string): Promise<boolean> {
