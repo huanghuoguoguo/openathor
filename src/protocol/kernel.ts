@@ -342,6 +342,45 @@ type AssetEntity = {
   profile: Record<string, string[]>;
 };
 
+type ChapterEntityCoverage = {
+  id: string;
+  display_order: number;
+  title: string;
+  source_path: string | null;
+  linked_characters: string[];
+  linked_character_names: string[];
+  mentioned_characters: string[];
+  missing_character_links: string[];
+};
+
+type CharacterProfileCoverageField = {
+  field: string;
+  values: string[];
+  total_terms: number;
+  matched_terms: string[];
+  missing_terms: string[];
+  coverage_ratio: number;
+};
+
+type CharacterProfileCoverage = {
+  checked_fields: number;
+  matched_fields: number;
+  total_terms: number;
+  matched_terms: string[];
+  missing_terms: string[];
+  coverage_ratio: number;
+  fields: CharacterProfileCoverageField[];
+};
+
+type ChapterCharacterProfileCoverage = CharacterProfileCoverage & {
+  id: string;
+  display_order: number;
+  title: string;
+  character_id: string | null;
+  character_name: string;
+  source_path: string | null;
+};
+
 type AssetSyncCharacter = {
   id: string;
   name: string;
@@ -1290,8 +1329,9 @@ export async function runAssetsAudit(
   const knownHooks = assetLookup(hooks);
   const linkedAssetRefs = new Set<string>();
   const outlineLinkIssues = [];
-  const chapterEntityCoverage = [];
-  const characterProfileCoverage = [];
+  const chapterEntityCoverage: ChapterEntityCoverage[] = [];
+  const characterProfileCoverage: ChapterCharacterProfileCoverage[] = [];
+  const characterProfileSummaryTexts = new Map<string, string[]>();
   const summaryDrift = [];
 
   for (const chapter of [...inspection.chapters.chapters].sort(
@@ -1366,6 +1406,19 @@ export async function runAssetsAudit(
         mentioned_characters: mentionedCharacters,
         missing_character_links: missingCharacterLinks,
       });
+    }
+
+    for (const character of characters) {
+      const linked = linkedCharacters.some((link) => isSameAssetReference(link, character));
+      const mentioned = mentionedCharacters.includes(character.name);
+
+      if (linked || mentioned) {
+        const key = assetSummaryKey(character);
+        characterProfileSummaryTexts.set(key, [
+          ...(characterProfileSummaryTexts.get(key) ?? []),
+          fullText,
+        ]);
+      }
     }
 
     for (const link of linkedCharacters) {
@@ -1460,6 +1513,26 @@ export async function runAssetsAudit(
   const weakProfileCoverageCount = characterProfileCoverage.filter(
     (coverage) => coverage.coverage_ratio < 0.12,
   ).length;
+  const characterProfileSummary = summarizeCharacterProfileCoverage(
+    characters,
+    chapterEntityCoverage,
+    characterProfileCoverage,
+    characterProfileSummaryTexts,
+  );
+  const weakCharacterProfileSummaryCount = characterProfileSummary.filter(
+    (summary) =>
+      summary.profile_field_count > 0 &&
+      summary.chapters.length > 0 &&
+      summary.coverage_ratio < 0.22,
+  ).length;
+
+  if (weakCharacterProfileSummaryCount > 0) {
+    warnings.push({
+      code: "OA_ASSET_CHARACTER_PROFILE_WEAK",
+      message: `Found ${weakCharacterProfileSummaryCount} character profile summary candidate(s) with weak manuscript coverage across linked chapters.`,
+      severity: "low",
+    });
+  }
 
   return {
     projectRoot,
@@ -1500,12 +1573,14 @@ export async function runAssetsAudit(
           unresolved_outline_links: outlineLinkIssues.length,
           character_link_drifts: missingCoverageCount,
           weak_character_profile_coverages: weakProfileCoverageCount,
+          weak_character_profile_summaries: weakCharacterProfileSummaryCount,
           summary_drift_candidates: summaryDrift.length,
           unlinked_characters: unlinkedCharacters.length,
         },
         outline_link_issues: outlineLinkIssues,
         chapter_entity_coverage: chapterEntityCoverage,
         character_profile_coverage: characterProfileCoverage,
+        character_profile_summary: characterProfileSummary,
         summary_drift: summaryDrift,
         unlinked_characters: unlinkedCharacters,
       },
@@ -6237,22 +6312,7 @@ function addLinkedAssetRef(
 function characterAssetProfileCoverage(
   character: AssetEntity,
   chapterText: string,
-): {
-  checked_fields: number;
-  matched_fields: number;
-  total_terms: number;
-  matched_terms: string[];
-  missing_terms: string[];
-  coverage_ratio: number;
-  fields: Array<{
-    field: string;
-    values: string[];
-    total_terms: number;
-    matched_terms: string[];
-    missing_terms: string[];
-    coverage_ratio: number;
-  }>;
-} {
+): CharacterProfileCoverage {
   const normalizedChapterText = normalizeAssetAuditText(chapterText);
   const fields = Object.entries(character.profile)
     .map(([field, values]) => ({
@@ -6306,6 +6366,108 @@ function characterAssetProfileCoverage(
     coverage_ratio: totalTerms === 0 ? 1 : roundTwo(matchedTerms.size / totalTerms),
     fields: fieldCoverage,
   };
+}
+
+function summarizeCharacterProfileCoverage(
+  characters: AssetEntity[],
+  chapterEntityCoverage: ChapterEntityCoverage[],
+  characterProfileCoverage: ChapterCharacterProfileCoverage[],
+  characterProfileSummaryTexts: Map<string, string[]>,
+): Array<{
+  character_id: string | null;
+  character_name: string;
+  source_path: string;
+  line: number;
+  profile_field_count: number;
+  matched_profile_field_count: number;
+  total_terms: number;
+  matched_terms: string[];
+  missing_terms: string[];
+  coverage_ratio: number;
+  linked_chapter_count: number;
+  mentioned_chapter_count: number;
+  chapters: Array<{
+    id: string;
+    display_order: number;
+    title: string;
+    source_path: string | null;
+    linked: boolean;
+    mentioned: boolean;
+    matched_fields: number;
+    checked_fields: number;
+    coverage_ratio: number | null;
+  }>;
+}> {
+  return characters.map((character) => {
+    const allFields = Object.entries(character.profile)
+      .map(([field, values]) => ({
+        field,
+        values,
+        terms: extractAssetProfileCoverageTerms(values.join(" ")),
+      }))
+      .filter((field) => field.terms.length > 0);
+    const projectCoverage = characterAssetProfileCoverage(
+      character,
+      (characterProfileSummaryTexts.get(assetSummaryKey(character)) ?? []).join("\n"),
+    );
+
+    const chapterRows = chapterEntityCoverage
+      .map((chapter) => {
+        const linked = chapter.linked_characters.some((link) =>
+          isSameAssetReference(link, character),
+        );
+        const mentioned = chapter.mentioned_characters.includes(character.name);
+
+        if (!linked && !mentioned) {
+          return null;
+        }
+
+        const coverage = characterProfileCoverage.find(
+          (candidate) =>
+            candidate.id === chapter.id &&
+            (candidate.character_id === character.id ||
+              candidate.character_name === character.name),
+        );
+
+        return {
+          id: chapter.id,
+          display_order: chapter.display_order,
+          title: chapter.title,
+          source_path: chapter.source_path,
+          linked,
+          mentioned,
+          matched_fields: coverage?.matched_fields ?? 0,
+          checked_fields: coverage?.checked_fields ?? allFields.length,
+          coverage_ratio: coverage?.coverage_ratio ?? null,
+        };
+      })
+      .filter((chapter): chapter is NonNullable<typeof chapter> => chapter !== null)
+      .sort((a, b) => a.display_order - b.display_order);
+
+    return {
+      character_id: character.id,
+      character_name: character.name,
+      source_path: character.source_path,
+      line: character.line,
+      profile_field_count: allFields.length,
+      matched_profile_field_count: projectCoverage.matched_fields,
+      total_terms: projectCoverage.total_terms,
+      matched_terms: projectCoverage.matched_terms.slice(0, 24),
+      missing_terms: projectCoverage.missing_terms.slice(0, 24),
+      coverage_ratio: projectCoverage.coverage_ratio,
+      linked_chapter_count: chapterRows.filter((chapter) => chapter.linked).length,
+      mentioned_chapter_count: chapterRows.filter((chapter) => chapter.mentioned).length,
+      chapters: chapterRows,
+    };
+  });
+}
+
+function assetSummaryKey(entity: AssetEntity): string {
+  return entity.id ?? entity.name;
+}
+
+function isSameAssetReference(value: string, entity: AssetEntity): boolean {
+  return value === entity.name || (entity.id !== null && value === entity.id);
 }
 
 function stringLinks(value: unknown): string[] {

@@ -49,6 +49,7 @@ commands:
       audit.counts.unresolved_outline_links: 0
       audit.counts.character_link_drifts: 0
       audit.counts.weak_character_profile_coverages: 2
+      audit.counts.weak_character_profile_summaries: 0
       audit.counts.summary_drift_candidates: 0
       audit.counts.unlinked_characters: 0
       audit.assets.characters.0.id: lin-zhi-yu
@@ -66,6 +67,20 @@ commands:
       audit.character_profile_coverage.8.matched_fields: 3
       audit.character_profile_coverage.8.fields.2.field: current_state
       audit.character_profile_coverage.8.fields.2.coverage_ratio: 0.91
+      audit.character_profile_summary.0.character_id: lin-zhi-yu
+      audit.character_profile_summary.0.linked_chapter_count: 3
+      audit.character_profile_summary.0.mentioned_chapter_count: 3
+      audit.character_profile_summary.0.matched_profile_field_count: 4
+      audit.character_profile_summary.0.coverage_ratio: 0.41
+      audit.character_profile_summary.1.character_id: zhou-yan
+      audit.character_profile_summary.1.linked_chapter_count: 3
+      audit.character_profile_summary.1.matched_profile_field_count: 4
+      audit.character_profile_summary.2.character_id: chen-mo
+      audit.character_profile_summary.2.linked_chapter_count: 2
+      audit.character_profile_summary.2.coverage_ratio: 0.22
+      audit.character_profile_summary.3.character_id: xu-man
+      audit.character_profile_summary.3.linked_chapter_count: 1
+      audit.character_profile_summary.3.coverage_ratio: 0.74
   - run: openathor context chapter 3 --json
     ok: true
     expect_data:

@@ -46,6 +46,7 @@ type ExpectedCommand = {
   error_code?: string;
   expect_data_path?: string;
   expect_data?: Record<string, unknown>;
+  expect_warnings?: string[];
   expect_no_writes?: boolean;
 };
 
@@ -239,6 +240,16 @@ export async function runFixtureCheck(
           throw new OpenAthorError(
             "OA_FIXTURE_COMMAND_FAILED",
             `Command ${expectedCommand.run} data path ${dataPath}=${JSON.stringify(actualValue)}, expected ${JSON.stringify(expectedValue)}.`,
+            { exitCode: 4 },
+          );
+        }
+      }
+
+      for (const warningCode of expectedCommand.expect_warnings ?? []) {
+        if (!result.envelope.warnings.some((warning) => warning.code === warningCode)) {
+          throw new OpenAthorError(
+            "OA_FIXTURE_COMMAND_FAILED",
+            `Command ${expectedCommand.run} missing warning ${warningCode}.`,
             { exitCode: 4 },
           );
         }
