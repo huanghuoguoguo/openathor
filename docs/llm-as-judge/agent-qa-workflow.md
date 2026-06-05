@@ -74,6 +74,8 @@ Pi Agent + GLM-5 可以作为首个 Operator Agent 执行环境。
 7. LLM judge 再基于证据评分
 8. 生成失败报告
 
+当前自动化 smoke 使用 `openathor-judge-smoke` 生成 evidence package。smoke 默认不调用模型，而是检查真实 fixture replay、CLI 输出、writes/warnings 和 file changes 是否足以交给 judge；真实 Pi Agent transcript 和 LLM judge scores 后续填入同一证据格式。
+
 ## 失败报告格式
 
 ```yaml

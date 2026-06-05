@@ -69,7 +69,7 @@
 - [x] 用户确认后写入下一章新正文：`openathor draft chapter next --confirm-write`
 - [x] 用户确认后改写已有章节正文：`openathor revise chapter --confirm-write --base-hash`
 - [x] 结构编辑最小闭环：`openathor outline show/impact/archive`
-- [ ] LLM-as-judge 自动化 smoke
+- [x] LLM-as-judge 自动化 smoke：`openathor-judge-smoke`
 
 ## 项目协议
 
@@ -178,6 +178,7 @@
 - `fixtures/slice-1/scattered-drafts`
 - `fixtures/slice-1/adopt-ambiguous-order`
 - `openathor-fixture-check` 会复制 fixture input、执行 expected commands、校验 JSON envelope、expected files、disallowed writes，并在最终项目上运行 `openathor doctor --json --strict`。
+- `openathor-judge-smoke` 会复用 fixture replay，为已落地写作/结构场景生成 `openathor.judge_evidence.v1` 证据包。
 
 ### 后续切片准备项
 
@@ -196,7 +197,8 @@
 - [x] 确定性相关检索：`openathor search related`
 - [ ] 插章、移章、拆分、合并和重规划
 - [ ] 向量语义检索
-- [ ] LLM-as-judge 自动化 smoke
+- [x] LLM-as-judge 自动化 smoke：证据包结构校验和 deterministic replay 已接入 `npm test`
+- [ ] 真实 Pi Agent transcript 和 LLM judge scores 进入回归门禁
 
 参考：
 

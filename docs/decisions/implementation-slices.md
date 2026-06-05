@@ -131,6 +131,28 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 
 当前状态：`openathor search text` 和 `openathor search related` 已作为只读确定性检索落地，并纳入 fixture 回归。向量语义检索仍待实现。
 
+## Cross-Slice: LLM-as-Judge Smoke
+
+目标：证明已落地场景能形成可交给 judge 的证据包，避免 LLM judge 脱离 deterministic checks。
+
+包含：
+
+- `openathor-judge-smoke`
+- `openathor.judge_evidence.v1`
+- CLI command evidence
+- writes/warnings evidence
+- file changes summary
+- judge placeholder for real scores
+
+验收重点：
+
+- smoke 不依赖真实模型，能稳定进入 `npm test`
+- 证据包包含用户任务、命令、输出、文件变化和 agent 最终回复
+- 真实 Pi Agent transcript 和 judge scores 后续能复用同一格式
+- deterministic failures 不会被 judge 分数掩盖
+
+当前状态：第一版 smoke 已覆盖 `fixtures/slice-2/draft-confirm-write` 和 `fixtures/slice-3/outline-archive`。真实 Pi Agent transcript 和 LLM judge scores 仍待进入回归门禁。
+
 ## Slice 5: Delivery And Expansion
 
 目标：在核心闭环稳定后扩展导出、sub-agent 和其他 agent 适配。

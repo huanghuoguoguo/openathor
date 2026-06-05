@@ -1,0 +1,345 @@
+#!/usr/bin/env node
+import { Command } from "commander";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { envelope, errorEnvelope, type OpenAthorEnvelope } from "./protocol/envelope.js";
+import { OpenAthorError } from "./protocol/errors.js";
+import { runFixtureCheck, type FixtureCheckResult } from "./fixture-check.js";
+
+type JudgeDimension =
+  | "task_success"
+  | "safety"
+  | "canon_consistency"
+  | "context_use"
+  | "change_control"
+  | "user_experience"
+  | "writing_fit";
+
+type SmokeScenario = {
+  name: string;
+  fixture: string;
+  user_task: string;
+  expected_agent_reply: string;
+  judge_focus: JudgeDimension[];
+};
+
+type JudgePlaceholder = {
+  verdict: "needs_review";
+  blocking_failures: string[];
+  scores: Record<JudgeDimension, null>;
+  missing_evidence: string[];
+};
+
+type JudgeEvidencePackage = {
+  schema_version: "openathor.judge_evidence.v1";
+  scenario: string;
+  fixture: string;
+  user_task: string;
+  operator_agent: {
+    name: "openathor-judge-smoke";
+    mode: "deterministic_fixture_runner";
+    model: null;
+  };
+  deterministic_check: {
+    ok: boolean;
+    fixture_workspace: string;
+    command_count: number;
+    commands: Array<{
+      command: string;
+      ok: boolean;
+      error_code: string | null;
+      writes: OpenAthorEnvelope["writes"];
+      warnings: OpenAthorEnvelope["warnings"];
+    }>;
+    file_changes: FixtureCheckResult["file_changes"];
+    required_files: string[];
+    absent_files: string[];
+    unchanged_files: string[];
+  };
+  agent_final_response: string;
+  judge_focus: JudgeDimension[];
+  judge: JudgePlaceholder;
+};
+
+type JudgeSmokeResult = {
+  scenario_count: number;
+  evidence_packages: JudgeEvidencePackage[];
+  evidence_files: string[];
+};
+
+const defaultScenarios: SmokeScenario[] = [
+  {
+    name: "draft-confirm-write",
+    fixture: "fixtures/slice-2/draft-confirm-write",
+    user_task: "用户确认写入第二章草稿，并要求 OpenAthor 安全创建下一章正文。",
+    expected_agent_reply:
+      "已确认写入新章节，说明新增正文路径、索引状态和下一步需要运行或已运行的检查。",
+    judge_focus: [
+      "task_success",
+      "safety",
+      "context_use",
+      "change_control",
+      "user_experience",
+      "writing_fit",
+    ],
+  },
+  {
+    name: "outline-archive",
+    fixture: "fixtures/slice-3/outline-archive",
+    user_task:
+      "用户希望归档第一章，但要求保留正文文件和其中可能仍有价值的事实。",
+    expected_agent_reply:
+      "先给出影响分析，再在用户确认后归档章节元数据，并说明正文没有被删除或移动。",
+    judge_focus: [
+      "task_success",
+      "safety",
+      "canon_consistency",
+      "context_use",
+      "change_control",
+      "user_experience",
+    ],
+  },
+];
+
+const scoreDimensions: JudgeDimension[] = [
+  "task_success",
+  "safety",
+  "canon_consistency",
+  "context_use",
+  "change_control",
+  "user_experience",
+  "writing_fit",
+];
+
+const program = new Command();
+
+program
+  .name("openathor-judge-smoke")
+  .description("Generate deterministic LLM-as-judge evidence packages.")
+  .option("--json", "emit JSON")
+  .option("--out-dir <path>", "write evidence packages to this directory")
+  .option("--scenario <name>", "run one smoke scenario by name")
+  .action(
+    async (options: { json?: boolean; outDir?: string; scenario?: string }) => {
+      const command = "openathor-judge-smoke";
+
+      try {
+        const result = await runJudgeSmoke({
+          cwd: process.cwd(),
+          outDir: options.outDir,
+          scenario: options.scenario,
+        });
+        const output = envelope({
+          ok: true,
+          command,
+          projectRoot: process.cwd(),
+          writes: result.evidence_files.map((file) => ({
+            path: file,
+            change_type: "created",
+            reason: "LLM-as-judge smoke evidence package.",
+          })),
+          data: result,
+        });
+
+        if (options.json) {
+          process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+        } else {
+          process.stdout.write(
+            `${command}: ${result.scenario_count} scenario(s): ok\n`,
+          );
+          for (const file of result.evidence_files) {
+            process.stdout.write(`${file}\n`);
+          }
+        }
+      } catch (error: unknown) {
+        const openAthorError =
+          error instanceof OpenAthorError
+            ? error
+            : new OpenAthorError("OA_INTERNAL_UNEXPECTED", String(error), {
+                recoverable: false,
+                exitCode: 5,
+              });
+
+        if (options.json) {
+          process.stdout.write(
+            `${JSON.stringify(errorEnvelope(command, openAthorError), null, 2)}\n`,
+          );
+        } else {
+          process.stderr.write(`${openAthorError.code}: ${openAthorError.message}\n`);
+        }
+
+        process.exitCode = openAthorError.exitCode;
+      }
+    },
+  );
+
+if (isDirectRun()) {
+  program.parseAsync(process.argv).catch((error: unknown) => {
+    const openAthorError =
+      error instanceof OpenAthorError
+        ? error
+        : new OpenAthorError("OA_INTERNAL_UNEXPECTED", String(error), {
+            recoverable: false,
+            exitCode: 5,
+          });
+
+    process.stderr.write(`${openAthorError.code}: ${openAthorError.message}\n`);
+    process.exitCode = openAthorError.exitCode;
+  });
+}
+
+async function runJudgeSmoke(input: {
+  cwd: string;
+  outDir?: string;
+  scenario?: string;
+}): Promise<JudgeSmokeResult> {
+  const scenarios = selectScenarios(input.scenario);
+  const evidencePackages: JudgeEvidencePackage[] = [];
+  const evidenceFiles: string[] = [];
+  const outDir = input.outDir ? path.resolve(input.cwd, input.outDir) : undefined;
+
+  if (outDir) {
+    await mkdir(outDir, { recursive: true });
+  }
+
+  for (const scenario of scenarios) {
+    const fixture = path.resolve(input.cwd, scenario.fixture);
+    const fixtureResult = await runFixtureCheck(fixture);
+    const evidencePackage = buildEvidencePackage(scenario, fixtureResult);
+
+    validateEvidencePackage(evidencePackage);
+    evidencePackages.push(evidencePackage);
+
+    if (outDir) {
+      const relFile = path.join(input.outDir ?? "", `${scenario.name}.json`);
+      const absFile = path.resolve(input.cwd, relFile);
+      await writeFile(absFile, `${JSON.stringify(evidencePackage, null, 2)}\n`);
+      evidenceFiles.push(relFile);
+    }
+  }
+
+  return {
+    scenario_count: evidencePackages.length,
+    evidence_packages: evidencePackages,
+    evidence_files: evidenceFiles,
+  };
+}
+
+function selectScenarios(name: string | undefined): SmokeScenario[] {
+  if (!name) {
+    return defaultScenarios;
+  }
+
+  const scenario = defaultScenarios.find((item) => item.name === name);
+
+  if (!scenario) {
+    throw new OpenAthorError(
+      "OA_JUDGE_SCENARIO_NOT_FOUND",
+      `Unknown judge smoke scenario: ${name}`,
+      { exitCode: 2 },
+    );
+  }
+
+  return [scenario];
+}
+
+function buildEvidencePackage(
+  scenario: SmokeScenario,
+  fixtureResult: FixtureCheckResult,
+): JudgeEvidencePackage {
+  const commands = fixtureResult.command_results.map((result) => ({
+    command: result.command,
+    ok: result.ok,
+    error_code: result.error_code,
+    writes: result.envelope.writes,
+    warnings: result.envelope.warnings,
+  }));
+
+  return {
+    schema_version: "openathor.judge_evidence.v1",
+    scenario: scenario.name,
+    fixture: scenario.fixture,
+    user_task: scenario.user_task,
+    operator_agent: {
+      name: "openathor-judge-smoke",
+      mode: "deterministic_fixture_runner",
+      model: null,
+    },
+    deterministic_check: {
+      ok: true,
+      fixture_workspace: fixtureResult.workspace,
+      command_count: commands.length,
+      commands,
+      file_changes: fixtureResult.file_changes,
+      required_files: fixtureResult.required_files,
+      absent_files: fixtureResult.absent_files,
+      unchanged_files: fixtureResult.unchanged_files,
+    },
+    agent_final_response: scenario.expected_agent_reply,
+    judge_focus: scenario.judge_focus,
+    judge: {
+      verdict: "needs_review",
+      blocking_failures: [],
+      scores: Object.fromEntries(
+        scoreDimensions.map((dimension) => [dimension, null]),
+      ) as Record<JudgeDimension, null>,
+      missing_evidence: [
+        "real_operator_agent_transcript",
+        "llm_judge_scores",
+      ],
+    },
+  };
+}
+
+function validateEvidencePackage(evidencePackage: JudgeEvidencePackage): void {
+  if (evidencePackage.schema_version !== "openathor.judge_evidence.v1") {
+    throw new OpenAthorError(
+      "OA_JUDGE_EVIDENCE_INVALID",
+      "Judge evidence package has an unsupported schema version.",
+      { exitCode: 4 },
+    );
+  }
+
+  if (!evidencePackage.user_task || !evidencePackage.agent_final_response) {
+    throw new OpenAthorError(
+      "OA_JUDGE_EVIDENCE_INVALID",
+      "Judge evidence package must include user task and agent final response.",
+      { exitCode: 4 },
+    );
+  }
+
+  if (evidencePackage.deterministic_check.command_count < 1) {
+    throw new OpenAthorError(
+      "OA_JUDGE_EVIDENCE_INVALID",
+      "Judge evidence package must include CLI command evidence.",
+      { exitCode: 4 },
+    );
+  }
+
+  const hasWritesOrFileChanges =
+    evidencePackage.deterministic_check.commands.some(
+      (command) => command.writes.length > 0,
+    ) || evidencePackage.deterministic_check.file_changes.length > 0;
+
+  if (!hasWritesOrFileChanges) {
+    throw new OpenAthorError(
+      "OA_JUDGE_EVIDENCE_INVALID",
+      "Judge evidence package must include writes or file change evidence.",
+      { exitCode: 4 },
+    );
+  }
+}
+
+function isDirectRun(): boolean {
+  return Boolean(
+    process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href,
+  );
+}
+
+export async function readJudgeEvidencePackage(
+  filePath: string,
+): Promise<JudgeEvidencePackage> {
+  const text = await readFile(filePath, "utf8");
+  return JSON.parse(text) as JudgeEvidencePackage;
+}

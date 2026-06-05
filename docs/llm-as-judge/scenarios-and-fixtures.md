@@ -135,3 +135,12 @@ fixtures/slice-1/
 ```
 
 后续写作、结构变更、检索和风格相关场景仍需要在 Slice 2+ 落地，并接入 LLM-as-judge 证据包。
+
+当前已接入自动化 smoke 的场景：
+
+```text
+fixtures/slice-2/draft-confirm-write
+fixtures/slice-3/outline-archive
+```
+
+这两个场景会通过 `openathor-judge-smoke` 生成 `openathor.judge_evidence.v1` 证据包，用于验证 judge 输入结构、CLI 命令证据和文件变化摘要。
