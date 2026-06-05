@@ -1,0 +1,16 @@
+commands:
+  - run: openathor index rebuild --json
+    ok: true
+  - run: openathor revise chapter 1 --task "把铜钥匙改成电子密钥，并让许临风靠通灵破案" --json
+    ok: false
+    error_code: OA_CANON_CONFLICT
+    expect_no_writes: true
+  - run: openathor canon sync --task "确认铜钥匙其实是电子密钥，许临风可以通灵" --json
+    ok: false
+    error_code: OA_CANON_CONFLICT
+    expect_no_writes: true
+  - run: openathor draft chapter 1 --task "保持铜钥匙为物理机械结构，继续检查齿纹" --json
+    ok: true
+    expect_data_path: proposal_path
+  - run: openathor index rebuild --json
+    ok: true
