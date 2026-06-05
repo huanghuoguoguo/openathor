@@ -1,0 +1,17 @@
+commands:
+  - run: openathor doctor --json
+    ok: true
+    expect_data:
+      checks.standard_assets_present: true
+  - run: openathor style check chapter 3 --json
+    ok: true
+    expect_data:
+      verdict: needs_revision
+      rule_matches.avoid_hits.0.rule: 情绪崩溃
+      findings.0.code: style_sentence_length_shift
+      findings.2.code: style_avoid_rule_hit
+    expect_data_path: metrics.target.average_sentence_chars
+  - run: openathor index rebuild --json
+    ok: true
+    expect_data:
+      chapters_indexed: 3

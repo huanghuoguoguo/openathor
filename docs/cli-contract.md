@@ -15,10 +15,11 @@
 3. [Slice 2 Context](cli-contract/slice-2-context.md)：写作闭环的只读上下文包合约
 4. [Slice 2 Writing Loop](cli-contract/slice-2-writing-loop.md)：规划、续写准备、审稿、改稿和 canon sync proposal 合约
 5. [Slice 3 Structural Editing](cli-contract/slice-3-structural-editing.md)：结构查看、影响分析和安全归档合约
-6. [Slice 4 Search](cli-contract/slice-4-search.md)：确定性文本检索合约
-7. [Output Formats](cli-contract/output-formats.md)：JSON、diff 和结构化输出
-8. [Write Safety](cli-contract/write-safety.md)：写操作、dry-run、diff 和冲突保护
-9. [Errors](cli-contract/errors.md)：错误码、退出码和恢复建议
+6. [Style Guidance CLI](cli-contract/style-guidance.md)：风格 profile 读取和确定性 style check 合约
+7. [Slice 4 Search](cli-contract/slice-4-search.md)：确定性文本检索合约
+8. [Output Formats](cli-contract/output-formats.md)：JSON、diff 和结构化输出
+9. [Write Safety](cli-contract/write-safety.md)：写操作、dry-run、diff 和冲突保护
+10. [Errors](cli-contract/errors.md)：错误码、退出码和恢复建议
 
 ## 当前结论
 
@@ -35,3 +36,4 @@ OpenAthor CLI 是 agent-facing 工具层：
 - `openathor outline show/impact/insert/move/split/merge/replan/archive` 已作为 Slice 3 结构编辑最小闭环落地
 - `openathor search text/related/semantic` 已作为检索入口落地
 - `openathor assets audit` 已作为长篇资产连续性和漂移审计入口落地
+- `openathor style check` 已作为确定性文风漂移审计入口落地
