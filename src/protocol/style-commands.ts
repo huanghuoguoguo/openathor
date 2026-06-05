@@ -40,7 +40,7 @@ import {
 import { ensureTrailingNewline } from "./text-format.js";
 import { normalizeSnippetChars } from "./text-analysis.js";
 import { isTextCandidate } from "./text-path.js";
-import { firstMarkdownHeading } from "./title.js";
+import { titleFromText } from "./title.js";
 import {
   asRecordArray,
   readYamlObjectFile,
@@ -714,7 +714,7 @@ export async function runStyleRevise(
   if (!previewOnly && revisedText) {
     await writeText(projectRoot, sourceRelPath, ensureTrailingNewline(revisedText));
     const contentHash = await sha256File(sourceFullPath);
-    const title = firstMarkdownHeading(revisedText) ?? targetChapter.title;
+    const title = titleFromText(revisedText) ?? targetChapter.title;
     const updatedChapters: ChapterOutline = {
       chapters: inspection.chapters.chapters.map((outlineChapter) =>
         outlineChapter.id === targetChapter.id

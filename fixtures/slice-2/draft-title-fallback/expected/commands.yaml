@@ -16,6 +16,11 @@ commands:
     expect_data:
       target.title: 旧站台回声
       target.source_path: manuscript/chapter-004.md
+  - run: openathor draft chapter next --task "继续写蓝灯线索" --text "第四章 蓝灯档案\n\n林澈把电子钥匙放在灯下，编号终于浮了出来。" --confirm-write --json
+    ok: true
+    expect_data:
+      target.title: 蓝灯档案
+      target.source_path: manuscript/chapter-005.md
   - run: openathor doctor --json
     ok: true
   - run: openathor index rebuild --json

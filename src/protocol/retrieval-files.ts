@@ -7,7 +7,7 @@ import type {
   VectorIndexDocument,
 } from "./model.js";
 import { isSafeRelativePath, sha256File, toPosix } from "./paths.js";
-import { firstMarkdownHeading } from "./title.js";
+import { titleFromText } from "./title.js";
 import {
   VECTOR_DIMENSIONS,
   cosineSimilarity,
@@ -87,7 +87,7 @@ export async function buildVectorIndex(
       path: relPath,
       hash: await sha256File(fullPath),
       kind: indexedChapter ? "chapter" : vectorDocumentKind(relPath),
-      title: indexedChapter?.title ?? firstMarkdownHeading(text),
+      title: indexedChapter?.title ?? titleFromText(text),
       terms: terms.slice(0, 40),
       vector: deterministicEmbedding(terms),
       preview: snippetAround(text.replace(/\s+/g, " ").trim(), 0, 0, 360),

@@ -3,6 +3,8 @@ required:
   - 正文/001-开端.md
   - manuscript/chapter-002.md
   - manuscript/chapter-003.md
+  - manuscript/chapter-004.md
+  - manuscript/chapter-005.md
   - outline/chapters.yaml
   - .openathor/manuscript.index.yaml
   - .openathor/index.sqlite
