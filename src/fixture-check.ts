@@ -11,6 +11,7 @@ import { OpenAthorError } from "./protocol/errors.js";
 import {
   runAdopt,
   runAssetsAudit,
+  runAssetsSync,
   runContext,
   runDoctor,
   runExport,
@@ -454,6 +455,20 @@ async function dispatchCommand(
     });
   }
 
+  if (parsed.name === "assets sync") {
+    return runAssetsSync({
+      cwd,
+      scope: parsed.options.scope === "chapter" ? "chapter" : undefined,
+      target: parsed.pathArg,
+      from: parsed.options.from,
+      confirm: parsed.options.confirm,
+      dryRun: parsed.options.dryRun,
+      baseHash: parsed.options.baseHash
+        ? await resolveFixtureHash(cwd, parsed.options.baseHash)
+        : undefined,
+    });
+  }
+
   if (parsed.name === "outline show") {
     return runOutlineShow({ cwd });
   }
@@ -638,6 +653,7 @@ function parseCommand(command: string): {
     | "search related"
     | "search semantic"
     | "assets audit"
+    | "assets sync"
     | "outline show"
     | "outline impact"
     | "outline insert"
@@ -679,11 +695,11 @@ function parseCommand(command: string): {
     confirmWrite?: boolean;
     baseHash?: string;
     nextBaseHash?: string;
+    from?: string;
     after?: string;
     atLine?: number;
     titleBefore?: string;
     titleAfter?: string;
-    from?: string;
     vector?: boolean;
     format?: string;
     out?: string;
@@ -760,6 +776,12 @@ function parseCommand(command: string): {
     if (token === "--out") {
       index += 1;
       options.out = unescapeFixtureArgument(tokens[index]);
+      continue;
+    }
+
+    if (token === "--from") {
+      index += 1;
+      options.from = unescapeFixtureArgument(tokens[index]);
       continue;
     }
 
@@ -984,6 +1006,17 @@ function parseCommand(command: string): {
     return {
       display: "openathor assets audit",
       name: "assets audit",
+      options,
+    };
+  }
+
+  if (positional[0] === "assets" && positional[1] === "sync") {
+    options.scope = positional[2] === "chapter" ? "chapter" : undefined;
+
+    return {
+      display: "openathor assets sync",
+      name: "assets sync",
+      pathArg: positional[3],
       options,
     };
   }

@@ -1,0 +1,48 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor draft chapter next --task "写第一章《钟楼齿轮》" --text "# 钟楼齿轮\n\n沈砚和顾青禾在旧钟楼齿轮室发现北港纹章铜钥匙。港口蓝灯异常亮起，失踪钟表匠的线索被重新打开。" --confirm-write --json
+    ok: true
+    expect_data:
+      target.id: ch_002
+      target.title: 钟楼齿轮
+  - run: openathor assets sync chapter 2 --from notes/asset-package-ch1.yaml --json
+    ok: true
+    expect_data:
+      mode: proposal
+      result.characters_added: 2
+      result.timeline_events_added: 2
+      result.hooks_added: 1
+      result.outline_modified: true
+      result.confirmed_assets_written: false
+  - run: openathor assets sync chapter 2 --from notes/asset-package-ch1.yaml --confirm --base-hash current:manuscript/chapter-002.md --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      result.characters_added: 2
+      result.timeline_events_added: 2
+      result.hooks_added: 1
+      result.outline_modified: true
+      result.confirmed_assets_written: true
+  - run: openathor assets audit --json
+    ok: true
+    expect_data:
+      audit.counts.characters: 2
+      audit.counts.timeline_events: 2
+      audit.counts.hooks: 1
+      audit.counts.unresolved_outline_links: 0
+      audit.counts.character_link_drifts: 0
+      audit.counts.summary_drift_candidates: 0
+      audit.assets.characters.0.id: shen-yan
+      audit.assets.characters.0.name: 沈砚
+      audit.chapter_entity_coverage.0.linked_character_names.0: 沈砚
+  - run: openathor context chapter 2 --json
+    ok: true
+    expect_data:
+      outline.chapters.1.links.characters.0: shen-yan
+      outline.chapters.1.links.timeline_events.1: event-blue-light-anomaly
+    expect_data_path: assets.characters.text
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true
