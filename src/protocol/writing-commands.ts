@@ -178,6 +178,7 @@ async function runConfirmedWriting(
   const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
   const plan = buildConfirmedDraftPlan(inspection, task, text, runStamp());
   const fullSourcePath = path.join(projectRoot, plan.sourcePath);
+  let writtenContentHash: string | null = null;
 
   if (await pathExists(fullSourcePath)) {
     throw new OpenAthorError(
@@ -190,6 +191,7 @@ async function runConfirmedWriting(
   if (!dryRun) {
     await writeText(projectRoot, plan.sourcePath, ensureTrailingNewline(text));
     const contentHash = await sha256File(fullSourcePath);
+    writtenContentHash = contentHash;
     const generatedAt = new Date().toISOString();
     const { chapters: updatedChapters, manuscriptIndex: updatedIndex } =
       confirmedDraftUpdates({
@@ -207,6 +209,7 @@ async function runConfirmedWriting(
         task,
         sources: inspection.sources,
         plan,
+        contentHash,
         createdAt: generatedAt,
       }),
     );
@@ -222,6 +225,7 @@ async function runConfirmedWriting(
       dryRun,
       task,
       plan,
+      contentHash: writtenContentHash,
     }),
   };
 }
@@ -280,10 +284,12 @@ async function runConfirmedRevision(
     baseHash: options.baseHash,
     stamp,
   });
+  let writtenContentHash: string | null = null;
 
   if (!dryRun) {
     await writeText(projectRoot, chapter.source_path, ensureTrailingNewline(text));
     const contentHash = await sha256File(fullSourcePath);
+    writtenContentHash = contentHash;
     const generatedAt = new Date().toISOString();
     const { chapters: updatedChapters, manuscriptIndex: updatedIndex } =
       confirmedRevisionUpdates({
@@ -301,6 +307,7 @@ async function runConfirmedRevision(
         task,
         plan,
         sources: inspection.sources,
+        contentHash,
         createdAt: generatedAt,
       }),
     );
@@ -316,6 +323,7 @@ async function runConfirmedRevision(
       dryRun,
       task,
       plan,
+      contentHash: writtenContentHash,
     }),
   };
 }

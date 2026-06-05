@@ -117,6 +117,35 @@ When using proposal commands:
 - for writing advice, read relevant plaintext sources and provide suggestions in the conversation
 - after writing or revising longform assets, run \`openathor assets audit --json\` and report unresolved links, drift, and character profile summary before claiming continuity is stable
 - after writing a chapter that introduces or changes story assets, create a structured asset package in a project note and run \`openathor assets sync chapter <id-or-order> --from <asset-package> --json\`; do not edit \`bible/characters.md\`, \`bible/timeline.md\`, \`notes/hooks.md\`, or \`outline/chapters.yaml\` by hand to bypass the sync flow
+- asset package canonical shape is:
+
+\`\`\`yaml
+characters:
+  - id: char_linche
+    name: 林澈
+    role: 旧案调查者
+    traits: [谨慎, 证据优先]
+    current_state: 正在核对空位名单签名缺口。
+    notes: [不能通灵；不能靠超自然破案。]
+timeline_events:
+  - id: event-signature-gap-found
+    title: 林澈发现签名缺口
+    summary: 林澈和孟夏发现更正通知日期矛盾，决定先核对签名。
+hooks:
+  - id: hook-empty-berth-list
+    title: 空位名单的签名缺口
+    status: advanced
+    summary: 空位名单出现后，突破口变成核对签名而不是公开保护对象姓名。
+chapter:
+  summary: 本章推进空位名单和警署篡改日期线索。
+  links:
+    characters: [char_linche]
+    timeline_events: [event-signature-gap-found]
+    hooks: [hook-empty-berth-list]
+\`\`\`
+
+- use \`event-...\`, \`event_...\`, or \`ev_...\` IDs for timeline events; use \`char_...\` or kebab-case IDs for characters; use \`hook-...\` or \`hook_...\` IDs for hooks
+- do not put the only structured assets under vague metadata; OpenAthor accepts common \`links.*\` object arrays and \`updates.*\` entries, but the canonical top-level arrays above are preferred
 - after a confirmed multi-chapter draft, do not stop at manuscript files; for each drafted chapter, sync the chapter summary, character states, timeline events, hooks, and outline links before claiming the longform assets have been persisted
 - only after explicit user confirmation, rerun asset sync with \`--confirm --base-hash "sha256:..."\`; use the latest source hash from context, sync proposal, or doctor output
 - confirmed asset sync writes new assets and merges updates for existing character, timeline, and hook assets; expect existing character \`current_state\` to change and earlier states to remain as \`note: previous_state: ...\`

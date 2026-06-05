@@ -236,7 +236,7 @@ openathor assets audit [--json] [--max-chars <count>]
 ### 当前限制
 
 - `assets audit` 只做 Markdown/YAML 文本扫描，不做完整语义事实推理。
-- 人物、timeline 和 hook 支持 `char_` / `ev_` / `hook_` 前缀、Markdown 标题、`## 名称 (id)` 以及 Pi 常写的 `- id: ...` + `name:` / `title:` 列表块。
+- 人物、timeline 和 hook 支持 `char_` / `ev_` / `event_` / `hook_` 前缀、Markdown 标题、`## 名称 (id)` 以及 Pi 常写的 `- id: ...` + `name:` / `title:` 列表块。
 - 对人物资产，`assets audit` 会解析 `role`、`traits`、`current_state`、`note`、`背景`、`性格`、`秘密` 等档案字段，并为已链接章节输出 `character_profile_coverage`，为每个人物输出项目级 `character_profile_summary`。章节级 `weak_character_profile_coverages` 只统计术语覆盖很低且命中字段过少的章节，避免把人物后续状态回扫早期章节时的正常演进误报成漂移。项目级 weak summary 仍用于判断人物设定、事迹和当前状态是否被多章持续承接；这些数据只作为确定性文本覆盖证据，不替代人工或 LLM judge 的语义判断。
 - `character_profile_summary` 按人物资产顺序输出，包含 `linked_chapter_count`、`mentioned_chapter_count`、`matched_profile_field_count`、`coverage_ratio` 和相关章节明细，用于复核一个人物在多章写作后是否仍有稳定可追踪的档案承接。
 - `summary_drift` 是复核提示，不代表自动判定正文错误。
@@ -261,6 +261,13 @@ openathor assets sync chapter <target> --from <asset-package.yaml|json> --confir
 - `chapter.links.hooks`
 
 CLI 不从自然语言正文里推断复杂事实；资产包必须由 agent 或用户显式提供。
+
+为兼容真实 Pi/Operator Agent 输出，读取层也接受两类等价结构：
+
+- `links.characters[]` / `links.timeline_events[]` / `links.hooks[]` 可为字符串 ID，也可为含 `id`、`name`/`title`、`role`、`status`、`description`、`constraints` 等字段的对象。
+- `updates.characters[]` / `updates.timeline_events[]` / `updates.hooks[]` 可作为资产增量来源；CLI 会把其中可解析的 `id`、`name`/`title`、`description`、`note`、`new_evidence` 等字段归一化为 canonical `characters`、`timeline_events`、`hooks`。
+
+如果资产包没有 `chapter.summary`、links、characters、timeline_events 或 hooks，CLI 返回 `OA_ASSETS_SYNC_PACKAGE_EMPTY`，避免空资产包被误判为同步成功。
 
 ### Proposal 模式
 
@@ -311,6 +318,7 @@ confirmed write 模式：
 - `OA_ASSETS_SYNC_PACKAGE_REQUIRED`
 - `OA_ASSETS_SYNC_PACKAGE_NOT_FOUND`
 - `OA_ASSETS_SYNC_PACKAGE_INVALID`
+- `OA_ASSETS_SYNC_PACKAGE_EMPTY`
 - `OA_BASE_HASH_REQUIRED`
 - `OA_MANUSCRIPT_CHANGED`
 

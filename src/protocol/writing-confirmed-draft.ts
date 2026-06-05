@@ -130,6 +130,7 @@ export function confirmedDraftUpdates(input: {
 export function confirmedDraftRunRecord(input: {
   task: string;
   plan: ConfirmedDraftPlan;
+  contentHash: string;
   sources: EnvelopeSource[];
   createdAt: string;
 }): Record<string, unknown> {
@@ -141,6 +142,7 @@ export function confirmedDraftRunRecord(input: {
     mode: "confirmed_write",
     filled_planned_chapter: input.plan.filledPlannedChapter,
     target: input.plan.target,
+    source_hash: input.contentHash,
     writes: input.plan.writes,
     sources: input.sources,
     user_confirmation_required: false,
@@ -151,6 +153,7 @@ export function confirmedDraftResultData(input: {
   dryRun: boolean;
   task: string;
   plan: ConfirmedDraftPlan;
+  contentHash: string | null;
 }): Record<string, unknown> {
   return {
     dry_run: input.dryRun,
@@ -159,6 +162,7 @@ export function confirmedDraftResultData(input: {
     task: input.task,
     filled_planned_chapter: input.plan.filledPlannedChapter,
     target: input.plan.target,
+    source_hash: input.contentHash,
     planned_writes: input.dryRun ? input.plan.writes : [],
     run_path: input.plan.runRelPath,
     user_confirmation_required: false,
