@@ -13,6 +13,7 @@
 - 用户确认后的拆章写入
 - 生成合章 proposal
 - 生成重规划 proposal
+- 用户确认后的 planned future outline 重规划写入
 - 归档前影响分析
 - 用户确认后的章节归档
 
@@ -22,9 +23,9 @@
 
 拆章默认只生成 proposal。只有显式传入 `--confirm --base-hash` 时才写入，并且只修改目标正文、创建后一段新正文、更新 outline/index 和写入 run record。
 
-合章当前只生成 proposal，不修改正文、outline 或 index。
+合章默认生成 proposal，用户确认且 hash 匹配时可以合并相邻章节正文并归档后一章。
 
-重规划当前只生成 proposal，不修改正文、outline 或 index。
+重规划默认只生成 proposal。用户确认且 `outline/chapters.yaml` hash 匹配时，可以用结构化 package 替换 `--from` 及之后的 planned 章节；不修改正文文件，不替换 drafted/revised 章节。
 
 归档只修改结构化元数据，不移动、不重命名、不删除正文文件。
 
@@ -399,9 +400,23 @@ confirmed merge 写入：
 
 ```bash
 openathor outline replan --from <target> --task <text> [--json] [--dry-run] [--diff] [--max-chars <count>]
+openathor outline replan --from <target> --task <text> --from-package <replan-package.yaml|json> --confirm --base-hash <sha256:...> [--json]
 ```
 
-`--from` 是重规划开始章节。当前只生成 proposal，不执行 confirmed write。
+`--from` 是重规划开始章节。默认只生成 proposal，不写文件。
+
+confirmed replan 需要结构化 JSON/YAML package：
+
+```yaml
+chapters:
+  - title: 调车场疑影
+    summary: 林岚去旧站台后的调车场核对匿名电话来源。
+    links:
+      hooks:
+        - hook-old-platform-call
+```
+
+确认写入只允许替换 `--from` 及之后的 planned 章节。若边界内包含 drafted/revised 章节、章节已有 `manuscript_path`，或已在 `.openathor/manuscript.index.yaml` 中登记，CLI 返回 `OA_OUTLINE_REPLAN_UNSAFE`，不会写文件。
 
 ### Output data
 
@@ -416,15 +431,21 @@ openathor outline replan --from <target> --task <text> [--json] [--dry-run] [--d
 - `result`
 - `user_confirmation_required`
 - `confirmed_write_supported`
+- `replacement_chapters`
 - `planned_writes`
 - `diff`
 - `next_agent_action`
 
 ### Expected writes
 
-无。
+默认 proposal、`--dry-run`、`--diff` 无写入。
 
-`writes` 必须为空。
+confirmed replan 写入：
+
+- `outline/chapters.yaml`
+- `runs/run_<stamp>_outline_replan.json`
+
+confirmed replan 不写 `.openathor/manuscript.index.yaml`，不创建/删除/移动/改写正文文件，不修改 confirmed canon。
 
 ### Errors
 
@@ -433,9 +454,9 @@ openathor outline replan --from <target> --task <text> [--json] [--dry-run] [--d
 - `OA_OUTLINE_TARGET_REQUIRED`
 - `OA_OUTLINE_TARGET_NOT_FOUND`
 - `OA_TASK_REQUIRED`
-
-## 未实现命令
-
-以下目标能力仍待实现：
-
-- confirmed write for `openathor outline replan`
+- `OA_OUTLINE_REPLAN_PACKAGE_REQUIRED`
+- `OA_OUTLINE_REPLAN_PACKAGE_NOT_FOUND`
+- `OA_OUTLINE_REPLAN_PACKAGE_INVALID`
+- `OA_BASE_HASH_REQUIRED`
+- `OA_OUTLINE_CHANGED`
+- `OA_OUTLINE_REPLAN_UNSAFE`

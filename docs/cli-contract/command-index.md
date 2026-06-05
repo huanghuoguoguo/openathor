@@ -126,7 +126,7 @@ openathor export --format markdown
 - `openathor outline merge`
 - `openathor outline replan`
 - `openathor outline archive`
-- 后续补齐 confirmed merge 和 confirmed replan
+- 后续继续扩展更复杂的 confirmed replan 场景
 
 当前已落地：
 
@@ -146,10 +146,10 @@ openathor export --format markdown
 - `outline move` 只修改 display order，不移动或重命名正文文件。
 - `outline split` 默认只生成拆章 proposal；`--confirm --base-hash` 支持确认拆章写入。
 - `outline merge` 默认只生成合章 proposal；`--confirm --base-hash --next-base-hash` 支持确认合章写入，合并到目标正文并归档下一章，不删除原正文文件。
-- `outline replan` 当前只生成重规划 proposal，不修改正文、outline 或 index。
+- `outline replan` 默认只生成重规划 proposal；`--from-package --confirm --base-hash` 支持替换 planned future outline 章节，不修改正文文件或 confirmed canon。
 - `outline archive` 默认只返回 proposal；只有 `--confirm` 才修改结构化元数据。
 - 归档不物理删除、移动或重命名正文文件。
-- confirmed replan 仍待实现。
+- confirmed replan 仅覆盖 planned future 章节；若边界内包含 drafted/revised 章节，需要先使用 archive/split/merge/revise 等受控流程处理。
 
 ### Slice 4: Retrieval And Export
 

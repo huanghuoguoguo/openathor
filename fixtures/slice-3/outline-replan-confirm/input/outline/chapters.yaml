@@ -1,0 +1,23 @@
+chapters:
+  - id: ch_001
+    display_order: 1
+    title: 雨夜
+    status: drafted
+    manuscript_path: manuscript/chapter-001.md
+    summary: 林岚在雨夜接到匿名电话。
+  - id: ch_002
+    display_order: 2
+    title: 追问
+    status: drafted
+    manuscript_path: manuscript/chapter-002.md
+    summary: 林岚追问电话来源，并确认旧站台线索。
+  - id: ch_003
+    display_order: 3
+    title: 旧计划一
+    status: planned
+    summary: 原计划提前揭露父亲真相。
+  - id: ch_004
+    display_order: 4
+    title: 旧计划二
+    status: planned
+    summary: 原计划直接进入终局。

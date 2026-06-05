@@ -1,0 +1,11 @@
+required:
+  - openathor.yaml
+  - outline/chapters.yaml
+  - .openathor/manuscript.index.yaml
+  - manuscript/chapter-001.md
+  - manuscript/chapter-002.md
+  - notes/replan-package.yaml
+  - .openathor/index.sqlite
+absent:
+  - manuscript/chapter-003.md
+  - manuscript/chapter-004.md
