@@ -1,0 +1,38 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor outline merge 1 2 --title "雨夜追问" --confirm --base-hash current:正文/001-雨夜.md --next-base-hash current:正文/002-追问.md --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      target.source_path: 正文/001-雨夜.md
+      next.source_path: 正文/002-追问.md
+      merged.title: 雨夜追问
+      merged.display_order: 1
+      result.applied: true
+      result.manuscript_file_modified: true
+      result.manuscript_files_deleted: false
+      result.outline_modified: true
+      result.index_modified: true
+      confirmed_write_supported: true
+  - run: openathor outline show --json
+    ok: true
+    expect_data:
+      outline.chapter_count: 2
+      outline.active_chapter_count: 1
+      outline.archived_chapter_count: 1
+      outline.chapters.0.title: 雨夜追问
+      outline.chapters.0.status: revised
+      outline.chapters.1.status: archived
+  - run: openathor context chapter 1 --json
+    ok: true
+    expect_data:
+      context_pack.target.title: 雨夜追问
+      context_pack.target.source_path: 正文/001-雨夜.md
+  - run: openathor search text "旧案钥匙" --json
+    ok: true
+    expect_data_path: matches
+  - run: openathor index rebuild --json
+    ok: true
+  - run: openathor doctor --json --strict
+    ok: true

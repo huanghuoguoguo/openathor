@@ -494,9 +494,16 @@ async function dispatchCommand(
       target: parsed.pathArg,
       next: parsed.secondPathArg,
       title: parsed.options.title,
+      confirm: parsed.options.confirm,
       dryRun: parsed.options.dryRun,
       diff: parsed.options.diff,
       maxChars: parsed.options.maxChars,
+      baseHash: parsed.options.baseHash
+        ? await resolveFixtureHash(cwd, parsed.options.baseHash)
+        : undefined,
+      nextBaseHash: parsed.options.nextBaseHash
+        ? await resolveFixtureHash(cwd, parsed.options.nextBaseHash)
+        : undefined,
     });
   }
 
@@ -671,6 +678,7 @@ function parseCommand(command: string): {
     text?: string;
     confirmWrite?: boolean;
     baseHash?: string;
+    nextBaseHash?: string;
     after?: string;
     atLine?: number;
     titleBefore?: string;
@@ -799,6 +807,12 @@ function parseCommand(command: string): {
     if (token === "--base-hash") {
       index += 1;
       options.baseHash = tokens[index];
+      continue;
+    }
+
+    if (token === "--next-base-hash") {
+      index += 1;
+      options.nextBaseHash = tokens[index];
       continue;
     }
 

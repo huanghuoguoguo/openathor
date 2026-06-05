@@ -142,11 +142,11 @@ openathor export --format markdown
 - `outline insert` 只插入 planned 章节元数据，不创建正文文件。
 - `outline move` 只修改 display order，不移动或重命名正文文件。
 - `outline split` 默认只生成拆章 proposal；`--confirm --base-hash` 支持确认拆章写入。
-- `outline merge` 当前只生成合章 proposal，不修改正文、outline 或 index。
+- `outline merge` 默认只生成合章 proposal；`--confirm --base-hash --next-base-hash` 支持确认合章写入，合并到目标正文并归档下一章，不删除原正文文件。
 - `outline replan` 当前只生成重规划 proposal，不修改正文、outline 或 index。
 - `outline archive` 默认只返回 proposal；只有 `--confirm` 才修改结构化元数据。
 - 归档不物理删除、移动或重命名正文文件。
-- confirmed merge 和 confirmed replan 仍待实现。
+- confirmed replan 仍待实现。
 
 ### Slice 4: Retrieval And Export
 

@@ -46,6 +46,7 @@ node dist/cli.js outline insert --after 1 --title "插入章" --confirm --json
 node dist/cli.js outline move 1 --after 2 --confirm --json
 node dist/cli.js outline split 1 --at-line 12 --title-before "前半章" --title-after "后半章" --confirm --base-hash "sha256:..." --json
 node dist/cli.js outline merge 1 2 --title "合并章" --json
+node dist/cli.js outline merge 1 2 --title "合并章" --confirm --base-hash "sha256:..." --next-base-hash "sha256:..." --json
 node dist/cli.js outline replan --from 3 --task "重规划后续剧情" --json
 node dist/cli.js outline archive 1 --confirm --base-hash "sha256:..." --json
 node dist/cli.js search text "关键词" --json

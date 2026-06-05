@@ -209,9 +209,12 @@ type OutlineMergeOptions = {
   target?: string;
   next?: string;
   title?: string;
+  confirm?: boolean;
   dryRun?: boolean;
   diff?: boolean;
   maxChars?: number;
+  baseHash?: string;
+  nextBaseHash?: string;
 };
 
 type OutlineSplitOptions = {
@@ -1935,34 +1938,203 @@ export async function runOutlineMerge(
     : null;
   const mergedTitle = options.title?.trim() || `${target.title} / ${next.title}`;
   const plan = mergePlan(target, next, mergedTitle, targetSource?.text, nextSource?.text, maxChars);
-  const plannedWrites = mergeWrites(target, next);
+  const dryRun = options.dryRun ?? false;
+  const confirm = options.confirm ?? false;
+  const diff = options.diff ?? false;
+  const previewOnly = dryRun || diff || !confirm;
+  const stamp = runStamp();
+  const runRelPath = `runs/run_${stamp}_outline_merge.json`;
+  const plannedWrites = mergeWrites(target, next, runRelPath);
+
+  if (confirm) {
+    if (!target.source_path || !targetSource) {
+      throw new OpenAthorError(
+        "OA_OUTLINE_MERGE_SOURCE_REQUIRED",
+        `Cannot merge into ${target.id} because it has no manuscript source file.`,
+        { exitCode: 2 },
+      );
+    }
+
+    if (!next.source_path || !nextSource) {
+      throw new OpenAthorError(
+        "OA_OUTLINE_MERGE_SOURCE_REQUIRED",
+        `Cannot merge ${next.id} because it has no manuscript source file.`,
+        { exitCode: 2 },
+      );
+    }
+
+    if (!options.baseHash || !options.nextBaseHash) {
+      throw new OpenAthorError(
+        "OA_BASE_HASH_REQUIRED",
+        "Confirmed merge writes require --base-hash <sha256:...> and --next-base-hash <sha256:...>.",
+        { exitCode: 2 },
+      );
+    }
+
+    if (options.baseHash !== targetSource.hash) {
+      throw new OpenAthorError(
+        "OA_MANUSCRIPT_CHANGED",
+        `Refusing to merge ${target.id} because the target source hash changed.`,
+        {
+          exitCode: 3,
+          hints: [
+            `Expected ${options.baseHash}.`,
+            `Current ${targetSource.hash}.`,
+            "Run openathor outline merge again before confirming the merge.",
+          ],
+        },
+      );
+    }
+
+    if (options.nextBaseHash !== nextSource.hash) {
+      throw new OpenAthorError(
+        "OA_MANUSCRIPT_CHANGED",
+        `Refusing to merge ${next.id} because the next source hash changed.`,
+        {
+          exitCode: 3,
+          hints: [
+            `Expected ${options.nextBaseHash}.`,
+            `Current ${nextSource.hash}.`,
+            "Run openathor outline merge again before confirming the merge.",
+          ],
+        },
+      );
+    }
+  }
+
+  const mergeData = mergeProposalData(
+    target,
+    next,
+    targetSource?.hash ?? null,
+    nextSource?.hash ?? null,
+    plan,
+    dryRun,
+    diff,
+    previewOnly,
+    plannedWrites,
+  );
+
+  if (previewOnly) {
+    return {
+      projectRoot,
+      projectId: inspection.config.project.id,
+      sources: [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path)),
+      writes: [],
+      warnings: inspection.warnings,
+      data: mergeData,
+    };
+  }
+
+  const targetSourcePath = target.source_path;
+  const nextSourcePath = next.source_path;
+
+  if (!targetSourcePath || !nextSourcePath || !targetSource || !nextSource) {
+    throw new OpenAthorError(
+      "OA_OUTLINE_MERGE_SOURCE_REQUIRED",
+      "Confirmed merge writes require both chapters to have manuscript source files.",
+      { exitCode: 2 },
+    );
+  }
+
+  const mergedText = ensureTrailingNewline(
+    mergedChapterText(mergedTitle, targetSource.text, nextSource.text),
+  );
+  await writeText(projectRoot, targetSourcePath, mergedText);
+  const mergedHash = await sha256File(path.join(projectRoot, targetSourcePath));
+  const updatedChapters: ChapterOutline = {
+    chapters: inspection.chapters.chapters.map((chapter) => {
+      if (chapter.id === target.id) {
+        return {
+          ...chapter,
+          title: mergedTitle,
+          status: "revised" as const,
+          manuscript_path: targetSourcePath,
+          summary: mergedSummary(chapter.summary, next.outlineChapter?.summary),
+          links: mergeOutlineLinks(chapter.links, next.outlineChapter?.links),
+        };
+      }
+
+      if (chapter.id === next.id) {
+        return {
+          ...chapter,
+          status: "archived" as const,
+          manuscript_path: chapter.manuscript_path ?? nextSourcePath,
+        };
+      }
+
+      return chapter;
+    }),
+  };
+  const updatedIndex: ManuscriptIndex = {
+    ...inspection.manuscriptIndex,
+    generated_at: new Date().toISOString(),
+    chapters: inspection.manuscriptIndex.chapters.map((chapter) => {
+      if (chapter.id === target.id) {
+        return {
+          ...chapter,
+          title: mergedTitle,
+          status: "revised" as const,
+          content_hash: mergedHash,
+          detected_title: mergedTitle,
+        };
+      }
+
+      if (chapter.id === next.id) {
+        return {
+          ...chapter,
+          status: "archived" as const,
+          content_hash: nextSource?.hash ?? chapter.content_hash,
+        };
+      }
+
+      return chapter;
+    }),
+  };
+
+  await writeYaml(projectRoot, "outline/chapters.yaml", updatedChapters);
+  await writeYaml(projectRoot, ".openathor/manuscript.index.yaml", updatedIndex);
+  await writeYaml(projectRoot, runRelPath, {
+    agent_role: "openathor-cli",
+    command: "openathor outline merge",
+    created_at: new Date().toISOString(),
+    mode: "confirmed_write",
+    target: outlineTargetData(target, targetSource?.hash ?? null),
+    next: outlineTargetData(next, nextSource?.hash ?? null),
+    merged: {
+      ...plan,
+      content_hash: mergedHash,
+    },
+    base_hash: options.baseHash,
+    next_base_hash: options.nextBaseHash,
+    writes: plannedWrites,
+    sources: [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path)),
+    user_confirmation_required: false,
+  });
 
   return {
     projectRoot,
     projectId: inspection.config.project.id,
     sources: [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path)),
-    writes: [],
+    writes: plannedWrites,
     warnings: inspection.warnings,
     data: {
-      dry_run: options.dryRun ?? false,
-      mode: options.diff ? "diff" : "proposal",
-      command: "openathor outline merge",
-      target: outlineTargetData(target, targetSource?.hash ?? null),
-      next: outlineTargetData(next, nextSource?.hash ?? null),
-      merged: plan,
+      ...mergeData,
+      mode: "confirmed_write",
       result: {
-        applied: false,
-        manuscript_file_modified: false,
+        applied: true,
+        manuscript_file_modified: true,
         manuscript_files_deleted: false,
-        outline_modified: false,
-        index_modified: false,
+        outline_modified: true,
+        index_modified: true,
+        archived_chapter_id: next.id,
+        target_content_hash: mergedHash,
       },
-      user_confirmation_required: true,
-      confirmed_write_supported: false,
-      planned_writes: plannedWrites,
-      diff: mergeDiff(target, next, plan),
+      user_confirmation_required: false,
+      confirmed_write_supported: true,
+      planned_writes: [],
+      run_path: runRelPath,
       next_agent_action:
-        "Show the merge proposal to the user. Confirmed merge writes are not implemented yet, so do not modify manuscript, outline, or index files automatically.",
+        "Run openathor outline show --json and refresh context before follow-up writing.",
     },
   };
 }
@@ -3004,15 +3176,70 @@ function mergePlan(
   };
 }
 
+function mergeProposalData(
+  target: ResolvedOutlineChapter,
+  next: ResolvedOutlineChapter,
+  targetHash: string | null,
+  nextHash: string | null,
+  plan: ReturnType<typeof mergePlan>,
+  dryRun: boolean,
+  diff: boolean,
+  previewOnly: boolean,
+  plannedWrites: EnvelopeWrite[],
+): {
+  dry_run: boolean;
+  mode: "proposal" | "diff" | "confirmed_write";
+  command: "openathor outline merge";
+  target: ReturnType<typeof outlineTargetData>;
+  next: ReturnType<typeof outlineTargetData>;
+  merged: ReturnType<typeof mergePlan>;
+  result: {
+    applied: boolean;
+    manuscript_file_modified: boolean;
+    manuscript_files_deleted: false;
+    outline_modified: boolean;
+    index_modified: boolean;
+  };
+  user_confirmation_required: boolean;
+  confirmed_write_supported: boolean;
+  planned_writes: EnvelopeWrite[];
+  diff: ReturnType<typeof mergeDiff>;
+  next_agent_action: string;
+} {
+  return {
+    dry_run: dryRun,
+    mode: previewOnly ? (diff ? "diff" : "proposal") : "confirmed_write",
+    command: "openathor outline merge",
+    target: outlineTargetData(target, targetHash),
+    next: outlineTargetData(next, nextHash),
+    merged: plan,
+    result: {
+      applied: false,
+      manuscript_file_modified: false,
+      manuscript_files_deleted: false,
+      outline_modified: false,
+      index_modified: false,
+    },
+    user_confirmation_required: previewOnly,
+    confirmed_write_supported: true,
+    planned_writes: previewOnly ? plannedWrites : [],
+    diff: mergeDiff(target, next, plan, previewOnly),
+    next_agent_action: previewOnly
+      ? "Show the merge proposal to the user and rerun with --confirm plus both source hashes after explicit approval."
+      : "Run openathor outline show --json and refresh context before follow-up writing.",
+  };
+}
+
 function mergeWrites(
   target: ResolvedOutlineChapter,
   next: ResolvedOutlineChapter,
+  runRelPath: string,
 ): EnvelopeWrite[] {
   const writes: EnvelopeWrite[] = [
     {
       path: "outline/chapters.yaml",
       change_type: "modified",
-      reason: "future_outline_merge_metadata",
+      reason: "outline_merge_metadata",
     },
   ];
 
@@ -3020,7 +3247,7 @@ function mergeWrites(
     writes.push({
       path: ".openathor/manuscript.index.yaml",
       change_type: "modified",
-      reason: "future_outline_merge_index",
+      reason: "outline_merge_index",
     });
   }
 
@@ -3028,9 +3255,15 @@ function mergeWrites(
     writes.push({
       path: target.source_path,
       change_type: "modified",
-      reason: "future_outline_merge_manuscript_source",
+      reason: "outline_merge_manuscript_source",
     });
   }
+
+  writes.push({
+    path: runRelPath,
+    change_type: "created",
+    reason: "outline_merge_run_record",
+  });
 
   return writes;
 }
@@ -3039,6 +3272,7 @@ function mergeDiff(
   target: ResolvedOutlineChapter,
   next: ResolvedOutlineChapter,
   plan: ReturnType<typeof mergePlan>,
+  previewOnly = true,
 ): {
   summary: string;
   changes: Array<{
@@ -3049,8 +3283,9 @@ function mergeDiff(
   }>;
 } {
   return {
-    summary:
-      "Proposal only: merge adjacent chapter intent into one kept chapter; no files are changed.",
+    summary: previewOnly
+      ? "Preview: merge adjacent chapters into one kept chapter; no files are changed."
+      : "Confirmed: merge adjacent chapters into one kept chapter and archive the next chapter.",
     changes: [
       {
         path: "outline/chapters.yaml",
@@ -3072,6 +3307,84 @@ function mergeDiff(
       },
     ],
   };
+}
+
+function mergedChapterText(title: string, targetText: string, nextText: string): string {
+  const targetBody = stripMarkdownHeading(targetText).trim();
+  const nextBody = stripMarkdownHeading(nextText).trim();
+
+  return [
+    `# ${title}`,
+    "",
+    targetBody,
+    "",
+    "<!-- merged-from-next-chapter -->",
+    "",
+    nextBody,
+  ]
+    .filter((part) => part.length > 0)
+    .join("\n");
+}
+
+function stripMarkdownHeading(text: string): string {
+  return text.replace(/^#\s+.+(?:\r?\n|$)/u, "");
+}
+
+function mergedSummary(
+  targetSummary: string | undefined,
+  nextSummary: string | undefined,
+): string | undefined {
+  const parts = [targetSummary, nextSummary]
+    .map((summary) => summary?.trim())
+    .filter((summary): summary is string => Boolean(summary));
+
+  return parts.length > 0 ? parts.join(" / ") : undefined;
+}
+
+function mergeOutlineLinks(
+  targetLinks: Record<string, unknown> | undefined,
+  nextLinks: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  if (!targetLinks && !nextLinks) {
+    return undefined;
+  }
+
+  const merged: Record<string, unknown> = { ...(targetLinks ?? {}) };
+
+  for (const [key, value] of Object.entries(nextLinks ?? {})) {
+    const current = merged[key];
+
+    if (Array.isArray(current) || Array.isArray(value)) {
+      merged[key] = uniqueUnknownArray([
+        ...(Array.isArray(current) ? current : current === undefined ? [] : [current]),
+        ...(Array.isArray(value) ? value : value === undefined ? [] : [value]),
+      ]);
+      continue;
+    }
+
+    if (current === undefined) {
+      merged[key] = value;
+    }
+  }
+
+  return merged;
+}
+
+function uniqueUnknownArray(values: unknown[]): unknown[] {
+  const seen = new Set<string>();
+  const result = [];
+
+  for (const value of values) {
+    const key = JSON.stringify(value);
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    result.push(value);
+  }
+
+  return result;
 }
 
 function normalizeSplitLine(atLine: number | undefined): number {

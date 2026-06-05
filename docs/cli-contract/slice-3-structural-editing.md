@@ -344,10 +344,15 @@ proposal、`--dry-run` 和 `--diff` 模式下 `writes` 必须为空。
 ### 参数
 
 ```bash
-openathor outline merge <target> <next> [--title <title>] [--json] [--dry-run] [--diff] [--max-chars <count>]
+openathor outline merge <target> <next> [--title <title>] [--json] [--dry-run] [--diff] [--max-chars <count>] [--confirm --base-hash <hash> --next-base-hash <hash>]
 ```
 
-`target` 和 `next` 必须是相邻章节，当前只生成 proposal，不执行 confirmed write。
+`target` 和 `next` 必须是相邻章节。默认只生成 proposal；`--confirm` 会把 `next` 的正文合并进 `target` 的正文文件，把 `target` 标记为 `revised`，把 `next` 标记为 `archived`，并更新 outline、manuscript index 和 run record。被合并章节的原正文文件保留，不物理删除。
+
+confirmed merge 必须同时提供：
+
+- `--base-hash`：`target` 当前正文 hash。
+- `--next-base-hash`：`next` 当前正文 hash。
 
 ### Output data
 
@@ -368,9 +373,14 @@ openathor outline merge <target> <next> [--title <title>] [--json] [--dry-run] [
 
 ### Expected writes
 
-无。
+默认 proposal 无写入。
 
-`writes` 必须为空。
+confirmed merge 写入：
+
+- `target` 正文文件
+- `outline/chapters.yaml`
+- `.openathor/manuscript.index.yaml`
+- `runs/run_<stamp>_outline_merge.json`
 
 ### Errors
 
@@ -379,6 +389,9 @@ openathor outline merge <target> <next> [--title <title>] [--json] [--dry-run] [
 - `OA_OUTLINE_TARGET_REQUIRED`
 - `OA_OUTLINE_TARGET_NOT_FOUND`
 - `OA_OUTLINE_MERGE_INVALID`
+- `OA_OUTLINE_MERGE_SOURCE_REQUIRED`
+- `OA_BASE_HASH_REQUIRED`
+- `OA_MANUSCRIPT_CHANGED`
 
 ## `openathor outline replan`
 
@@ -425,5 +438,4 @@ openathor outline replan --from <target> --task <text> [--json] [--dry-run] [--d
 
 以下目标能力仍待实现：
 
-- confirmed write for `openathor outline merge`
 - confirmed write for `openathor outline replan`

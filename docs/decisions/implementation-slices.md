@@ -113,7 +113,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 影响分析覆盖 canon、伏笔、人物状态和后续章节
 - 结构变更后 context 可刷新
 
-当前状态：`openathor outline show`、`openathor outline impact`、`openathor outline insert`、`openathor outline move`、`openathor outline split`、`openathor outline merge`、`openathor outline replan` 和 `openathor outline archive` 已作为结构编辑最小闭环落地，并纳入 fixture 回归。`split --confirm --base-hash` 支持确认拆章写入；`merge` 和 `replan` 当前是 proposal-only，confirmed write 仍待实现。
+当前状态：`openathor outline show`、`openathor outline impact`、`openathor outline insert`、`openathor outline move`、`openathor outline split`、`openathor outline merge`、`openathor outline replan` 和 `openathor outline archive` 已作为结构编辑最小闭环落地，并纳入 fixture 回归。`split --confirm --base-hash` 支持确认拆章写入；`merge --confirm --base-hash --next-base-hash` 支持确认合章写入，会合并到目标正文并归档下一章，不删除原正文文件；`replan` 当前仍是 proposal-only，confirmed write 仍待实现。
 
 ## Slice 4: Long Project Retrieval
 
