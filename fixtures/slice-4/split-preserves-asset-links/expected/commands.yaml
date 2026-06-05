@@ -1,0 +1,44 @@
+commands:
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor outline split 2 --at-line 6 --title-before "潮汐舱门" --title-after "船票空位" --confirm --base-hash current:manuscript/chapter-002.md --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      split_at_line: 6
+      inserted.id: ch_003_2
+      inserted.display_order: 3
+      inserted.title: 船票空位
+      result.applied: true
+      result.outline_modified: true
+      result.index_modified: true
+  - run: openathor outline show --json
+    ok: true
+    expect_data:
+      outline.chapter_count: 4
+      outline.chapters.2.id: ch_003_2
+      outline.chapters.2.links.characters.0: lin-che
+      outline.chapters.2.links.characters.1: meng-xia
+      outline.chapters.2.links.characters.2: lin-yan
+      outline.chapters.2.links.timeline_events.0: event-cabin-lock-recent-trace
+      outline.chapters.2.links.timeline_events.1: event-lin-yan-ticket-found
+      outline.chapters.2.links.hooks.0: hook-inner-cabin-lock
+      outline.chapters.2.links.hooks.1: hook-empty-berth-ticket
+  - run: openathor index rebuild --json
+    ok: true
+    expect_data:
+      chapters_indexed: 4
+  - run: openathor assets audit --json
+    ok: true
+    expect_data:
+      audit.counts.chapters: 4
+      audit.counts.indexed_chapters: 4
+      audit.counts.characters: 4
+      audit.counts.unresolved_outline_links: 0
+      audit.counts.character_link_drifts: 0
+      audit.counts.weak_character_profile_summaries: 0
+  - run: openathor doctor --json --strict
+    ok: true
+    expect_data:
+      checks.manuscript_index_matches_outline: true
+      checks.derived_index_current: true
