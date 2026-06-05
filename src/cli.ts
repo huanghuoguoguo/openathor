@@ -23,6 +23,7 @@ import {
   runSearchSemantic,
   runSearchText,
   runSkillInstallPi,
+  runStyleCheck,
   runStyleProfileShow,
   runWritingProposal,
 } from "./protocol/kernel.js";
@@ -287,14 +288,15 @@ styleCommand
   .argument("<scope>", "style check scope; currently chapter")
   .argument("<target>", "chapter id or display order")
   .option("--json", "emit JSON")
-  .action(async (_scope: string, _target: string, options: { json?: boolean }) => {
+  .option("--max-chars <count>", "maximum characters per snippet")
+  .action(async (scope: string, target: string, options: { json?: boolean; maxChars?: string }) => {
     await emitResult(
       "openathor style check",
       options.json,
-      runNotImplemented({
-        command: "openathor style check",
-        feature: "Style consistency checking",
-        hints: ["Use openathor context chapter <target> --json and bible/style.md manually for now."],
+      runStyleCheck({
+        scope: scope === "chapter" ? "chapter" : undefined,
+        target,
+        maxChars: options.maxChars ? Number(options.maxChars) : undefined,
       }),
     );
   });

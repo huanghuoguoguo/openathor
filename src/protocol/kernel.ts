@@ -157,6 +157,13 @@ type StyleProfileShowOptions = {
   maxChars?: number;
 };
 
+type StyleCheckOptions = {
+  cwd?: string;
+  scope?: "chapter";
+  target?: string;
+  maxChars?: number;
+};
+
 type AssetsAuditOptions = {
   cwd?: string;
   maxChars?: number;
@@ -306,6 +313,18 @@ type AssetEntity = {
   source_path: string;
   line: number;
   kind: "character" | "timeline_event" | "hook" | "world";
+};
+
+type StyleMetrics = {
+  char_count: number;
+  sentence_count: number;
+  average_sentence_chars: number;
+  dialogue_line_count: number;
+  dialogue_ratio: number;
+  paragraph_count: number;
+  average_paragraph_chars: number;
+  action_detail_hits: number;
+  emotion_exposition_hits: number;
 };
 
 type ResolvedOutlineChapter = {
@@ -880,6 +899,138 @@ export async function runStyleProfileShow(
       manual_style: manualStyle,
       profiles,
       references,
+    },
+  };
+}
+
+export async function runStyleCheck(
+  options: StyleCheckOptions = {},
+): Promise<CommandResult> {
+  if ((options.scope ?? "chapter") !== "chapter") {
+    throw new OpenAthorError(
+      "OA_STYLE_UNSUPPORTED_SCOPE",
+      `Unsupported style check scope ${options.scope}.`,
+      { exitCode: 2 },
+    );
+  }
+
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
+  const targetChapter = resolveContextChapter(
+    options.target,
+    inspection.chapters,
+    inspection.manuscriptIndex,
+  );
+  const maxChars = normalizeSnippetChars(options.maxChars);
+  const sourceMap = new Map<string, EnvelopeSource>();
+
+  for (const source of inspection.sources) {
+    sourceMap.set(source.path, source);
+  }
+
+  const styleSource = await readContextSource(
+    projectRoot,
+    "bible/style.md",
+    Number.MAX_SAFE_INTEGER,
+    sourceMap,
+  );
+  const profileSource = await readContextSource(
+    projectRoot,
+    "style/profiles.yaml",
+    Number.MAX_SAFE_INTEGER,
+    sourceMap,
+  );
+  const chapterText = await readFile(path.join(projectRoot, targetChapter.source_path), "utf8");
+  sourceMap.set(targetChapter.source_path, {
+    path: targetChapter.source_path,
+    hash: targetChapter.content_hash,
+  });
+  const baselineChapters = inspection.manuscriptIndex.chapters.filter(
+    (chapter) => chapter.id !== targetChapter.id && chapter.status !== "archived",
+  );
+  const baselineTexts = [];
+
+  for (const chapter of baselineChapters) {
+    const text = await readFile(path.join(projectRoot, chapter.source_path), "utf8");
+    sourceMap.set(chapter.source_path, {
+      path: chapter.source_path,
+      hash: chapter.content_hash,
+    });
+    baselineTexts.push(text);
+  }
+
+  const targetMetrics = styleMetrics(chapterText);
+  const baselineMetrics =
+    baselineTexts.length > 0 ? styleMetrics(baselineTexts.join("\n\n")) : null;
+  const styleRules = extractStyleRules(`${styleSource.text}\n${profileSource.text}`);
+  const ruleMatches = styleRuleMatches(chapterText, styleRules, maxChars);
+  const driftFindings = styleDriftFindings(targetMetrics, baselineMetrics, ruleMatches);
+  const warnings = [...inspection.warnings];
+
+  if (driftFindings.some((finding) => finding.severity === "medium")) {
+    warnings.push({
+      code: "OA_STYLE_DRIFT_CANDIDATE",
+      message: "The target chapter has deterministic style drift candidate(s).",
+      severity: "medium",
+    });
+  } else if (driftFindings.some((finding) => finding.severity === "low")) {
+    warnings.push({
+      code: "OA_STYLE_REVIEW_CANDIDATE",
+      message: "The target chapter has low-severity style review candidate(s).",
+      severity: "low",
+    });
+  }
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources: [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path)),
+    writes: [],
+    warnings,
+    data: {
+      scope: "chapter",
+      target: {
+        id: targetChapter.id,
+        display_order: targetChapter.display_order,
+        title: targetChapter.title,
+        source_path: targetChapter.source_path,
+        content_hash: targetChapter.content_hash,
+      },
+      method: "deterministic_style_metric_scan",
+      read_only: true,
+      style_sources: {
+        manual_style: {
+          path: styleSource.path,
+          hash: styleSource.hash,
+          present: styleSource.hash !== null,
+        },
+        profiles: {
+          path: profileSource.path,
+          hash: profileSource.hash,
+          present: profileSource.hash !== null,
+        },
+      },
+      metrics: {
+        target: targetMetrics,
+        baseline: baselineMetrics,
+      },
+      rules: {
+        do: styleRules.do,
+        avoid: styleRules.avoid,
+      },
+      rule_matches: ruleMatches,
+      findings: driftFindings,
+      verdict:
+        driftFindings.length === 0
+          ? "pass"
+          : driftFindings.some((finding) => finding.severity === "medium")
+            ? "needs_revision"
+            : "needs_review",
+      recommendations: [
+        "Treat deterministic style findings as review prompts, not automatic rewrite instructions.",
+        "Use openathor revise chapter <target> --task ... for any confirmed revision proposal.",
+        "Do not copy reference text phrasing when resolving style drift.",
+      ],
     },
   };
 }
@@ -4786,6 +4937,304 @@ function extractAssetAuditTerms(text: string): string[] {
   return [...terms].sort((a, b) => a.localeCompare(b, "zh-Hans-CN")).slice(0, 80);
 }
 
+function styleMetrics(text: string): StyleMetrics {
+  const body = text.replace(/^# .+$/gm, "").trim();
+  const paragraphs = body
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph.length > 0);
+  const sentences = body
+    .split(/[。！？!?]+/u)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length > 0);
+  const lines = body.split(/\r?\n/).map((line) => line.trim());
+  const dialogueLines = lines.filter((line) => /^["“][^"”]+["”]/u.test(line));
+  const charCount = [...body.replace(/\s+/g, "")].length;
+  const paragraphChars = paragraphs.map((paragraph) => [...paragraph.replace(/\s+/g, "")].length);
+
+  return {
+    char_count: charCount,
+    sentence_count: sentences.length,
+    average_sentence_chars:
+      sentences.length > 0 ? roundOne(charCount / sentences.length) : 0,
+    dialogue_line_count: dialogueLines.length,
+    dialogue_ratio: lines.length > 0 ? roundTwo(dialogueLines.length / lines.length) : 0,
+    paragraph_count: paragraphs.length,
+    average_paragraph_chars:
+      paragraphChars.length > 0
+        ? roundOne(paragraphChars.reduce((sum, value) => sum + value, 0) / paragraphChars.length)
+        : 0,
+    action_detail_hits: countPatternHits(
+      body,
+      /手套|证物袋|相机|放大镜|镊子|齿轮|钥匙|锁|金属|锈|雨|雾|光|声|触|记录|笔记|机械/g,
+    ),
+    emotion_exposition_hits: countPatternHits(
+      body,
+      /悲伤|痛苦|愤怒|害怕|恐惧|绝望|崩溃|激动|兴奋|开心|难过|内心|情绪/g,
+    ),
+  };
+}
+
+function extractStyleRules(text: string): {
+  do: string[];
+  avoid: string[];
+} {
+  const doRules = [];
+  const avoidRules = [];
+  let section: "do" | "avoid" | null = null;
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) {
+      continue;
+    }
+
+    if (/^(###?\s*)?(do|应做|推荐|典型行为|语言特征|特点|写作风格|语言质感|物理细节优先)/i.test(line)) {
+      section = "do";
+      continue;
+    }
+
+    if (/^(###?\s*)?(avoid|避免|禁止|不要|禁忌|禁止元素)/i.test(line)) {
+      section = "avoid";
+      continue;
+    }
+
+    const bullet = line.match(/^[-*]\s+(.+)$/u)?.[1]?.trim();
+    if (!bullet || !section) {
+      continue;
+    }
+
+    const cleaned = cleanStyleRule(bullet);
+    if (!cleaned) {
+      continue;
+    }
+
+    const bulletSection = styleRuleSectionFromBullet(bullet) ?? section;
+    if (bulletSection === "do") {
+      doRules.push(cleaned);
+    } else {
+      avoidRules.push(cleaned);
+    }
+  }
+
+  return {
+    do: uniqueLimited(doRules, 20),
+    avoid: uniqueLimited(avoidRules, 20),
+  };
+}
+
+function cleanStyleRule(value: string): string {
+  const cleaned = value
+    .replace(/^["“”']|["“”']$/g, "")
+    .replace(/^[✅❌]\s*/u, "")
+    .replace(/^(?:避免|禁止|不要|禁忌|avoid|must not)\s*[:：]\s*/iu, "")
+    .replace(/^(?:do|应做|推荐)\s*[:：]\s*/iu, "")
+    .replace(/\*\*/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (/^(语言特征|典型行为|特点|感官偏好|思维模式|叙事距离|适用场景|视觉|听觉|气味|触觉|节奏)[:：]?$/u.test(cleaned)) {
+    return "";
+  }
+
+  if (/^(id|name|status|source|references|profiles|traits|rules|sentence_rhythm|diction|exposition_style)[:：]/iu.test(cleaned)) {
+    return "";
+  }
+
+  return cleaned;
+}
+
+function styleRuleSectionFromBullet(value: string): "do" | "avoid" | null {
+  if (/^[❌]/u.test(value) || /(?:避免|禁止|不要|禁忌|avoid|must not)/iu.test(value)) {
+    return "avoid";
+  }
+  if (/^[✅]/u.test(value) || /(?:应做|推荐|do)\s*[:：]/iu.test(value)) {
+    return "do";
+  }
+
+  return null;
+}
+
+function styleRuleMatches(
+  text: string,
+  rules: {
+    do: string[];
+    avoid: string[];
+  },
+  maxChars: number,
+): {
+  do_hits: Array<{ rule: string; matched_terms: string[]; snippet: string }>;
+  avoid_hits: Array<{ rule: string; matched_terms: string[]; snippet: string }>;
+  do_misses: string[];
+} {
+  return {
+    do_hits: styleRuleHits(text, rules.do, maxChars),
+    avoid_hits: styleRuleHits(text, rules.avoid, maxChars),
+    do_misses: rules.do
+      .filter((rule) => !styleRuleHasHit(text, rule))
+      .slice(0, 10),
+  };
+}
+
+function styleRuleHits(
+  text: string,
+  rules: string[],
+  maxChars: number,
+): Array<{ rule: string; matched_terms: string[]; snippet: string }> {
+  const hits = [];
+  const normalized = text.toLowerCase();
+
+  for (const rule of rules) {
+    const terms = extractStyleRuleTerms(rule);
+    const matchedTerms = terms.filter((term) => normalized.includes(term.toLowerCase()));
+    if (matchedTerms.length === 0) {
+      continue;
+    }
+
+    const firstTerm = matchedTerms[0];
+    const index = Math.max(0, normalized.indexOf(firstTerm.toLowerCase()));
+    hits.push({
+      rule,
+      matched_terms: matchedTerms.slice(0, 6),
+      snippet: snippetAround(text.replace(/\s+/g, " "), index, firstTerm.length, maxChars),
+    });
+  }
+
+  return hits.slice(0, 12);
+}
+
+function styleRuleHasHit(text: string, rule: string): boolean {
+  const normalized = text.toLowerCase();
+  return extractStyleRuleTerms(rule).some((term) =>
+    normalized.includes(term.toLowerCase()),
+  );
+}
+
+function extractStyleRuleTerms(rule: string): string[] {
+  const terms = new Set<string>();
+  const normalized = rule.toLowerCase();
+
+  for (const token of normalized.match(/[a-z0-9_]{3,}/g) ?? []) {
+    if (!STYLE_RULE_STOP_WORDS.has(token)) {
+      terms.add(token);
+    }
+  }
+
+  for (const token of normalized.match(/[\p{Script=Han}]{2,}/gu) ?? []) {
+    if (!STYLE_RULE_STOP_WORDS.has(token)) {
+      terms.add(token);
+    }
+  }
+
+  return [...terms].slice(0, 12);
+}
+
+function styleDriftFindings(
+  target: StyleMetrics,
+  baseline: StyleMetrics | null,
+  ruleMatches: ReturnType<typeof styleRuleMatches>,
+): Array<{
+  code: string;
+  severity: "low" | "medium";
+  message: string;
+  evidence: Record<string, unknown>;
+}> {
+  const findings = [];
+
+  if (baseline && baseline.average_sentence_chars > 0) {
+    const ratio = target.average_sentence_chars / baseline.average_sentence_chars;
+    if (ratio >= 1.8 || ratio <= 0.45) {
+      findings.push({
+        code: "style_sentence_length_shift",
+        severity: "medium" as const,
+        message: "Average sentence length differs sharply from the project baseline.",
+        evidence: {
+          target_average_sentence_chars: target.average_sentence_chars,
+          baseline_average_sentence_chars: baseline.average_sentence_chars,
+        },
+      });
+    } else if (ratio >= 1.45 || ratio <= 0.65) {
+      findings.push({
+        code: "style_sentence_length_review",
+        severity: "low" as const,
+        message: "Average sentence length differs from the project baseline.",
+        evidence: {
+          target_average_sentence_chars: target.average_sentence_chars,
+          baseline_average_sentence_chars: baseline.average_sentence_chars,
+        },
+      });
+    }
+  }
+
+  if (baseline && Math.abs(target.dialogue_ratio - baseline.dialogue_ratio) >= 0.35) {
+    findings.push({
+      code: "style_dialogue_ratio_shift",
+      severity: "low" as const,
+      message: "Dialogue line ratio differs from the project baseline.",
+      evidence: {
+        target_dialogue_ratio: target.dialogue_ratio,
+        baseline_dialogue_ratio: baseline.dialogue_ratio,
+      },
+    });
+  }
+
+  if (target.emotion_exposition_hits > target.action_detail_hits && target.char_count > 200) {
+    findings.push({
+      code: "style_emotion_exposition_review",
+      severity: "low" as const,
+      message: "Emotion exposition terms outnumber concrete action/detail terms.",
+      evidence: {
+        emotion_exposition_hits: target.emotion_exposition_hits,
+        action_detail_hits: target.action_detail_hits,
+      },
+    });
+  }
+
+  if (ruleMatches.avoid_hits.length > 0) {
+    findings.push({
+      code: "style_avoid_rule_hit",
+      severity: "medium" as const,
+      message: "The target chapter matches avoid-rule terms from project style guidance.",
+      evidence: {
+        avoid_hit_count: ruleMatches.avoid_hits.length,
+        rules: ruleMatches.avoid_hits.slice(0, 5).map((hit) => hit.rule),
+      },
+    });
+  }
+
+  return findings;
+}
+
+function countPatternHits(text: string, pattern: RegExp): number {
+  return text.match(pattern)?.length ?? 0;
+}
+
+function uniqueLimited(values: string[], limit: number): string[] {
+  const seen = new Set<string>();
+  const result = [];
+
+  for (const value of values) {
+    if (seen.has(value)) {
+      continue;
+    }
+    seen.add(value);
+    result.push(value);
+    if (result.length >= limit) {
+      break;
+    }
+  }
+
+  return result;
+}
+
+function roundOne(value: number): number {
+  return Number(value.toFixed(1));
+}
+
+function roundTwo(value: number): number {
+  return Number(value.toFixed(2));
+}
+
 async function searchCandidatePaths(
   projectRoot: string,
   inspection: Awaited<ReturnType<typeof inspectProject>>,
@@ -5101,6 +5550,25 @@ const SEARCH_STOP_WORDS = new Set([
   "我们",
   "你们",
   "正在",
+]);
+
+const STYLE_RULE_STOP_WORDS = new Set([
+  ...SEARCH_STOP_WORDS,
+  "使用",
+  "保持",
+  "避免",
+  "不要",
+  "可以",
+  "作为",
+  "通过",
+  "体现",
+  "描写",
+  "语言",
+  "特征",
+  "特点",
+  "叙事",
+  "风格",
+  "项目",
 ]);
 
 function snippetAround(

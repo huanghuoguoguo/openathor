@@ -29,6 +29,7 @@ import {
   runSearchSemantic,
   runSearchText,
   runSkillInstallPi,
+  runStyleCheck,
   runStyleProfileShow,
   runWritingProposal,
   type CommandResult,
@@ -583,9 +584,17 @@ async function dispatchCommand(
     return runStyleProfileShow({ cwd });
   }
 
+  if (parsed.name === "style check") {
+    return runStyleCheck({
+      cwd,
+      scope: parsed.options.scope === "chapter" ? "chapter" : undefined,
+      target: parsed.pathArg,
+      maxChars: parsed.options.maxChars,
+    });
+  }
+
   if (
     parsed.name === "style analyze" ||
-    parsed.name === "style check" ||
     parsed.name === "style revise" ||
     parsed.name === "style profile apply"
   ) {
@@ -853,6 +862,9 @@ function parseCommand(command: string): {
   }
 
   if (positional[0] === "style" && positional[1] === "check") {
+    const scope = positional[2] === "chapter" ? "chapter" : undefined;
+    options.scope = scope;
+
     return {
       display: "openathor style check",
       name: "style check",

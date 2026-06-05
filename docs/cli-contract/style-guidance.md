@@ -1,0 +1,88 @@
+# Style Guidance CLI
+
+## 目标
+
+`openathor style` 命令用于让 Pi Agent 检查和维护项目文风稳定性。
+
+当前实现只交付确定性只读检查，不调用模型，不分析外部参考文本，不生成作家仿写规则。
+
+## `openathor style profile show`
+
+读取 `bible/style.md`、`style/profiles.yaml` 和 `style/references.yaml`。
+
+```bash
+openathor style profile show [--json]
+```
+
+### Expected writes
+
+无。
+
+## `openathor style check`
+
+检查目标章节相对项目风格说明和其他章节基线的确定性指标。
+
+```bash
+openathor style check chapter <target> [--json] [--max-chars <count>]
+```
+
+### Output data
+
+`data` 包含：
+
+- `scope`
+- `target`
+- `method: deterministic_style_metric_scan`
+- `read_only`
+- `style_sources`
+- `metrics`
+- `rules`
+- `rule_matches`
+- `findings`
+- `verdict`
+- `recommendations`
+
+`metrics.target` 和 `metrics.baseline` 包含：
+
+- `char_count`
+- `sentence_count`
+- `average_sentence_chars`
+- `dialogue_line_count`
+- `dialogue_ratio`
+- `paragraph_count`
+- `average_paragraph_chars`
+- `action_detail_hits`
+- `emotion_exposition_hits`
+
+`verdict` 取值：
+
+- `pass`
+- `needs_review`
+- `needs_revision`
+
+### Warnings
+
+- `OA_STYLE_REVIEW_CANDIDATE`：低严重度文风复核提示。
+- `OA_STYLE_DRIFT_CANDIDATE`：确定性指标显示较明显漂移。
+
+### Expected writes
+
+无。
+
+`style check` 不自动改稿、不写 `bible/style.md`，也不写 confirmed style profile。
+
+### 当前限制
+
+- 只做确定性指标和词项扫描，不是 LLM 文风判断。
+- `avoid` 规则命中和句长偏移是复核提示，不代表自动判定作品质量。
+- 解决 drift 时必须通过 `openathor revise` 或用户手动编辑进入确认流程。
+
+## 未实现命令
+
+以下命令仍返回结构化 `OA_COMMAND_NOT_IMPLEMENTED`：
+
+- `openathor style analyze`
+- `openathor style revise`
+- `openathor style profile apply`
+
+这些能力仍是目标命令面，但不能伪装成已交付。

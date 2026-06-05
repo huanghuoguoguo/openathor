@@ -92,6 +92,7 @@ openathor export --format markdown
 
 - `openathor context`
 - `openathor style profile show`
+- `openathor style check`
 - `openathor plan`
 - `openathor draft`
 - `openathor review`
@@ -105,7 +106,8 @@ openathor export --format markdown
 - `revise chapter --confirm-write --base-hash` 支持 hash 匹配时确认改写已有章节。
 - `context` 暴露 `bible/world.md`、`bible/characters.md`、`bible/timeline.md` 和 `style/profiles.yaml`，作为长篇资产沉淀入口。
 - proposal 写入前会对 confirmed canon 中的硬约束做确定性冲突拦截，命中时返回 `OA_CANON_CONFLICT` 且不写文件。
-- `style analyze/check/revise/profile apply` 当前返回结构化 `OA_COMMAND_NOT_IMPLEMENTED`，避免 Pi 收到非 JSON Commander 错误；完整 style 分析、检查和应用仍待实现。
+- `style check` 当前是确定性指标和词项扫描，不是 LLM 文风判断。
+- `style analyze/revise/profile apply` 当前返回结构化 `OA_COMMAND_NOT_IMPLEMENTED`，避免 Pi 收到非 JSON Commander 错误；完整 style 分析、改写和应用仍待实现。
 - CLI 不调用模型，不覆盖已有正文，不直接修改 confirmed canon。
 - 真实 LLM judge scores attachment 已支持；更完整的真实 Pi Agent 场景集仍待扩展。
 

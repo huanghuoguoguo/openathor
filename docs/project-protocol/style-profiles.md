@@ -19,7 +19,7 @@ style/
 
 `bible/style.md` 是用户可读的主风格说明。`style/profiles.yaml` 保存结构化风格画像。`style/references.yaml` 记录参考文本来源和授权状态。
 
-当前 CLI 已支持 `openathor style profile show --json` 读取这些文件，并在 `openathor context` 中暴露 `style_profiles`。`style analyze`、`style check`、`style revise` 和 `style profile apply` 仍是目标命令面，当前返回结构化未实现错误。
+当前 CLI 已支持 `openathor style profile show --json` 读取这些文件，并在 `openathor context` 中暴露 `style_profiles`。`openathor style check chapter <target> --json` 已支持确定性风格指标扫描，用于发现句长、对话比例、动作细节和 avoid 规则命中的漂移候选。`style analyze`、`style revise` 和 `style profile apply` 仍是目标命令面，当前返回结构化未实现错误。
 
 ## Profile 示例
 
@@ -89,3 +89,4 @@ archived
 - 不承诺复制某个具体作家的独特表达
 - 用户未确认的风格画像不能覆盖 confirmed style
 - `draft` 和 `revise` 应读取适用的 confirmed style profile
+- `style check` 的确定性 finding 是复核提示，不能自动改写正文或覆盖 confirmed style
