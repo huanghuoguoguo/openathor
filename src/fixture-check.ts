@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { envelope, errorEnvelope } from "./protocol/envelope.js";
 import type { OpenAthorEnvelope } from "./protocol/envelope.js";
@@ -50,6 +51,32 @@ type ExpectedDisallowed = {
 type ExpectedDoctor = {
   ok: boolean;
   checks?: Record<string, boolean>;
+};
+
+export type FixtureCommandResult = {
+  command: string;
+  ok: boolean;
+  error_code: string | null;
+  envelope: OpenAthorEnvelope;
+};
+
+export type FixtureFileChange = {
+  path: string;
+  change_type: "created" | "modified" | "deleted";
+  before_hash: string | null;
+  after_hash: string | null;
+  before_excerpt?: string;
+  after_excerpt?: string;
+};
+
+export type FixtureCheckResult = {
+  fixture: string;
+  workspace: string;
+  command_results: FixtureCommandResult[];
+  required_files: string[];
+  absent_files: string[];
+  unchanged_files: string[];
+  file_changes: FixtureFileChange[];
 };
 
 program
@@ -104,31 +131,24 @@ program
     }
   });
 
-program.parseAsync(process.argv).catch((error: unknown) => {
-  const openAthorError =
-    error instanceof OpenAthorError
-      ? error
-      : new OpenAthorError("OA_INTERNAL_UNEXPECTED", String(error), {
-          recoverable: false,
-          exitCode: 5,
-        });
+if (isDirectRun()) {
+  program.parseAsync(process.argv).catch((error: unknown) => {
+    const openAthorError =
+      error instanceof OpenAthorError
+        ? error
+        : new OpenAthorError("OA_INTERNAL_UNEXPECTED", String(error), {
+            recoverable: false,
+            exitCode: 5,
+          });
 
-  process.stderr.write(`${openAthorError.code}: ${openAthorError.message}\n`);
-  process.exitCode = openAthorError.exitCode;
-});
+    process.stderr.write(`${openAthorError.code}: ${openAthorError.message}\n`);
+    process.exitCode = openAthorError.exitCode;
+  });
+}
 
-async function runFixtureCheck(fixtureDir: string): Promise<{
-  fixture: string;
-  workspace: string;
-  command_results: Array<{
-    command: string;
-    ok: boolean;
-    error_code: string | null;
-  }>;
-  required_files: string[];
-  absent_files: string[];
-  unchanged_files: string[];
-}> {
+export async function runFixtureCheck(
+  fixtureDir: string,
+): Promise<FixtureCheckResult> {
   const inputDir = path.join(fixtureDir, "input");
   const expectedDir = path.join(fixtureDir, "expected");
 
@@ -145,6 +165,7 @@ async function runFixtureCheck(fixtureDir: string): Promise<{
   await removeGitkeepFiles(workspace);
 
   const beforeHashes = await hashExistingFiles(workspace);
+  const beforeExcerpts = await textExcerptsForHashes(workspace, beforeHashes);
   const expectedCommands = await readExpectedYaml<ExpectedCommands>(
     expectedDir,
     "commands.yaml",
@@ -158,7 +179,7 @@ async function runFixtureCheck(fixtureDir: string): Promise<{
     expectedDir,
     "doctor.json",
   );
-  const commandResults = [];
+  const commandResults: FixtureCommandResult[] = [];
 
   try {
     for (const expectedCommand of expectedCommands.commands ?? []) {
@@ -199,6 +220,7 @@ async function runFixtureCheck(fixtureDir: string): Promise<{
         command: expectedCommand.run,
         ok: result.ok,
         error_code: result.error_code,
+        envelope: result.envelope,
       });
     }
 
@@ -225,8 +247,15 @@ async function runFixtureCheck(fixtureDir: string): Promise<{
         command: "openathor doctor --json --strict",
         ok: true,
         error_code: null,
+        envelope: doctorResult.envelope,
       });
     }
+
+    const fileChanges = await collectFileChanges(
+      workspace,
+      beforeHashes,
+      beforeExcerpts,
+    );
 
     return {
       fixture: fixtureDir,
@@ -235,11 +264,18 @@ async function runFixtureCheck(fixtureDir: string): Promise<{
       required_files: expectedFiles.required ?? [],
       absent_files: [...(expectedFiles.absent ?? []), ...(expectedDisallowed.absent ?? [])],
       unchanged_files: expectedDisallowed.unchanged ?? [],
+      file_changes: fileChanges,
     };
   } catch (error) {
     await rm(workspace, { recursive: true, force: true });
     throw error;
   }
+}
+
+function isDirectRun(): boolean {
+  return Boolean(
+    process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href,
+  );
 }
 
 async function executeFixtureCommand(
@@ -884,6 +920,77 @@ async function hashExistingFiles(root: string): Promise<Map<string, string>> {
 
   await visit(root);
   return hashes;
+}
+
+async function collectFileChanges(
+  root: string,
+  beforeHashes: Map<string, string>,
+  beforeExcerpts: Map<string, string>,
+): Promise<FixtureFileChange[]> {
+  const afterHashes = await hashExistingFiles(root);
+  const allPaths = new Set([...beforeHashes.keys(), ...afterHashes.keys()]);
+  const changes: FixtureFileChange[] = [];
+
+  for (const relPath of [...allPaths].sort()) {
+    const beforeHash = beforeHashes.get(relPath) ?? null;
+    const afterHash = afterHashes.get(relPath) ?? null;
+
+    if (beforeHash === afterHash) {
+      continue;
+    }
+
+    const changeType =
+      beforeHash === null ? "created" : afterHash === null ? "deleted" : "modified";
+    const beforeExcerpt = beforeExcerpts.get(relPath);
+    const afterExcerpt =
+      afterHash === null ? undefined : await readTextExcerpt(path.join(root, relPath));
+
+    changes.push({
+      path: relPath,
+      change_type: changeType,
+      before_hash: beforeHash,
+      after_hash: afterHash,
+      ...(beforeExcerpt ? { before_excerpt: beforeExcerpt } : {}),
+      ...(afterExcerpt ? { after_excerpt: afterExcerpt } : {}),
+    });
+  }
+
+  return changes;
+}
+
+async function textExcerptsForHashes(
+  root: string,
+  hashes: Map<string, string>,
+): Promise<Map<string, string>> {
+  const excerpts = new Map<string, string>();
+
+  for (const relPath of hashes.keys()) {
+    const excerpt = await readTextExcerpt(path.join(root, relPath));
+    if (excerpt) {
+      excerpts.set(relPath, excerpt);
+    }
+  }
+
+  return excerpts;
+}
+
+async function readTextExcerpt(filePath: string): Promise<string | undefined> {
+  if (filePath.endsWith(".sqlite")) {
+    return undefined;
+  }
+
+  try {
+    const buffer = await readFile(filePath);
+    const text = buffer.toString("utf8");
+
+    if (text.includes("\u0000")) {
+      return undefined;
+    }
+
+    return text.slice(0, 1200);
+  } catch {
+    return undefined;
+  }
 }
 
 async function pathExists(filePath: string): Promise<boolean> {

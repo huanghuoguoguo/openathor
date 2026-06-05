@@ -11,8 +11,9 @@
 1. [Evaluation Strategy](llm-as-judge/evaluation-strategy.md)：整体评估分层
 2. [Scenarios And Fixtures](llm-as-judge/scenarios-and-fixtures.md)：样例项目和任务集
 3. [Agent QA Workflow](llm-as-judge/agent-qa-workflow.md)：agent 作为真实用户和 QA 的流程
-4. [Judge Rubrics](llm-as-judge/judge-rubrics.md)：LLM judge 评分维度
-5. [Regression Loop](llm-as-judge/regression-loop.md)：快速迭代和回归方式
+4. [Evidence Package](llm-as-judge/evidence-package.md)：judge 证据包格式和自动化 smoke 入口
+5. [Judge Rubrics](llm-as-judge/judge-rubrics.md)：LLM judge 评分维度
+6. [Regression Loop](llm-as-judge/regression-loop.md)：快速迭代和回归方式
 
 ## 当前结论
 
@@ -25,3 +26,5 @@ deterministic checks
 ```
 
 LLM judge 只判断高层质量和用户体验，不替代 schema 校验、文件 diff 校验、索引一致性检查和 CLI 错误检查。
+
+当前已落地 `openathor-judge-smoke` 自动化入口。第一版 smoke 生成并校验 judge evidence package，覆盖确认写入正文和归档章节两个场景；真实模型评分仍通过同一证据包后续接入。

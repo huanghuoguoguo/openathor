@@ -5,7 +5,8 @@
   "type": "module",
   "bin": {
     "openathor": "./dist/cli.js",
-    "openathor-fixture-check": "./dist/fixture-check.js"
+    "openathor-fixture-check": "./dist/fixture-check.js",
+    "openathor-judge-smoke": "./dist/judge-smoke.js"
   },
   "files": [
     "dist",
@@ -15,13 +16,15 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run check && npm run validate:schemas && npm run build && npm run test:fixtures",
+    "test": "npm run check && npm run validate:schemas && npm run build && npm run test:fixtures && npm run test:judge:smoke",
     "validate:schemas": "node scripts/validate-schemas.mjs",
     "test:fixtures": "npm run test:fixtures:slice1 && npm run test:fixtures:slice2 && npm run test:fixtures:slice3 && npm run test:fixtures:slice4",
     "test:fixtures:slice1": "npm run fixture -- fixtures/slice-1/new-project && npm run fixture -- fixtures/slice-1/adopt-3-chapters && npm run fixture -- fixtures/slice-1/scattered-drafts && npm run fixture -- fixtures/slice-1/adopt-ambiguous-order",
     "test:fixtures:slice2": "npm run fixture -- fixtures/slice-2/draft-confirm-write && npm run fixture -- fixtures/slice-2/revise-confirm-write && npm run fixture -- fixtures/slice-2/revise-hash-conflict",
     "test:fixtures:slice3": "npm run fixture -- fixtures/slice-3/outline-archive",
     "test:fixtures:slice4": "npm run fixture -- fixtures/slice-4/search-text",
+    "test:judge:smoke": "node dist/judge-smoke.js",
+    "judge:smoke": "node dist/judge-smoke.js --out-dir evals/smoke",
     "fixture": "node dist/fixture-check.js"
   },
   "engines": {

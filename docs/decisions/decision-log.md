@@ -334,3 +334,31 @@ Slice 1 已实现为 TypeScript/Node.js CLI，并纳入 `npm test`。
 验证：
 
 - `fixtures/slice-4/search-text`
+
+## 2026-06-05: LLM-as-judge smoke 已落地
+
+`openathor-judge-smoke` 已实现为自动化 evidence package smoke 入口。
+
+已实现：
+
+- `openathor-judge-smoke`
+- `npm run test:judge:smoke`
+- `npm run judge:smoke`
+- `openathor.judge_evidence.v1`
+
+当前行为：
+
+- 复用 deterministic fixture replay。
+- 覆盖 `fixtures/slice-2/draft-confirm-write` 和 `fixtures/slice-3/outline-archive`。
+- 收集 CLI commands、writes、warnings、file changes、user task 和 agent final response。
+- 默认不调用模型，judge 字段为 `needs_review`，明确缺少真实 Operator Agent transcript 和 LLM judge scores。
+- 已接入 `npm test`。
+
+验证：
+
+- `npm run test:judge:smoke`
+
+后续：
+
+- 将真实 Pi Agent transcript 写入同一 evidence package。
+- 将 LLM judge scores 和 blocking failures 接入回归门禁。

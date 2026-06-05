@@ -18,12 +18,13 @@
 
 日常快速迭代建议跑：
 
+- `npm run test:judge:smoke`
 - `adopt-3-chapters`
 - `outline-insert`
 - `canon-conflict`
 - `revise-local`
 
-这四个能覆盖接管、结构变更、一致性和改稿风险。
+`test:judge:smoke` 当前覆盖已落地的确认写入和归档章节证据包；后四个目标场景用于后续补齐接管、结构变更、一致性和改稿风险。
 
 ## 完整目标场景集
 
@@ -57,6 +58,12 @@ evals/runs/
 - judge 分数
 - blocking failures
 - diff 摘要
+
+自动化 smoke 需要保存证据包时使用：
+
+```bash
+npm run judge:smoke
+```
 
 ## 回归判断
 
