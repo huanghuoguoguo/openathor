@@ -86,7 +86,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 新增设定默认进入 pending
 - 用户手写冲突能被发现
 
-当前状态：`openathor context` 已作为只读上下文包命令落地；`plan`、`draft`、`review`、`revise`、`canon sync` 已作为 proposal 入口落地；确认后的 `draft chapter next` 新章写入、标题 fallback 和 `revise chapter --base-hash` 安全改写已落地，并纳入 fixture 回归。CLI 仍不调用模型。
+当前状态：`openathor context` 已作为只读上下文包命令落地，并暴露人物、世界观、时间线和 style profile 资产；`openathor style profile show` 已作为只读 profile 检查命令落地；`plan`、`draft`、`review`、`revise`、`canon sync` 已作为 proposal 入口落地；确认后的 `draft chapter next` 新章写入、标题 fallback 和 `revise chapter --base-hash` 安全改写已落地，并纳入 fixture 回归。`style analyze/check/revise/profile apply` 当前以结构化 `OA_COMMAND_NOT_IMPLEMENTED` 暴露，避免 agent 收到非 JSON 错误；完整 style profile 分析/检查/应用仍待实现。CLI 仍不调用模型。
 
 ## Slice 3: Structural Editing
 
@@ -135,7 +135,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 向量索引仍是派生数据
 - context 包含来源证据
 
-当前状态：`openathor search text`、`openathor search related`、`openathor search semantic` 和 `openathor export --format markdown` 已落地，并纳入 fixture 回归。`search semantic` 使用 `openathor index rebuild --vector` 生成的本地 deterministic hash embedding 派生索引，不调用外部 embedding 服务；export 当前只支持从明文 manuscript source 合并导出 Markdown。
+当前状态：`openathor search text`、`openathor search related`、`openathor search semantic` 和 `openathor export --format markdown` 已落地，并纳入 fixture 回归。资产连续性 fixture 验证 `bible/world.md`、`bible/characters.md`、`bible/timeline.md`、canon、notes 和 style profile 能被 context/search/semantic/export 闭环引用。`index rebuild` 已能从 outline 和正文重建 `.openathor/manuscript.index.yaml`，覆盖 agent 写新章但漏同步索引的真实问题。`search semantic` 使用 `openathor index rebuild --vector` 生成的本地 deterministic hash embedding 派生索引，不调用外部 embedding 服务；export 当前只支持从明文 manuscript source 合并导出 Markdown。
 
 ## Cross-Slice: LLM-as-Judge Smoke
 

@@ -4,5 +4,16 @@ required:
   - 正文/雨中会面.md
   - .openathor/manuscript.index.yaml
   - notes/import-questions.md
+  - notes/hooks.md
+  - notes/unresolved.md
+  - bible/premise.md
+  - bible/style.md
+  - bible/world.md
+  - bible/characters.md
+  - bible/timeline.md
+  - bible/canon.md
+  - bible/canon.pending.md
+  - style/profiles.yaml
+  - style/references.yaml
   - .openathor/index.sqlite
 absent: []

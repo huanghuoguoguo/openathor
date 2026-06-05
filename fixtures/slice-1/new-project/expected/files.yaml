@@ -2,8 +2,16 @@ required:
   - openathor.yaml
   - bible/premise.md
   - bible/style.md
+  - bible/world.md
+  - bible/characters.md
+  - bible/timeline.md
   - bible/canon.md
   - bible/canon.pending.md
+  - notes/hooks.md
+  - notes/unresolved.md
+  - notes/import-questions.md
+  - style/profiles.yaml
+  - style/references.yaml
   - outline/volumes.yaml
   - outline/chapters.yaml
   - outline/scenes.yaml

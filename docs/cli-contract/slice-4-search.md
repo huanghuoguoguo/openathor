@@ -129,6 +129,8 @@ openathor index rebuild [--json] [--dry-run] [--vector]
 
 `.openathor/vector/index.json` 是可删除、可重建的派生索引，不保存唯一用户内容。
 
+`index rebuild` 也会从 `outline/chapters.yaml` 和正文文件重建 `.openathor/manuscript.index.yaml`，然后再生成 SQLite 和可选向量索引。长篇写作中如果 agent 写了新章和 outline 但漏同步 manuscript index，重建命令必须让后续 `context`、`search` 和 `export` 能看到该章节。
+
 ## `openathor search semantic`
 
 ### 参数

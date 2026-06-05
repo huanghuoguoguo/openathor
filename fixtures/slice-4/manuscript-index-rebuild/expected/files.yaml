@@ -1,0 +1,21 @@
+required:
+  - openathor.yaml
+  - bible/world.md
+  - bible/characters.md
+  - bible/timeline.md
+  - bible/canon.md
+  - bible/canon.pending.md
+  - notes/hooks.md
+  - notes/unresolved.md
+  - style/profiles.yaml
+  - style/references.yaml
+  - outline/chapters.yaml
+  - outline/scenes.yaml
+  - manuscript/chapter-001.md
+  - manuscript/chapter-002.md
+  - manuscript/chapter-003.md
+  - .openathor/manuscript.index.yaml
+  - .openathor/index.sqlite
+  - .openathor/vector/index.json
+  - exports/asset-continuity.md
+absent: []

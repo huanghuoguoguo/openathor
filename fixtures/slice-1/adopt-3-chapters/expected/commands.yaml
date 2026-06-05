@@ -22,3 +22,5 @@ commands:
   - run: openathor canon sync 2 --task "提取第二章新增设定到 pending" --json
     ok: true
     expect_data_path: proposal_path
+  - run: openathor index rebuild --json
+    ok: true
