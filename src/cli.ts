@@ -11,6 +11,7 @@ import {
   runOutlineArchive,
   runOutlineImpact,
   runOutlineInsert,
+  runOutlineMove,
   runOutlineShow,
   runSearchRelated,
   runSearchText,
@@ -264,6 +265,40 @@ outlineCommand
         runOutlineInsert({
           after: options.after,
           title: options.title,
+          confirm: options.confirm,
+          dryRun: options.dryRun,
+          diff: options.diff,
+        }),
+      );
+    },
+  );
+
+outlineCommand
+  .command("move")
+  .description("Move chapter display order without moving manuscript files.")
+  .argument("<target>", "chapter id or display order to move")
+  .requiredOption("--after <target>", "chapter id or display order to move after")
+  .option("--json", "emit JSON")
+  .option("--confirm", "perform the move write")
+  .option("--dry-run", "show planned writes without changing files")
+  .option("--diff", "show structured diff without changing files")
+  .action(
+    async (
+      target: string,
+      options: {
+        after: string;
+        json?: boolean;
+        confirm?: boolean;
+        dryRun?: boolean;
+        diff?: boolean;
+      },
+    ) => {
+      await emitResult(
+        "openathor outline move",
+        options.json,
+        runOutlineMove({
+          target,
+          after: options.after,
           confirm: options.confirm,
           dryRun: options.dryRun,
           diff: options.diff,
