@@ -1,0 +1,16 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor style analyze "设定/线索.md" --json
+    ok: false
+    error_code: OA_COMMAND_NOT_IMPLEMENTED
+  - run: openathor style profile show --json
+    ok: true
+    expect_data_path: profiles.text
+  - run: openathor style check chapter 1 --json
+    ok: false
+    error_code: OA_COMMAND_NOT_IMPLEMENTED
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

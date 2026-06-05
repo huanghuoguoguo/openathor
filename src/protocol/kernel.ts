@@ -133,10 +133,28 @@ type IndexRebuildOptions = {
   vector?: boolean;
 };
 
+type ExportOptions = {
+  cwd?: string;
+  format?: string;
+  out?: string;
+  dryRun?: boolean;
+};
+
 type SkillInstallOptions = {
   cwd?: string;
   target?: "project" | "global";
   dryRun?: boolean;
+};
+
+type NotImplementedOptions = {
+  command: string;
+  feature: string;
+  hints?: string[];
+};
+
+type StyleProfileShowOptions = {
+  cwd?: string;
+  maxChars?: number;
 };
 
 type ContextOptions = {
@@ -319,8 +337,26 @@ const REQUIRED_DIRECTORIES = [
   "outline",
   "manuscript",
   "notes",
+  "style",
   "reviews",
   "runs",
+] as const;
+
+const STANDARD_ASSET_DIRECTORIES = ["style", "style/samples"] as const;
+
+const STANDARD_ASSET_FILES = [
+  "bible/premise.md",
+  "bible/style.md",
+  "bible/world.md",
+  "bible/characters.md",
+  "bible/timeline.md",
+  "bible/canon.md",
+  "bible/canon.pending.md",
+  "notes/hooks.md",
+  "notes/unresolved.md",
+  "notes/import-questions.md",
+  "style/profiles.yaml",
+  "style/references.yaml",
 ] as const;
 
 const SYSTEM_DIRS = new Set([
@@ -557,12 +593,25 @@ export async function runIndexRebuild(
 ): Promise<CommandResult> {
   const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
   const dryRun = options.dryRun ?? false;
-  const inspection = await inspectProject(projectRoot, { includeIndexWarning: false });
-  const sqliteRel = inspection.config.paths.sqlite_index;
+  const initialInspection = await inspectProject(projectRoot, { includeIndexWarning: false });
+  const rebuiltManuscriptIndex = await rebuildManuscriptIndexFromOutline(
+    projectRoot,
+    initialInspection.chapters,
+    initialInspection.manuscriptIndex,
+  );
+  const manuscriptIndexRel = initialInspection.config.paths.manuscript_index;
+  const sqliteRel = initialInspection.config.paths.sqlite_index;
   const sqlitePath = path.join(projectRoot, sqliteRel);
-  const vectorRel = path.posix.join(inspection.config.paths.vector_index, "index.json");
+  const vectorRel = path.posix.join(initialInspection.config.paths.vector_index, "index.json");
   const vectorPath = path.join(projectRoot, vectorRel);
   const writes: EnvelopeWrite[] = [
+    {
+      path: manuscriptIndexRel,
+      change_type: (await pathExists(path.join(projectRoot, manuscriptIndexRel)))
+        ? "replaced"
+        : "created",
+      reason: "manuscript_index_rebuild",
+    },
     {
       path: sqliteRel,
       change_type: (await pathExists(sqlitePath)) ? "replaced" : "created",
@@ -578,11 +627,17 @@ export async function runIndexRebuild(
     });
   }
 
+  const inspection = await inspectionWithManuscriptIndex(
+    projectRoot,
+    initialInspection,
+    rebuiltManuscriptIndex,
+  );
   const vectorIndex = options.vector
     ? await buildVectorIndex(projectRoot, inspection)
     : null;
 
   if (!dryRun) {
+    await writeYaml(projectRoot, manuscriptIndexRel, rebuiltManuscriptIndex);
     await mkdir(path.dirname(sqlitePath), { recursive: true });
     await rm(sqlitePath, { force: true });
     await writeSqliteIndex(sqlitePath, inspection);
@@ -592,18 +647,109 @@ export async function runIndexRebuild(
     }
   }
 
+  const resultInspection = dryRun
+    ? inspection
+    : await inspectProject(projectRoot, { includeIndexWarning: false });
+
   return {
     projectRoot,
-    projectId: inspection.config.project.id,
-    sources: inspection.sources,
+    projectId: resultInspection.config.project.id,
+    sources: resultInspection.sources,
     writes: dryRun ? [] : writes,
     data: {
       dry_run: dryRun,
       planned_writes: dryRun ? writes : [],
-      chapters_indexed: inspection.manuscriptIndex.chapters.length,
+      chapters_indexed: resultInspection.manuscriptIndex.chapters.length,
+      manuscript_index: manuscriptIndexRel,
       sqlite_index: sqliteRel,
       vector_index: options.vector ? vectorRel : null,
       vector_documents_indexed: vectorIndex?.documents.length ?? 0,
+    },
+  };
+}
+
+export async function runExport(options: ExportOptions = {}): Promise<CommandResult> {
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: false });
+  const format = options.format ?? "markdown";
+  const dryRun = options.dryRun ?? false;
+
+  if (format !== "markdown") {
+    throw new OpenAthorError(
+      "OA_EXPORT_FORMAT_UNSUPPORTED",
+      `Unsupported export format ${format}.`,
+      {
+        exitCode: 2,
+        hints: ["Supported format: markdown."],
+      },
+    );
+  }
+
+  const outPath = options.out?.trim() || defaultMarkdownExportPath(inspection.config);
+  ensureSafeRelativePath(outPath, "--out");
+
+  const chapters = inspection.manuscriptIndex.chapters
+    .filter((chapter) => chapter.status !== "archived")
+    .sort((a, b) => a.display_order - b.display_order || a.id.localeCompare(b.id));
+  const sourceMap = new Map<string, EnvelopeSource>();
+  addKnownSource(sourceMap, inspection.sources, "openathor.yaml");
+  addKnownSource(sourceMap, inspection.sources, "outline/chapters.yaml");
+  addKnownSource(sourceMap, inspection.sources, inspection.config.paths.manuscript_index);
+
+  const chapterParts = [];
+  let totalChars = 0;
+
+  for (const chapter of chapters) {
+    const fullPath = path.join(projectRoot, chapter.source_path);
+    if (!(await pathExists(fullPath))) {
+      throw new OpenAthorError(
+        "OA_MANUSCRIPT_SOURCE_MISSING",
+        `Cannot export missing manuscript source ${chapter.source_path}.`,
+        { exitCode: 3 },
+      );
+    }
+
+    const text = await readFile(fullPath, "utf8");
+    const hash = await sha256File(fullPath);
+    sourceMap.set(chapter.source_path, { path: chapter.source_path, hash });
+    const normalizedText = ensureTrailingNewline(text.trimEnd());
+    totalChars += normalizedText.length;
+    chapterParts.push(normalizedText);
+  }
+
+  const markdown = chapterParts.join("\n");
+  const writes: EnvelopeWrite[] = [
+    {
+      path: outPath,
+      change_type: (await pathExists(path.join(projectRoot, outPath))) ? "modified" : "created",
+      reason: "export_markdown",
+    },
+  ];
+
+  if (!dryRun) {
+    await writeText(projectRoot, outPath, markdown);
+  }
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources: [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path)),
+    writes: dryRun ? [] : writes,
+    warnings: inspection.warnings,
+    data: {
+      dry_run: dryRun,
+      format,
+      out_path: outPath,
+      chapter_count: chapters.length,
+      chapters: chapters.map((chapter) => ({
+        id: chapter.id,
+        display_order: chapter.display_order,
+        title: chapter.title,
+        source_path: chapter.source_path,
+        status: chapter.status,
+      })),
+      char_count: totalChars,
+      planned_writes: dryRun ? writes : [],
     },
   };
 }
@@ -655,6 +801,68 @@ export async function runSkillInstallPi(
   };
 }
 
+export function runNotImplemented(options: NotImplementedOptions): Promise<CommandResult> {
+  return Promise.reject(
+    new OpenAthorError(
+      "OA_COMMAND_NOT_IMPLEMENTED",
+      `${options.command} is part of the target command surface but is not implemented in this slice.`,
+      {
+        exitCode: 2,
+        hints: [
+          `${options.feature} remains a documented product capability, not a delivered CLI command yet.`,
+          ...(options.hints ?? []),
+        ],
+      },
+    ),
+  );
+}
+
+export async function runStyleProfileShow(
+  options: StyleProfileShowOptions = {},
+): Promise<CommandResult> {
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
+  const maxChars = normalizeMaxChars(options.maxChars).section;
+  const sourceMap = new Map<string, EnvelopeSource>();
+
+  for (const source of inspection.sources) {
+    sourceMap.set(source.path, source);
+  }
+
+  const manualStyle = await readContextSource(
+    projectRoot,
+    "bible/style.md",
+    maxChars,
+    sourceMap,
+  );
+  const profiles = await readContextSource(
+    projectRoot,
+    "style/profiles.yaml",
+    maxChars,
+    sourceMap,
+  );
+  const references = await readContextSource(
+    projectRoot,
+    "style/references.yaml",
+    maxChars,
+    sourceMap,
+  );
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources: [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path)),
+    writes: [],
+    warnings: inspection.warnings,
+    data: {
+      profile_source: profiles.hash ? "style/profiles.yaml" : "bible/style.md",
+      manual_style: manualStyle,
+      profiles,
+      references,
+    },
+  };
+}
+
 export async function runContext(options: ContextOptions = {}): Promise<CommandResult> {
   const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
   const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
@@ -681,6 +889,36 @@ export async function runContext(options: ContextOptions = {}): Promise<CommandR
   const style = await readContextSource(
     projectRoot,
     "bible/style.md",
+    maxChars.section,
+    baseSources,
+  );
+  const world = await readContextSource(
+    projectRoot,
+    "bible/world.md",
+    maxChars.section,
+    baseSources,
+  );
+  const characters = await readContextSource(
+    projectRoot,
+    "bible/characters.md",
+    maxChars.section,
+    baseSources,
+  );
+  const timeline = await readContextSource(
+    projectRoot,
+    "bible/timeline.md",
+    maxChars.section,
+    baseSources,
+  );
+  const styleProfiles = await readContextSource(
+    projectRoot,
+    "style/profiles.yaml",
+    maxChars.section,
+    baseSources,
+  );
+  const styleReferences = await readContextSource(
+    projectRoot,
+    "style/references.yaml",
     maxChars.section,
     baseSources,
   );
@@ -777,6 +1015,15 @@ export async function runContext(options: ContextOptions = {}): Promise<CommandR
         questions: inspection.manuscriptIndex.questions ?? [],
       },
       style,
+      style_profiles: {
+        profiles: styleProfiles,
+        references: styleReferences,
+      },
+      assets: {
+        world,
+        characters,
+        timeline,
+      },
       notes,
       manuscript: {
         source_mode: inspection.manuscriptIndex.source_mode,
@@ -3591,13 +3838,25 @@ async function writeProjectSkeleton(
     await mkdir(path.join(projectRoot, dir), { recursive: true });
   }
 
+  for (const dir of STANDARD_ASSET_DIRECTORIES) {
+    await mkdir(path.join(projectRoot, dir), { recursive: true });
+  }
+
   await mkdir(path.join(projectRoot, ".openathor"), { recursive: true });
 
   await writeYaml(projectRoot, "openathor.yaml", config);
   await writeText(projectRoot, "bible/premise.md", "# Premise\n\n");
   await writeText(projectRoot, "bible/style.md", "# Style\n\n");
+  await writeText(projectRoot, "bible/world.md", "# World\n\n");
+  await writeText(projectRoot, "bible/characters.md", "# Characters\n\n");
+  await writeText(projectRoot, "bible/timeline.md", "# Timeline\n\n");
   await writeText(projectRoot, "bible/canon.md", "# Confirmed Canon\n\n");
   await writeText(projectRoot, "bible/canon.pending.md", "# Pending Canon\n\n");
+  await writeText(projectRoot, "notes/hooks.md", "# Hooks\n\n");
+  await writeText(projectRoot, "notes/unresolved.md", "# Unresolved Questions\n\n");
+  await writeText(projectRoot, "notes/import-questions.md", "# Import Questions\n\n");
+  await writeYaml(projectRoot, "style/profiles.yaml", { profiles: [] });
+  await writeYaml(projectRoot, "style/references.yaml", { references: [] });
   await writeYaml(projectRoot, "outline/volumes.yaml", { volumes: [] });
   await writeYaml(projectRoot, "outline/chapters.yaml", input.chapterOutline ?? { chapters: [] });
   await writeYaml(projectRoot, "outline/scenes.yaml", { scenes: [] });
@@ -3781,10 +4040,32 @@ async function inspectProject(
     volumesRel,
     scenesRel,
     manuscriptIndexRel,
+    ...STANDARD_ASSET_FILES,
     ...manuscriptIndex.chapters.map((chapter) => chapter.source_path),
   ]);
 
   const warnings: EnvelopeWarning[] = [];
+  for (const relPath of STANDARD_ASSET_FILES) {
+    if (!(await pathExists(path.join(projectRoot, relPath)))) {
+      warnings.push({
+        code: "OA_PROJECT_ASSET_MISSING",
+        message: `Standard project asset is missing: ${relPath}`,
+        severity: "medium",
+      });
+    }
+  }
+
+  const indexedChapterIds = new Set(manuscriptIndex.chapters.map((chapter) => chapter.id));
+  for (const chapter of chapters.chapters) {
+    if (chapter.status !== "planned" && chapter.manuscript_path && !indexedChapterIds.has(chapter.id)) {
+      warnings.push({
+        code: "OA_MANUSCRIPT_INDEX_STALE",
+        message: `Manuscript index is missing outlined chapter ${chapter.id}.`,
+        severity: "medium",
+      });
+    }
+  }
+
   if (options.includeIndexWarning && (await isIndexStale(projectRoot, config, sources))) {
     warnings.push({
       code: "OA_INDEX_STALE",
@@ -3808,9 +4089,115 @@ async function inspectProject(
       chapter_ids_unique: true,
       display_order_unique: true,
       source_paths_exist: true,
+      standard_assets_present: !warnings.some(
+        (warning) => warning.code === "OA_PROJECT_ASSET_MISSING",
+      ),
+      manuscript_index_matches_outline: !warnings.some(
+        (warning) => warning.code === "OA_MANUSCRIPT_INDEX_STALE",
+      ),
       derived_index_current: warnings.length === 0,
     },
   };
+}
+
+async function rebuildManuscriptIndexFromOutline(
+  projectRoot: string,
+  chapters: ChapterOutline,
+  currentIndex: ManuscriptIndex,
+): Promise<ManuscriptIndex> {
+  const currentById = new Map(currentIndex.chapters.map((chapter) => [chapter.id, chapter]));
+  const rebuilt: IndexedChapter[] = [];
+
+  for (const chapter of [...chapters.chapters].sort((a, b) => a.display_order - b.display_order)) {
+    if (chapter.status === "planned" || !chapter.manuscript_path) {
+      continue;
+    }
+
+    ensureSafeRelativePath(chapter.manuscript_path, "chapters.manuscript_path");
+    const fullPath = path.join(projectRoot, chapter.manuscript_path);
+    if (!(await pathExists(fullPath))) {
+      throw new OpenAthorError(
+        "OA_MANUSCRIPT_MISSING_SOURCE",
+        `Missing manuscript source file: ${chapter.manuscript_path}`,
+        { exitCode: 3 },
+      );
+    }
+
+    const existing = currentById.get(chapter.id);
+    rebuilt.push({
+      id: chapter.id,
+      display_order: chapter.display_order,
+      title: chapter.title,
+      source_path: chapter.manuscript_path,
+      status: outlineStatusToIndexStatus(chapter.status),
+      origin: existing?.origin ?? currentIndex.source_mode,
+      content_hash: await sha256File(fullPath),
+      detected_title: existing?.detected_title ?? chapter.title,
+      confidence: existing?.confidence ?? "high",
+    });
+  }
+
+  return {
+    ...currentIndex,
+    generated_at: new Date().toISOString(),
+    chapters: rebuilt,
+  };
+}
+
+async function inspectionWithManuscriptIndex(
+  projectRoot: string,
+  inspection: Awaited<ReturnType<typeof inspectProject>>,
+  manuscriptIndex: ManuscriptIndex,
+): Promise<Awaited<ReturnType<typeof inspectProject>>> {
+  const sources = await hashSources(projectRoot, [
+    "openathor.yaml",
+    path.join(inspection.config.paths.outline, "chapters.yaml"),
+    path.join(inspection.config.paths.outline, "volumes.yaml"),
+    path.join(inspection.config.paths.outline, "scenes.yaml"),
+    inspection.config.paths.manuscript_index,
+    ...STANDARD_ASSET_FILES,
+    ...manuscriptIndex.chapters.map((chapter) => chapter.source_path),
+  ]);
+
+  const assetMissing = [];
+  for (const relPath of STANDARD_ASSET_FILES) {
+    if (!(await pathExists(path.join(projectRoot, relPath)))) {
+      assetMissing.push(relPath);
+    }
+  }
+
+  const warnings: EnvelopeWarning[] = assetMissing.map((relPath) => ({
+    code: "OA_PROJECT_ASSET_MISSING",
+    message: `Standard project asset is missing: ${relPath}`,
+    severity: "medium",
+  }));
+
+  return {
+    ...inspection,
+    manuscriptIndex,
+    sources,
+    warnings,
+    checks: {
+      ...inspection.checks,
+      manuscript_index: true,
+      source_paths_exist: true,
+      standard_assets_present: assetMissing.length === 0,
+      manuscript_index_matches_outline: true,
+      derived_index_current: warnings.length === 0,
+    },
+  };
+}
+
+function outlineStatusToIndexStatus(status: ChapterOutlineEntry["status"]): IndexedChapter["status"] {
+  if (status === "archived") {
+    return "archived";
+  }
+
+  if (status === "revised") {
+    return "revised";
+  }
+
+  return "drafted";
 }
 
 async function writeSqliteIndex(
@@ -4052,6 +4439,9 @@ function vectorDocumentKind(relPath: string): string {
   }
   if (relPath.startsWith("notes/")) {
     return "note";
+  }
+  if (relPath.startsWith("style/")) {
+    return "style";
   }
   if (relPath.startsWith("reviews/")) {
     return "review";
@@ -4452,20 +4842,24 @@ function ensureTrailingNewline(text: string): string {
   return text.endsWith("\n") ? text : `${text}\n`;
 }
 
+function defaultMarkdownExportPath(config: ProjectConfig): string {
+  const filename = `${slugAscii(config.project.title) || "manuscript"}.md`;
+  return `exports/${filename}`;
+}
+
 function skeletonWrites(reason: string): EnvelopeWrite[] {
   return [
     "openathor.yaml",
     "bible/",
-    "bible/premise.md",
-    "bible/style.md",
-    "bible/canon.md",
-    "bible/canon.pending.md",
     "outline/",
     "outline/volumes.yaml",
     "outline/chapters.yaml",
     "outline/scenes.yaml",
     "manuscript/",
     "notes/",
+    "style/",
+    "style/samples/",
+    ...STANDARD_ASSET_FILES,
     "reviews/",
     "runs/",
     ".openathor/",
@@ -4484,11 +4878,6 @@ function adoptWrites(): EnvelopeWrite[] {
       path: ".openathor/import-report.md",
       change_type: "created" as const,
       reason: "adopt_import_report",
-    },
-    {
-      path: "notes/import-questions.md",
-      change_type: "created" as const,
-      reason: "adopt_questions",
     },
     {
       path: "runs/run_*.json",

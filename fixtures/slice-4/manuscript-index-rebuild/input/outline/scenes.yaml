@@ -1,0 +1,13 @@
+scenes:
+  - id: sc_00001_01
+    chapter_id: ch_00001
+    purpose: 建立苏禾的不信任和七号仓线索。
+    status: drafted
+  - id: sc_00002_01
+    chapter_id: ch_00002
+    purpose: 把蓝灯档案和林鸦父亲联系起来。
+    status: drafted
+  - id: sc_00003_01
+    chapter_id: ch_00003
+    purpose: 推进七号仓近期被进入的悬念。
+    status: drafted

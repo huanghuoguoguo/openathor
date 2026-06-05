@@ -1,0 +1,8 @@
+required:
+  - openathor.yaml
+  - 正文/001-雨夜.md
+  - 正文/002-旧案.md
+  - 设定/线索.md
+  - exports/full.md
+  - .openathor/index.sqlite
+absent: []

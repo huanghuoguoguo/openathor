@@ -6,8 +6,10 @@ import {
   runAdopt,
   runContext,
   runDoctor,
+  runExport,
   runIndexRebuild,
   runInit,
+  runNotImplemented,
   runOutlineArchive,
   runOutlineImpact,
   runOutlineInsert,
@@ -20,6 +22,7 @@ import {
   runSearchSemantic,
   runSearchText,
   runSkillInstallPi,
+  runStyleProfileShow,
   runWritingProposal,
 } from "./protocol/kernel.js";
 
@@ -235,6 +238,99 @@ searchCommand
       );
     },
   );
+
+const styleCommand = program
+  .command("style")
+  .description("Manage style guidance profiles.")
+  .exitOverride();
+
+styleCommand
+  .command("analyze")
+  .description("Analyze an authorized style reference into an abstract profile.")
+  .argument("<path>", "authorized style reference path")
+  .option("--json", "emit JSON")
+  .action(async (_referencePath: string, options: { json?: boolean }) => {
+    await emitResult(
+      "openathor style analyze",
+      options.json,
+      runNotImplemented({
+        command: "openathor style analyze",
+        feature: "Style profile analysis",
+        hints: ["Use bible/style.md manually for now and avoid copying reference text."],
+      }),
+    );
+  });
+
+styleCommand
+  .command("check")
+  .description("Check chapter style consistency against the project profile.")
+  .argument("<scope>", "style check scope; currently chapter")
+  .argument("<target>", "chapter id or display order")
+  .option("--json", "emit JSON")
+  .action(async (_scope: string, _target: string, options: { json?: boolean }) => {
+    await emitResult(
+      "openathor style check",
+      options.json,
+      runNotImplemented({
+        command: "openathor style check",
+        feature: "Style consistency checking",
+        hints: ["Use openathor context chapter <target> --json and bible/style.md manually for now."],
+      }),
+    );
+  });
+
+styleCommand
+  .command("revise")
+  .description("Create a style-guided revision proposal.")
+  .argument("<scope>", "style revision scope; currently chapter")
+  .argument("<target>", "chapter id or display order")
+  .option("--goal <text>", "style revision goal")
+  .option("--json", "emit JSON")
+  .action(async (_scope: string, _target: string, _options: { goal?: string; json?: boolean }) => {
+    await emitResult(
+      "openathor style revise",
+      _options.json,
+      runNotImplemented({
+        command: "openathor style revise",
+        feature: "Style-guided revision",
+        hints: ["Use openathor revise chapter <target> --task ... for proposal-mode revision."],
+      }),
+    );
+  });
+
+const styleProfileCommand = styleCommand
+  .command("profile")
+  .description("Inspect or apply style profiles.");
+
+styleProfileCommand
+  .command("show")
+  .description("Show the current style profile.")
+  .option("--json", "emit JSON")
+  .action(async (options: { json?: boolean }) => {
+    await emitResult(
+      "openathor style profile show",
+      options.json,
+      runStyleProfileShow(),
+    );
+  });
+
+styleProfileCommand
+  .command("apply")
+  .description("Apply a confirmed style profile.")
+  .argument("<profile>", "style profile id")
+  .option("--json", "emit JSON")
+  .option("--diff", "show structured diff without changing files")
+  .action(async (_profile: string, options: { json?: boolean; diff?: boolean }) => {
+    await emitResult(
+      "openathor style profile apply",
+      options.json,
+      runNotImplemented({
+        command: "openathor style profile apply",
+        feature: "Style profile application",
+        hints: ["Confirmed style profile application is not implemented yet."],
+      }),
+    );
+  });
 
 const outlineCommand = program
   .command("outline")
@@ -607,6 +703,34 @@ program
           kind: "canon_sync",
           target,
           task: options.task,
+          dryRun: options.dryRun,
+        }),
+      );
+    },
+  );
+
+program
+  .command("export")
+  .description("Export manuscript deliverables from plaintext sources.")
+  .requiredOption("--format <format>", "export format; currently markdown")
+  .option("--out <path>", "relative output path")
+  .option("--json", "emit JSON")
+  .option("--dry-run", "show planned writes without changing files")
+  .action(
+    async (
+      options: {
+        format: string;
+        out?: string;
+        json?: boolean;
+        dryRun?: boolean;
+      },
+    ) => {
+      await emitResult(
+        "openathor export",
+        options.json,
+        runExport({
+          format: options.format,
+          out: options.out,
           dryRun: options.dryRun,
         }),
       );

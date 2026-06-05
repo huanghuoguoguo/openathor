@@ -54,14 +54,24 @@ openathor init [path] [--title <title>] [--language <tag>] [--json] [--dry-run]
 - `bible/`
 - `bible/premise.md`
 - `bible/style.md`
+- `bible/world.md`
+- `bible/characters.md`
+- `bible/timeline.md`
 - `bible/canon.md`
 - `bible/canon.pending.md`
+- `style/`
+- `style/profiles.yaml`
+- `style/references.yaml`
+- `style/samples/`
 - `outline/`
 - `outline/volumes.yaml`
 - `outline/chapters.yaml`
 - `outline/scenes.yaml`
 - `manuscript/`
 - `notes/`
+- `notes/hooks.md`
+- `notes/unresolved.md`
+- `notes/import-questions.md`
 - `reviews/`
 - `runs/`
 - `.openathor/`
@@ -135,7 +145,12 @@ openathor adopt [path] [--json] [--confirm-ambiguous]
 - `.openathor/import-report.md`
 - `bible/canon.pending.md`
 - `bible/style.md`
+- `bible/world.md`
+- `bible/characters.md`
+- `bible/timeline.md`
 - `outline/chapters.yaml`
+- `style/profiles.yaml`
+- `style/references.yaml`
 - `notes/import-questions.md`
 - `runs/run_*.json`
 
@@ -175,6 +190,8 @@ openathor doctor [--json] [--strict]
 - chapter ID 唯一
 - `display_order` 无重复
 - `source_path` 指向存在文件或合法 planned 状态
+- 标准长期资产骨架存在，包括人物、世界观、时间线、canon、notes 和 style profile 文件
+- `.openathor/manuscript.index.yaml` 与 `outline/chapters.yaml` 中已写章节一致
 - derived index 是否过期
 
 ### Expected writes
@@ -188,9 +205,10 @@ openathor doctor [--json] [--strict]
 - `OA_SCHEMA_INVALID`
 - `OA_OUTLINE_DUPLICATE_ID`
 - `OA_MANUSCRIPT_MISSING_SOURCE`
+- `OA_MANUSCRIPT_INDEX_STALE`
 - `OA_INDEX_STALE`
 
-`OA_INDEX_STALE` 默认是 warning，`--strict` 下可变为错误。
+`OA_MANUSCRIPT_INDEX_STALE` 和 `OA_INDEX_STALE` 默认是 warning，`--strict` 下可变为错误。通常通过 `openathor index rebuild --json` 修复。
 
 ## `openathor index rebuild`
 
@@ -208,11 +226,14 @@ openathor index rebuild [--json] [--dry-run]
 
 实际写入时可以创建或替换：
 
+- `.openathor/manuscript.index.yaml`
 - `.openathor/index.sqlite`
 
 不得修改任何事实源文件。
 
 ### Index scope
+
+`index rebuild` 必须先从 `outline/chapters.yaml` 和正文文件重建 `.openathor/manuscript.index.yaml`，再重建 SQLite。这样当 agent 已写正文和 outline、但漏同步 manuscript index 时，CLI 能从明文事实源恢复派生索引。
 
 Slice 1 SQLite 只需要保存确定性索引：
 

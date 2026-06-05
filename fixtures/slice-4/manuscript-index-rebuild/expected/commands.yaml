@@ -1,0 +1,36 @@
+commands:
+  - run: openathor doctor --json
+    ok: true
+    expect_data:
+      checks.standard_assets_present: true
+  - run: openathor context chapter 3 --json
+    ok: false
+    error_code: OA_CONTEXT_TARGET_NOT_FOUND
+  - run: openathor index rebuild --vector --json
+    ok: true
+    expect_data:
+      chapters_indexed: 3
+      manuscript_index: .openathor/manuscript.index.yaml
+      vector_index: .openathor/vector/index.json
+  - run: openathor context chapter 3 --json
+    ok: true
+    expect_data_path: assets.characters.text
+  - run: openathor style profile show --json
+    ok: true
+    expect_data:
+      profile_source: style/profiles.yaml
+    expect_data_path: profiles.text
+  - run: openathor search text "苏禾" --json
+    ok: true
+    expect_data_path: matches
+  - run: openathor search semantic "苏禾 七号仓 不信任" --json
+    ok: true
+    expect_data:
+      method: deterministic_hash_embedding_v1
+    expect_data_path: matches
+  - run: openathor export --format markdown --out exports/asset-continuity.md --json
+    ok: true
+    expect_data:
+      chapter_count: 3
+  - run: openathor doctor --json
+    ok: true

@@ -12,8 +12,10 @@ import {
   runAdopt,
   runContext,
   runDoctor,
+  runExport,
   runIndexRebuild,
   runInit,
+  runNotImplemented,
   runOutlineArchive,
   runOutlineImpact,
   runOutlineInsert,
@@ -26,6 +28,7 @@ import {
   runSearchSemantic,
   runSearchText,
   runSkillInstallPi,
+  runStyleProfileShow,
   runWritingProposal,
   type CommandResult,
 } from "./protocol/kernel.js";
@@ -550,6 +553,32 @@ async function dispatchCommand(
     });
   }
 
+  if (parsed.name === "export") {
+    return runExport({
+      cwd,
+      format: parsed.options.format,
+      out: parsed.options.out,
+      dryRun: parsed.options.dryRun,
+    });
+  }
+
+  if (parsed.name === "style profile show") {
+    return runStyleProfileShow({ cwd });
+  }
+
+  if (
+    parsed.name === "style analyze" ||
+    parsed.name === "style check" ||
+    parsed.name === "style revise" ||
+    parsed.name === "style profile apply"
+  ) {
+    return runNotImplemented({
+      command: `openathor ${parsed.name}`,
+      feature: "Style guidance CLI",
+      hints: ["Style commands are intentionally structured as not implemented until the style slice is built."],
+    });
+  }
+
   if (parsed.name === "skill install pi") {
     return runSkillInstallPi({
       cwd,
@@ -588,6 +617,12 @@ function parseCommand(command: string): {
     | "review"
     | "revise"
     | "canon sync"
+    | "export"
+    | "style analyze"
+    | "style check"
+    | "style revise"
+    | "style profile show"
+    | "style profile apply"
     | "index rebuild"
     | "skill install pi";
   pathArg?: string;
@@ -615,6 +650,8 @@ function parseCommand(command: string): {
     titleAfter?: string;
     from?: string;
     vector?: boolean;
+    format?: string;
+    out?: string;
   };
 } {
   const tokens = command.match(/"[^"]*"|'[^']*'|\S+/g)?.map((token) =>
@@ -676,6 +713,18 @@ function parseCommand(command: string): {
 
     if (token === "--vector") {
       options.vector = true;
+      continue;
+    }
+
+    if (token === "--format") {
+      index += 1;
+      options.format = unescapeFixtureArgument(tokens[index]);
+      continue;
+    }
+
+    if (token === "--out") {
+      index += 1;
+      options.out = unescapeFixtureArgument(tokens[index]);
       continue;
     }
 
@@ -764,6 +813,58 @@ function parseCommand(command: string): {
       display: "openathor index rebuild",
       name: "index rebuild",
       pathArg: positional[2],
+      options,
+    };
+  }
+
+  if (positional[0] === "export") {
+    return {
+      display: "openathor export",
+      name: "export",
+      options,
+    };
+  }
+
+  if (positional[0] === "style" && positional[1] === "analyze") {
+    return {
+      display: "openathor style analyze",
+      name: "style analyze",
+      pathArg: positional[2],
+      options,
+    };
+  }
+
+  if (positional[0] === "style" && positional[1] === "check") {
+    return {
+      display: "openathor style check",
+      name: "style check",
+      pathArg: positional[3],
+      options,
+    };
+  }
+
+  if (positional[0] === "style" && positional[1] === "revise") {
+    return {
+      display: "openathor style revise",
+      name: "style revise",
+      pathArg: positional[3],
+      options,
+    };
+  }
+
+  if (positional[0] === "style" && positional[1] === "profile" && positional[2] === "show") {
+    return {
+      display: "openathor style profile show",
+      name: "style profile show",
+      options,
+    };
+  }
+
+  if (positional[0] === "style" && positional[1] === "profile" && positional[2] === "apply") {
+    return {
+      display: "openathor style profile apply",
+      name: "style profile apply",
+      pathArg: positional[3],
       options,
     };
   }

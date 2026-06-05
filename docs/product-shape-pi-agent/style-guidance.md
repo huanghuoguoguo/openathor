@@ -137,13 +137,16 @@ openathor style revise chapter 5 --goal "更冷静克制" --diff
 
 可先做：
 
-- 从用户样稿生成手工可读 style profile
+- 初始化和接管项目时创建 `style/profiles.yaml` 与 `style/references.yaml`
+- 用 `openathor style profile show --json` 读取当前 profile
 - 让 `context` 暴露 style profile
 - 在 `draft` 和 `revise` 中使用 style profile
 - 用 LLM judge 检查风格一致性
 
 暂不做：
 
+- 自动分析参考文本并写入 confirmed profile
+- 自动 style check 和 style revise
 - 自动判定任意作家风格
 - 大规模风格库
 - 按作家名字一键仿写

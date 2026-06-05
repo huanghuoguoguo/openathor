@@ -1,0 +1,5 @@
+references:
+  - id: ref_project_manual
+    status: user_owned
+    path: bible/style.md
+    allowed_use: style_guidance

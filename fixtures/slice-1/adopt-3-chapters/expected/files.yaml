@@ -9,5 +9,15 @@ required:
   - .openathor/import-report.md
   - .openathor/index.sqlite
   - notes/import-questions.md
+  - notes/hooks.md
+  - notes/unresolved.md
+  - bible/premise.md
+  - bible/style.md
+  - bible/world.md
+  - bible/characters.md
+  - bible/timeline.md
+  - bible/canon.md
   - bible/canon.pending.md
+  - style/profiles.yaml
+  - style/references.yaml
 absent: []

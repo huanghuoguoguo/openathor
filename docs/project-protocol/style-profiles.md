@@ -19,6 +19,8 @@ style/
 
 `bible/style.md` 是用户可读的主风格说明。`style/profiles.yaml` 保存结构化风格画像。`style/references.yaml` 记录参考文本来源和授权状态。
 
+当前 CLI 已支持 `openathor style profile show --json` 读取这些文件，并在 `openathor context` 中暴露 `style_profiles`。`style analyze`、`style check`、`style revise` 和 `style profile apply` 仍是目标命令面，当前返回结构化未实现错误。
+
 ## Profile 示例
 
 ```yaml

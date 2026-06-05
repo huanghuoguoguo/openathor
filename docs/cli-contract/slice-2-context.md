@@ -31,6 +31,11 @@ openathor context chapter <chapter-id-or-display-order> --json
 - `canon.pending`：`bible/canon.pending.md`
 - `canon.questions`：接管或索引中的待确认问题
 - `style`：`bible/style.md`
+- `style_profiles.profiles`：`style/profiles.yaml`
+- `style_profiles.references`：`style/references.yaml`
+- `assets.world`：`bible/world.md`
+- `assets.characters`：`bible/characters.md`
+- `assets.timeline`：`bible/timeline.md`
 - `notes`：`notes/` 下的文本资料摘录
 - `manuscript.indexed_chapters`：章节索引摘要
 - `manuscript.context_chapters`：目标章节及相邻章节正文摘录
