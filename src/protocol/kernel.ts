@@ -4808,24 +4808,13 @@ function extractMarkdownEntities(
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index].trim();
     const heading = line.match(/^#{2,6}\s+(.+)$/u)?.[1]?.trim();
-    const idHeading = heading?.match(/^([a-z][a-z0-9_:-]{2,})\s*[:：]\s*(.+)$/iu);
-    const idBullet = line.match(/^[-*]\s+([a-z][a-z0-9_:-]{2,})\s*[:：]\s*(.+)$/iu);
-    const headingRawId = heading?.match(/^([a-z][a-z0-9_:-]{2,})\b/iu)?.[1] ?? null;
-    const headingId =
-      headingRawId && isAssetIdForKind(headingRawId, kind) ? headingRawId : null;
-    const id =
-      idHeading && isAssetIdForKind(idHeading[1], kind)
-        ? idHeading[1]
-        : idBullet && isAssetIdForKind(idBullet[1], kind)
-          ? idBullet[1]
-          : headingId;
-    const name = cleanAssetName(
-      (idHeading && isAssetIdForKind(idHeading[1], kind) ? idHeading[2] : null) ??
-        (idBullet && isAssetIdForKind(idBullet[1], kind) ? idBullet[2] : null) ??
-        headingId ??
-        heading ??
-        "",
-    );
+    const inlineEntity = parseInlineAssetEntity(heading ?? line, kind, Boolean(heading));
+    const listEntity = !heading ? parseListAssetEntity(lines, index, kind) : null;
+    const idField = heading
+      ? findAssetIdField(lines, index + 1, kind)
+      : inlineEntity?.id ?? null;
+    const id = inlineEntity?.id ?? listEntity?.id ?? idField;
+    const name = cleanAssetName(inlineEntity?.name ?? listEntity?.name ?? heading ?? "");
 
     if (!name || isGenericAssetHeading(name)) {
       continue;
@@ -4849,6 +4838,102 @@ function extractMarkdownEntities(
   return entities.slice(0, 200);
 }
 
+function parseInlineAssetEntity(
+  value: string,
+  kind: AssetEntity["kind"],
+  allowNameOnly: boolean,
+): { id: string | null; name: string } | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const idFirst = trimmed.match(/^([a-z][a-z0-9_:-]{2,})\s*[:：]\s*(.+)$/iu);
+  if (idFirst && isLegacyAssetIdForKind(idFirst[1], kind)) {
+    return { id: idFirst[1], name: idFirst[2] };
+  }
+
+  const bulletIdFirst = trimmed.match(
+    /^[-*]\s+([a-z][a-z0-9_:-]{2,})\s*[:：]\s*(.+)$/iu,
+  );
+  if (bulletIdFirst && isLegacyAssetIdForKind(bulletIdFirst[1], kind)) {
+    return { id: bulletIdFirst[1], name: bulletIdFirst[2] };
+  }
+
+  const trailingParen = trimmed.match(/^(.*?)\s*[\(（]([a-z][a-z0-9_:-]{2,})[\)）]\s*$/iu);
+  if (trailingParen && isAssetIdForKind(trailingParen[2], kind)) {
+    return { id: trailingParen[2], name: trailingParen[1] };
+  }
+
+  const headingRawId = trimmed.match(/^([a-z][a-z0-9_:-]{2,})\b/iu)?.[1] ?? null;
+  if (headingRawId && isLegacyAssetIdForKind(headingRawId, kind)) {
+    return { id: headingRawId, name: trimmed };
+  }
+
+  return allowNameOnly ? { id: null, name: trimmed } : null;
+}
+
+function parseListAssetEntity(
+  lines: string[],
+  index: number,
+  kind: AssetEntity["kind"],
+): { id: string; name: string } | null {
+  const line = lines[index].trim();
+  const idLine = line.match(/^[-*]\s+(?:\*\*)?id(?:\*\*)?\s*[:：]\s*`?([a-z][a-z0-9_:-]{2,})`?\s*$/iu);
+  if (!idLine || !isAssetIdForKind(idLine[1], kind)) {
+    return null;
+  }
+
+  for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+    const candidate = lines[cursor];
+    const trimmed = candidate.trim();
+
+    if (!trimmed) {
+      continue;
+    }
+
+    if (/^#{1,6}\s+/u.test(trimmed) || /^[-*]\s+/.test(trimmed)) {
+      break;
+    }
+
+    const nameField = trimmed.match(
+      /^(?:\*\*)?(?:name|title|名称|名字|事件|钩子|hook|event)(?:\*\*)?\s*[:：]\s*(.+)$/iu,
+    );
+    if (nameField) {
+      return { id: idLine[1], name: nameField[1] };
+    }
+  }
+
+  return { id: idLine[1], name: idLine[1] };
+}
+
+function findAssetIdField(
+  lines: string[],
+  startIndex: number,
+  kind: AssetEntity["kind"],
+): string | null {
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+
+    if (!line) {
+      continue;
+    }
+
+    if (/^#{1,6}\s+/u.test(line)) {
+      return null;
+    }
+
+    const idField = line.match(
+      /^(?:[-*]\s*)?(?:\*\*)?id(?:\*\*)?\s*[:：]\s*`?([a-z][a-z0-9_:-]{2,})`?\s*$/iu,
+    );
+    if (idField && isAssetIdForKind(idField[1], kind)) {
+      return idField[1];
+    }
+  }
+
+  return null;
+}
+
 function cleanAssetName(value: string): string {
   return value
     .replace(/\([^)]*\)/g, "")
@@ -4867,17 +4952,37 @@ function isGenericAssetHeading(value: string): boolean {
 }
 
 function isAssetIdForKind(id: string, kind: AssetEntity["kind"]): boolean {
-  if (kind === "character") {
-    return id.startsWith("char_");
-  }
-  if (kind === "timeline_event") {
-    return id.startsWith("ev_");
-  }
-  if (kind === "hook") {
-    return id.startsWith("hook_");
+  const normalized = id.toLowerCase();
+  if (isLegacyAssetIdForKind(normalized, kind)) {
+    return true;
   }
 
-  return /^(loc|org|item|world)_/.test(id);
+  if (kind === "character") {
+    return /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(normalized);
+  }
+  if (kind === "timeline_event") {
+    return normalized.startsWith("event-");
+  }
+  if (kind === "hook") {
+    return normalized.startsWith("hook-");
+  }
+
+  return /^(loc|org|item|world)[_-]/.test(normalized);
+}
+
+function isLegacyAssetIdForKind(id: string, kind: AssetEntity["kind"]): boolean {
+  const normalized = id.toLowerCase();
+  if (kind === "character") {
+    return normalized.startsWith("char_");
+  }
+  if (kind === "timeline_event") {
+    return normalized.startsWith("ev_");
+  }
+  if (kind === "hook") {
+    return normalized.startsWith("hook_");
+  }
+
+  return /^(loc|org|item|world)_/.test(normalized);
 }
 
 function assetLookup(entities: AssetEntity[]): Map<string, AssetEntity> {

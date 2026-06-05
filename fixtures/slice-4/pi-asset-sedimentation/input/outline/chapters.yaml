@@ -1,0 +1,31 @@
+chapters:
+  - id: ch_001
+    display_order: 1
+    title: 雾港之夜
+    status: drafted
+    manuscript_path: manuscript/chapter-001.md
+    summary: 林维远和陈若雪在修理铺发现地下图纸，满月夜齿轮系统异常轰鸣。
+    links:
+      characters: [lin-wei-yuan, chen-ruo-xue]
+      timeline_events: [event-archive-discovery, event-lighthouse-completed]
+      hooks: [hook-underground-blueprint, hook-midnight-gears]
+  - id: ch_002
+    display_order: 2
+    title: 码头少年
+    status: drafted
+    manuscript_path: manuscript/chapter-002.md
+    summary: 阿锈目睹周明海手下向检修井投递金属箱，并逃进林维远的修理铺。
+    links:
+      characters: [a-xiu, lin-wei-yuan, chen-ruo-xue, zhou-ming-hai]
+      timeline_events: [event-a-xiu-witness, event-lighthouse-completed]
+      hooks: [hook-midnight-gears]
+  - id: ch_003
+    display_order: 3
+    title: 商人
+    status: drafted
+    manuscript_path: manuscript/chapter-003.md
+    summary: 周明海回忆蒸汽船爆炸案并安排人继续监视林维远、陈若雪和阿锈。
+    links:
+      characters: [zhou-ming-hai, lin-wei-yuan, chen-ruo-xue, a-xiu]
+      timeline_events: [event-steamship-explosion, event-a-xiu-witness]
+      hooks: [hook-midnight-gears]
