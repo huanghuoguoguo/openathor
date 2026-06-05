@@ -1,0 +1,56 @@
+characters:
+  - id: lin-che
+    name: 林澈
+    role: 调查记者
+    traits:
+      - 克制
+      - 证据优先
+      - 不急于下结论
+    current_state: 在下层船舱发现林砚检修牌和潮湿船票，并暂缓把父亲写成船舱锁打开者。
+    notes:
+      - 在孟夏提醒后接受证据只能证明检修牌和潮湿船票出现，不能证明林砚本人回船。
+  - id: meng-xia
+    name: 孟夏
+    role: 船务档案员
+    traits:
+      - 谨慎
+      - 只相信盖章记录
+      - 对客轮旧案保持距离
+    current_state: 核对潮湿船票号码，发现它对应乘客名册中没有登船签名的空位。
+    notes:
+      - 阻止林澈过早断定林砚打开船舱锁，并建议追查星桥仓库印章。
+  - id: lin-yan
+    name: 林砚
+    role: 失踪检修员
+    traits:
+      - 熟悉客轮下层线路
+      - 行踪被证据间接指向
+      - 真相未确认
+    current_state: 检修牌和潮湿船票在舱门后出现，但本人是否回到星桥一号仍未确认。
+    notes:
+      - 林砚第一次作为被证据直接指向的人物进入资产链。
+timeline_events:
+  - id: event-cabin-lock-recent-trace
+    title: 船舱锁内侧近期打开痕迹确认
+    summary: 林澈和孟夏在下层船舱确认门轴没有新锈，船舱锁从里面被打开不是多年以前的痕迹。
+  - id: event-lin-yan-ticket-found
+    title: 林砚检修牌和潮湿船票出现
+    summary: 林澈和孟夏在配电箱背后找到林砚检修牌，潮湿船票日期是客轮失火前夜。
+hooks:
+  - id: hook-empty-berth-ticket
+    title: 没有登船签名的空位是谁
+    status: opened
+    summary: 潮湿船票号码属于乘客名册中没有登船签名的空位，空位身份尚未确认。
+chapter:
+  summary: 林澈和孟夏在下层船舱确认船舱锁内侧近期打开痕迹，找到林砚检修牌和潮湿船票，但暂缓断定林砚本人回船，并将线索转向星桥仓库。
+  links:
+    characters:
+      - lin-che
+      - meng-xia
+      - lin-yan
+    timeline_events:
+      - event-cabin-lock-recent-trace
+      - event-lin-yan-ticket-found
+    hooks:
+      - hook-inner-cabin-lock
+      - hook-empty-berth-ticket

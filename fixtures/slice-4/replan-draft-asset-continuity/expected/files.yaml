@@ -1,0 +1,18 @@
+required:
+  - openathor.yaml
+  - bible/characters.md
+  - bible/timeline.md
+  - bible/canon.md
+  - bible/canon.pending.md
+  - notes/hooks.md
+  - notes/replan-package-canary.yaml
+  - notes/asset-package-ch4.yaml
+  - outline/chapters.yaml
+  - manuscript/chapter-001.md
+  - manuscript/chapter-002.md
+  - manuscript/chapter-003.md
+  - manuscript/chapter-004.md
+  - .openathor/manuscript.index.yaml
+  - .openathor/index.sqlite
+  - exports/replan-draft-asset-continuity.md
+absent: []
