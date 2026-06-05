@@ -142,6 +142,7 @@ async function runFixtureCheck(fixtureDir: string): Promise<{
 
   const workspace = await mkdtemp(path.join(os.tmpdir(), "openathor-fixture-"));
   await cp(inputDir, workspace, { recursive: true });
+  await removeGitkeepFiles(workspace);
 
   const beforeHashes = await hashExistingFiles(workspace);
   const expectedCommands = await readExpectedYaml<ExpectedCommands>(
@@ -717,6 +718,23 @@ async function resolveFixtureHash(cwd: string, value: string): Promise<string> {
 
   const relPath = value.slice("current:".length);
   return sha256File(path.join(cwd, relPath));
+}
+
+async function removeGitkeepFiles(root: string): Promise<void> {
+  const entries = await readdir(root, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(root, entry.name);
+
+    if (entry.isDirectory()) {
+      await removeGitkeepFiles(fullPath);
+      continue;
+    }
+
+    if (entry.isFile() && entry.name === ".gitkeep") {
+      await rm(fullPath, { force: true });
+    }
+  }
 }
 
 function isJsonEnvelope(value: unknown): boolean {
