@@ -10,6 +10,7 @@ import {
   runInit,
   runOutlineArchive,
   runOutlineImpact,
+  runOutlineInsert,
   runOutlineShow,
   runSearchRelated,
   runSearchText,
@@ -232,6 +233,40 @@ outlineCommand
         runOutlineImpact({
           target,
           maxChars: options.maxChars ? Number(options.maxChars) : undefined,
+        }),
+      );
+    },
+  );
+
+outlineCommand
+  .command("insert")
+  .description("Insert a planned chapter in outline metadata without moving manuscript files.")
+  .requiredOption("--after <target>", "chapter id or display order to insert after")
+  .requiredOption("--title <title>", "planned chapter title")
+  .option("--json", "emit JSON")
+  .option("--confirm", "perform the insert write")
+  .option("--dry-run", "show planned writes without changing files")
+  .option("--diff", "show structured diff without changing files")
+  .action(
+    async (
+      options: {
+        after: string;
+        title: string;
+        json?: boolean;
+        confirm?: boolean;
+        dryRun?: boolean;
+        diff?: boolean;
+      },
+    ) => {
+      await emitResult(
+        "openathor outline insert",
+        options.json,
+        runOutlineInsert({
+          after: options.after,
+          title: options.title,
+          confirm: options.confirm,
+          dryRun: options.dryRun,
+          diff: options.diff,
         }),
       );
     },

@@ -32,5 +32,5 @@ OpenAthor CLI 是 agent-facing 工具层：
 - agent 不应直接修改 SQLite、向量索引或派生缓存
 - CLI 实现语言锁定为 TypeScript/Node.js，不使用 Python
 - `openathor context` 已作为 Slice 2 的只读入口落地
-- `openathor outline show/impact/archive` 已作为 Slice 3 结构编辑最小闭环落地
+- `openathor outline show/impact/insert/archive` 已作为 Slice 3 结构编辑最小闭环落地
 - `openathor search text/related` 已作为只读确定性检索入口落地

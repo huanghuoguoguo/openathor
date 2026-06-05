@@ -2,13 +2,16 @@
 
 ## 目标
 
-`openathor outline` 命令提供确定性结构检查和安全归档能力。
+`openathor outline` 命令提供确定性结构检查和安全结构编辑能力。
 
 当前实现只覆盖最小闭环：
 
 - 查看章节大纲
+- 插入 planned 章节
 - 归档前影响分析
 - 用户确认后的章节归档
+
+插章只修改结构化元数据，不创建正文文件，不移动、不重命名、不删除已有正文文件。
 
 归档只修改结构化元数据，不移动、不重命名、不删除正文文件。
 
@@ -148,11 +151,65 @@ openathor outline archive <target> [--json] [--keep-facts] [--confirm] [--dry-ru
 - `OA_OUTLINE_TARGET_NOT_FOUND`
 - `OA_MANUSCRIPT_CHANGED`
 
+## `openathor outline insert`
+
+### 参数
+
+```bash
+openathor outline insert --after <target> --title <title> [--json] [--confirm] [--dry-run] [--diff]
+```
+
+`--after` 可以是章节 ID 或 display order。默认行为是不写入，只返回 proposal 和 planned writes。
+
+只有传入 `--confirm` 且没有 `--dry-run` 或 `--diff` 时才写入。
+
+### Output data
+
+`data` 包含：
+
+- `dry_run`
+- `mode`
+- `command`
+- `after`
+- `inserted`
+- `result`
+- `user_confirmation_required`
+- `planned_writes`
+- `diff`
+- `next_agent_action`
+
+`inserted` 是新增 planned 章节：
+
+- `id`
+- `display_order`
+- `title`
+- `status: planned`
+- `manuscript_path: null`
+
+### Confirmed writes
+
+确认写入时：
+
+- 在 `outline/chapters.yaml` 新增 planned 章节
+- 顺延后续章节在 `outline/chapters.yaml` 中的 `display_order`
+- 顺延后续已有正文在 `.openathor/manuscript.index.yaml` 中的 `display_order`
+- 写入 `runs/run_*_outline_insert.json`
+- 不创建正文文件
+- 不移动、重命名或删除已有正文文件
+- 不修改 confirmed canon
+
+### Errors
+
+- `OA_PROJECT_NOT_FOUND`
+- `OA_SCHEMA_INVALID`
+- `OA_OUTLINE_TARGET_REQUIRED`
+- `OA_OUTLINE_TARGET_NOT_FOUND`
+- `OA_OUTLINE_TITLE_REQUIRED`
+
 ## 未实现命令
 
 以下目标命令仍待实现：
 
-- `openathor outline insert`
 - `openathor outline move`
 - `openathor outline split`
 - `openathor outline merge`
