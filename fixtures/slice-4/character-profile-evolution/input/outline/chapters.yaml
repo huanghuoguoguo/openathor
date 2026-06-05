@@ -1,0 +1,31 @@
+chapters:
+  - id: ch_001
+    display_order: 1
+    title: 雾港钥匙
+    status: drafted
+    manuscript_path: manuscript/chapter-001.md
+    summary: 林澈和孟夏在雾港旧客轮登船口确认蓝钥匙与星桥一号旧编号吻合，林澈把父亲林砚失踪时间列入证据袋，船舱锁从里面被打开成为疑点。
+    links:
+      characters: [lin-che, meng-xia, lin-yan]
+      hooks: [hook-inner-cabin-lock]
+      timeline_events: [event-blue-key-number-match, event-passenger-list-reviewed]
+  - id: ch_002
+    display_order: 2
+    title: 潮汐舱门
+    status: drafted
+    manuscript_path: manuscript/chapter-002.md
+    summary: 林澈和孟夏在下层船舱确认船舱锁内侧近期打开痕迹，找到林砚检修牌和潮湿船票，但暂缓断定林砚本人回船，并将线索转向星桥仓库。
+    links:
+      characters: [lin-che, meng-xia, lin-yan]
+      hooks: [hook-inner-cabin-lock, hook-empty-berth-ticket]
+      timeline_events: [event-cabin-lock-recent-trace, event-lin-yan-ticket-found]
+  - id: ch_003
+    display_order: 3
+    title: 星桥仓库
+    status: drafted
+    manuscript_path: manuscript/chapter-003.md
+    summary: 林澈和孟夏在星桥仓库见到许岚，许岚证实林砚失火前夜到过仓库并交出封蜡账册，第三次雾笛成为内部开锁暗号的新疑点。
+    links:
+      characters: [lin-che, meng-xia, lin-yan, xu-lan]
+      hooks: [hook-empty-berth-ticket, hook-third-fog-horn]
+      timeline_events: [event-xu-lan-testimony, event-third-fog-horn-ledger]

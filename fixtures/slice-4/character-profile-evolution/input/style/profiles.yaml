@@ -1,0 +1,8 @@
+profiles:
+  - id: style_main
+    status: confirmed
+    name: main narrative style
+    rules:
+      sentence_rhythm: short_controlled
+      diction: concrete_observational
+      exposition_style: implicit
