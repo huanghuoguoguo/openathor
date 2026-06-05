@@ -89,7 +89,7 @@ Confirmed new-chapter write is allowed only after explicit user confirmation:
 openathor draft chapter next --task "<task>" --text "<manuscript>" --confirm-write --json
 \`\`\`
 
-For confirmed new-chapter writes, make the first line of \`--text\` a Markdown H1 title, for example \`# 最后一班车\`. OpenAthor uses that heading as the chapter title in outline and index metadata.
+For confirmed new-chapter writes, make the first line of \`--text\` a clear chapter title. Preferred forms are a Markdown H1 such as \`# 最后一班车\`, or a plain chapter line such as \`第一章 最后一班车\` / \`Chapter 1: Last Bus\`. OpenAthor uses that title line as the chapter title in outline and index metadata.
 
 If the outline already has an unwritten planned chapter, \`openathor draft chapter next --confirm-write\` fills that planned chapter and returns \`filled_planned_chapter: true\`; otherwise it appends a new chapter. After structural edits such as confirmed replan, run \`openathor outline show --json\` before drafting so you know which planned chapter will be filled.
 
