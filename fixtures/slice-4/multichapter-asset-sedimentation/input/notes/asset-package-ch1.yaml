@@ -1,0 +1,44 @@
+characters:
+  - id: lin-zhi-yu
+    name: 林知雨
+    role: 档案修复员
+    traits:
+      - 谨慎
+      - 证据优先
+      - 不轻易表态
+    current_state: 在旧档案室发现地下联络道地图，并把九点水印列为核心证据。
+    notes:
+      - 面对周砚隐瞒三年前汽笛记录时没有立刻责备，倾向先固化证据。
+  - id: zhou-yan
+    name: 周砚
+    role: 铁路检修员
+    traits:
+      - 内疚
+      - 回避旧案
+      - 熟悉调车场路线
+    current_state: 承认三年前九点听见汽笛但没有报告。
+    notes:
+      - 随身保存带煤灰的检修牌。
+timeline_events:
+  - id: event-archive-map-found
+    title: 旧档案室发现地下联络道地图
+    summary: 林知雨和周砚在旧档案室第七柜背面找到地下联络道地图。
+  - id: event-nine-watermark-confirmed
+    title: 九点水印与汽笛记录吻合
+    summary: 地图边缘的九点水印和三年前九点汽笛记录吻合，周砚承认自己听见过汽笛。
+hooks:
+  - id: hook-nine-o-clock-whistle
+    title: 九点汽笛是谁拉响
+    status: opened
+    summary: 三年前九点汽笛与地下联络道地图相关，但拉响汽笛的人尚未确认。
+chapter:
+  summary: 林知雨和周砚在旧档案室发现地下联络道地图，九点水印与三年前九点汽笛记录吻合，周砚承认隐瞒听见汽笛。
+  links:
+    characters:
+      - lin-zhi-yu
+      - zhou-yan
+    timeline_events:
+      - event-archive-map-found
+      - event-nine-watermark-confirmed
+    hooks:
+      - hook-nine-o-clock-whistle

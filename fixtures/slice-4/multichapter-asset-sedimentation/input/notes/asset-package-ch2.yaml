@@ -1,0 +1,52 @@
+characters:
+  - id: lin-zhi-yu
+    name: 林知雨
+    role: 档案修复员
+    traits:
+      - 谨慎
+      - 证据优先
+      - 不轻易表态
+    current_state: 带着地下联络道地图进入废弃调车场，并把陈默的潮湿信纸封存。
+  - id: zhou-yan
+    name: 周砚
+    role: 铁路检修员
+    traits:
+      - 内疚
+      - 回避旧案
+      - 熟悉调车场路线
+    current_state: 确认调车场火灾当夜有人从北门进入，并继续协助林知雨。
+  - id: chen-mo
+    name: 陈默
+    role: 失踪守钟人
+    traits:
+      - 冷静
+      - 留线索但不露面
+      - 熟悉旧铁路暗号
+    current_state: 留下潮湿信纸，暗示调车场火灾不是事故。
+    notes:
+      - 他的名字第一次作为主动行动者进入事件链。
+timeline_events:
+  - id: event-chen-mo-letter-found
+    title: 陈默潮湿信纸出现
+    summary: 林知雨和周砚在废弃调车场发现陈默留下的潮湿信纸。
+  - id: event-switch-yard-fire-linked
+    title: 调车场火灾与地下联络道相连
+    summary: 潮湿信纸把三年前调车场火灾、北门脚印和地下联络道地图连在一起。
+hooks:
+  - id: hook-red-string-ledger
+    title: 红线账本藏在哪里
+    status: opened
+    summary: 陈默在潮湿信纸上提到红线账本，但没有说明账本位置。
+chapter:
+  summary: 林知雨和周砚进入废弃调车场，发现陈默留下的潮湿信纸，确认调车场火灾与地下联络道地图相连，并引出红线账本。
+  links:
+    characters:
+      - lin-zhi-yu
+      - zhou-yan
+      - chen-mo
+    timeline_events:
+      - event-chen-mo-letter-found
+      - event-switch-yard-fire-linked
+    hooks:
+      - hook-nine-o-clock-whistle
+      - hook-red-string-ledger

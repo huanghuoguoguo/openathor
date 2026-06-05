@@ -103,6 +103,7 @@ When using proposal commands:
 - for writing advice, read relevant plaintext sources and provide suggestions in the conversation
 - after writing or revising longform assets, run \`openathor assets audit --json\` and report unresolved links or drift before claiming continuity is stable
 - after writing a chapter that introduces or changes story assets, create a structured asset package in a project note and run \`openathor assets sync chapter <id-or-order> --from <asset-package> --json\`; do not edit \`bible/characters.md\`, \`bible/timeline.md\`, \`notes/hooks.md\`, or \`outline/chapters.yaml\` by hand to bypass the sync flow
+- after a confirmed multi-chapter draft, do not stop at manuscript files; for each drafted chapter, sync the chapter summary, character states, timeline events, hooks, and outline links before claiming the longform assets have been persisted
 - only after explicit user confirmation, rerun asset sync with \`--confirm --base-hash "sha256:..."\`; use the latest source hash from context, sync proposal, or doctor output
 - run \`openathor assets audit --json\` after confirmed asset sync and report unresolved outline links, character link drift, or summary drift
 - after writing or revising chapter prose, run \`openathor style check chapter <id-or-order> --json\` when style stability is part of the task; treat findings as review prompts, not automatic edits

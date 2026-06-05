@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "checks": {
+    "standard_assets_present": true,
+    "manuscript_index_matches_outline": true,
+    "derived_index_current": true
+  }
+}

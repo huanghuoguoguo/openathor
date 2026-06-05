@@ -1,0 +1,88 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor assets sync chapter 1 --from notes/asset-package-ch1.yaml --confirm --base-hash current:正文/001-档案室地图.md --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      result.characters_added: 2
+      result.timeline_events_added: 2
+      result.hooks_added: 1
+      result.outline_modified: true
+      result.confirmed_assets_written: true
+  - run: openathor draft chapter next --task "用户确认写入第二章《潮湿信纸》" --text "# 潮湿信纸\n\n林知雨和周砚按照地下联络道地图进入废弃调车场。北门铁轨旁有一截新压出的脚印，雨水把煤灰冲进轨缝，只留下九点汽笛同一晚的巡查编号。\n\n周砚认出那是三年前调车场火灾前最后一次检修记录。他想把纸页塞回证物袋，林知雨却先按住袋口。她没有追问，只让他把北门、火灾和地下联络道的位置逐一标在地图上。\n\n标到第三处时，信号箱里掉出一张潮湿信纸。纸上只有陈默的名字和一句话：火不是从仓库烧起的。信纸背面画着红线账本的记号，却没有写账本藏在哪里。\n\n林知雨把陈默的潮湿信纸封存，周砚终于承认火灾当夜有人从北门进入。两人决定先查旧报社，因为红线账本的纸张带着铅字油墨味。" --confirm-write --json
+    ok: true
+    expect_data:
+      target.id: ch_002
+      target.title: 潮湿信纸
+  - run: openathor assets sync chapter 2 --from notes/asset-package-ch2.yaml --confirm --base-hash current:manuscript/chapter-002.md --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      result.characters_added: 1
+      result.timeline_events_added: 2
+      result.hooks_added: 1
+      result.outline_modified: true
+      result.confirmed_assets_written: true
+  - run: openathor draft chapter next --task "用户确认写入第三章《铅字柜后》" --text "# 铅字柜后\n\n旧报社的铅字间比调车场更冷。林知雨把红线账本的记号画给门房看，门房没有说话，只把他们带到许曼面前。\n\n许曼是旧报社排字员，记日期准确得近乎固执。她看见陈默的名字，先确认火灾前夜的日期，又确认周砚身上的检修牌，才说陈默那晚确实来过旧报社。\n\n她从铅字柜后取出红线账本。账本记录了三年前九点汽笛、调车场火灾、北门脚印，还在最后一页写着第三声钟响。周砚想起那晚自己听见的不止一声汽笛，还有从钟楼方向传来的第三声钟响。\n\n林知雨没有把第三声钟响写成结论。她只在证据页旁标注：陈默主动留下潮湿信纸，许曼指认陈默火灾前夜出现，红线账本可能是真证据，也可能是引导调查的陷阱。" --confirm-write --json
+    ok: true
+    expect_data:
+      target.id: ch_003
+      target.title: 铅字柜后
+  - run: openathor assets sync chapter 3 --from notes/asset-package-ch3.yaml --confirm --base-hash current:manuscript/chapter-003.md --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      result.characters_added: 1
+      result.timeline_events_added: 2
+      result.hooks_added: 1
+      result.outline_modified: true
+      result.confirmed_assets_written: true
+  - run: openathor assets audit --json
+    ok: true
+    expect_data:
+      audit.counts.chapters: 3
+      audit.counts.indexed_chapters: 3
+      audit.counts.characters: 4
+      audit.counts.timeline_events: 6
+      audit.counts.hooks: 3
+      audit.counts.unresolved_outline_links: 0
+      audit.counts.character_link_drifts: 0
+      audit.counts.summary_drift_candidates: 0
+      audit.counts.unlinked_characters: 0
+      audit.assets.characters.0.id: lin-zhi-yu
+      audit.assets.characters.1.id: zhou-yan
+      audit.assets.characters.2.id: chen-mo
+      audit.assets.characters.3.id: xu-man
+      audit.chapter_entity_coverage.2.linked_character_names.3: 许曼
+  - run: openathor context chapter 3 --json
+    ok: true
+    expect_data:
+      context_pack.target.id: ch_003
+      outline.chapter_count: 3
+      outline.chapters.2.links.characters.3: xu-man
+      outline.chapters.2.links.hooks.1: hook-third-bell-signal
+    expect_data_path: assets.characters.text
+  - run: openathor search text "陈默" --json
+    ok: true
+    expect_data_path: matches
+  - run: openathor search related chapter 3 --json
+    ok: true
+    expect_data:
+      target.id: ch_003
+    expect_data_path: matches
+  - run: openathor index rebuild --vector --json
+    ok: true
+    expect_data:
+      chapters_indexed: 3
+      vector_index: .openathor/vector/index.json
+  - run: openathor search semantic "陈默 红线账本 第三声钟响" --json
+    ok: true
+    expect_data:
+      method: deterministic_hash_embedding_v1
+    expect_data_path: matches
+  - run: openathor doctor --json --strict
+    ok: true
+    expect_data:
+      checks.manuscript_index_matches_outline: true
+      checks.derived_index_current: true
