@@ -10,7 +10,7 @@
 
 `openathor assets audit` 提供长篇资产连续性审计。它把 `bible/characters.md`、`bible/timeline.md`、`notes/hooks.md`、`outline/chapters.yaml` 和正文提及放在一起扫描，用来发现资产没有沉淀、outline link 悬空、正文出现人物但大纲未关联等漂移风险。
 
-`openathor assets sync` 提供写作后资产沉淀入口。它接收 Pi Agent、Operator 或用户生成的结构化资产包，默认写入 pending proposal；只有用户确认且章节 source hash 匹配时，才把新人物、时间线事件、伏笔和章节 outline links 写入明文事实源。
+`openathor assets sync` 提供写作后资产沉淀入口。它接收 Pi Agent、Operator 或用户生成的结构化资产包，默认写入 pending proposal；只有用户确认且章节 source hash 匹配时，才把新人物、时间线事件、伏笔、既有资产状态更新和章节 outline links 写入明文事实源。
 
 search 和 assets audit 命令只读，不写用户文件。assets sync 是受确认和 hash gate 保护的写命令。
 
@@ -279,11 +279,10 @@ CLI 不从自然语言正文里推断复杂事实；资产包必须由 agent 或
 
 带 `--confirm --base-hash` 且 hash 匹配时可以写：
 
-- `bible/characters.md`：只追加新增人物
-- `bible/timeline.md`：只追加新增时间线事件
-- `notes/hooks.md`：只追加新增伏笔
+- `bible/characters.md`：追加新增人物；合并更新既有人物 `role`、`traits`、`current_state` 和 `notes`，旧 `current_state` 以 `note: previous_state: ...` 保留
+- `bible/timeline.md`：追加新增时间线事件；合并更新既有事件摘要并把旧摘要作为 note 保留
+- `notes/hooks.md`：追加新增伏笔；合并更新既有伏笔状态和摘要并把旧状态/摘要作为 note 保留
 - `outline/chapters.yaml`：更新目标章节摘要和 links
-- `bible/canon.pending.md`：仅保存已有资产的更新候选，不直接改写已有 confirmed 资产
 - `runs/run_*_assets_sync.json`
 
 hash 不匹配时返回 `OA_MANUSCRIPT_CHANGED` 且不得写入。
@@ -302,7 +301,6 @@ confirmed write 模式：
 - `bible/timeline.md`
 - `notes/hooks.md`
 - `outline/chapters.yaml`
-- `bible/canon.pending.md`，仅当资产包包含已有资产的更新候选
 
 ### Errors
 
@@ -319,5 +317,5 @@ confirmed write 模式：
 ### 当前限制
 
 - `assets sync` 不从正文自动抽取复杂事实，只处理结构化资产包。
-- 确认写入只追加新资产；已有资产状态更新进入 pending，不直接覆盖原档案。
+- 确认写入会合并 OpenAthor 规范 `- id:` 资产块；无法识别的用户自由格式会保留，必要时追加规范资产块。
 - 资产包 schema 当前只覆盖人物、时间线事件、伏笔和章节 outline links，地点、组织、道具等资产后续扩展。

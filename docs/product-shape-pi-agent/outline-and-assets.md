@@ -193,8 +193,8 @@ canon = 已确认发生了什么
 - Pi Agent/Operator 负责从写作结果整理结构化资产包
 - CLI 负责校验资产 ID、source hash、写入范围和 run 记录
 - 默认只写 pending proposal
-- `--confirm --base-hash` 匹配时才追加新人物、新时间线事件、新伏笔，并更新目标章节 outline links
-- 已有资产的状态更新仍进入 pending，不直接改写 confirmed 资产
+- `--confirm --base-hash` 匹配时才追加新人物、新时间线事件、新伏笔，合并更新既有资产状态，并更新目标章节 outline links
+- 既有人物的最新 `current_state` 写回 confirmed 档案，旧状态以 `note: previous_state: ...` 保留，便于追踪人物事迹演进
 - 同步后必须运行 `openathor assets audit --json` 检查 link drift 和 summary drift
 - 多章写作验收必须覆盖“正文确认写入 -> 每章 asset package -> `assets sync --confirm` -> `assets audit`”的完整链路，不能只验最终小说文本是否存在
 

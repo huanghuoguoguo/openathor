@@ -94,7 +94,9 @@ openathor export --format markdown
 - `openathor context`
 - `openathor style analyze`
 - `openathor style profile show`
+- `openathor style profile apply`
 - `openathor style check`
+- `openathor style revise`
 - `openathor plan`
 - `openathor draft`
 - `openathor review`
@@ -110,7 +112,7 @@ openathor export --format markdown
 - proposal 写入前会对 confirmed canon 中的硬约束做确定性冲突拦截，命中时返回 `OA_CANON_CONFLICT` 且不写文件。
 - `style check` 当前是确定性指标和词项扫描，不是 LLM 文风判断。
 - `style analyze` 当前生成 pending style profile，不生成 confirmed profile，不复制参考文本原文。
-- `style profile apply` 已支持 hash 保护的 confirmed profile 激活；`style revise` 当前返回结构化 `OA_COMMAND_NOT_IMPLEMENTED`，避免 Pi 收到非 JSON Commander 错误；完整 style 改写仍待实现。
+- `style profile apply` 已支持 hash 保护的 confirmed profile 激活；`style revise` 已支持 proposal、diff 和 `--confirm-write --base-hash` 安全写入，但修订正文仍由 Pi/Operator Agent 或用户在 CLI 外部生成，CLI 不调用模型。
 - CLI 不调用模型，不覆盖已有正文，不直接修改 confirmed canon。
 - 真实 LLM judge scores attachment 已支持；更完整的真实 Pi Agent 场景集仍待扩展。
 
@@ -177,8 +179,8 @@ openathor export --format markdown
 - `search related` 使用词项重叠，不是向量语义检索。
 - `search semantic` 使用可重建的本地 deterministic hash embedding 向量索引，不调用外部 embedding 服务。
 - `assets audit` 使用 Markdown/YAML 文本扫描检查 story assets、outline links 和章节正文提及，不做完整语义事实推理。
-- `assets sync` 接收 agent/用户提供的结构化资产包，默认 pending；确认写入必须提供目标章节 hash，只追加新资产并更新目标章节 outline links，不直接改写已有 confirmed 资产。
-- 多章资产沉淀回归覆盖连续章节写入后的 `assets sync --confirm`、confirmed story assets、outline links、检索/context 和 `assets audit` 无漂移结果。
+- `assets sync` 接收 agent/用户提供的结构化资产包，默认 pending；确认写入必须提供目标章节 hash，会写入新资产、合并更新既有 confirmed 人物/时间线/伏笔资产，并更新目标章节 outline links。既有人物的最新 `current_state` 写回档案，早期状态作为 `note: previous_state` 保留。
+- 多章资产沉淀回归覆盖连续章节写入后的 `assets sync --confirm`、confirmed story assets、outline links、检索/context 和 `assets audit` 无漂移结果，并验证既有人物性格、事迹和当前状态持续承接。
 - export 当前只支持完整 manuscript Markdown 合并导出；EPUB/DOCX/PDF 仍不在当前切片内。
 
 ## 命令不变量

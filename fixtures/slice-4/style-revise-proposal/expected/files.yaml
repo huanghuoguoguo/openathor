@@ -6,4 +6,6 @@ required:
   - .openathor/index.sqlite
   - style/profiles.yaml
   - style/references.yaml
+  - reviews
+  - runs
 absent: []

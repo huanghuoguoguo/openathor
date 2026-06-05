@@ -183,6 +183,19 @@ type StyleCheckOptions = {
   maxChars?: number;
 };
 
+type StyleReviseOptions = {
+  cwd?: string;
+  scope?: "chapter";
+  target?: string;
+  goal?: string;
+  text?: string;
+  confirmWrite?: boolean;
+  baseHash?: string;
+  dryRun?: boolean;
+  diff?: boolean;
+  maxChars?: number;
+};
+
 type AssetsAuditOptions = {
   cwd?: string;
   maxChars?: number;
@@ -1464,9 +1477,258 @@ export async function runStyleCheck(
             : "needs_review",
       recommendations: [
         "Treat deterministic style findings as review prompts, not automatic rewrite instructions.",
-        "Use openathor revise chapter <target> --task ... for any confirmed revision proposal.",
+        "Use openathor style revise chapter <target> --goal ... for style-specific proposal, diff, and hash-confirm workflow.",
         "Do not copy reference text phrasing when resolving style drift.",
       ],
+    },
+  };
+}
+
+export async function runStyleRevise(
+  options: StyleReviseOptions = {},
+): Promise<CommandResult> {
+  if ((options.scope ?? "chapter") !== "chapter") {
+    throw new OpenAthorError(
+      "OA_STYLE_UNSUPPORTED_SCOPE",
+      `Unsupported style revise scope ${options.scope}.`,
+      { exitCode: 2 },
+    );
+  }
+
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
+  const targetChapter = resolveContextChapter(
+    options.target,
+    inspection.chapters,
+    inspection.manuscriptIndex,
+  );
+  const sourceRelPath = targetChapter.source_path;
+  const sourceFullPath = path.join(projectRoot, sourceRelPath);
+  const sourceHash = await sha256File(sourceFullPath);
+  const currentText = await readFile(sourceFullPath, "utf8");
+  const revisedText = options.text?.trim();
+  const goal = options.goal?.trim() || "Revise the target chapter toward confirmed project style guidance.";
+  const confirmWrite = options.confirmWrite ?? false;
+  const dryRun = options.dryRun ?? false;
+  const diff = options.diff ?? false;
+  const previewOnly = dryRun || diff || !confirmWrite;
+  const proposalWrite = !confirmWrite && !diff && !dryRun;
+  const maxChars = normalizeSnippetChars(options.maxChars);
+  const stamp = runStamp();
+  const runRelPath = `runs/run_${stamp}_style_revise.json`;
+  const proposalRelPath = `reviews/style-revise-${targetChapter.id}-${stamp}.md`;
+  const sourceMap = new Map<string, EnvelopeSource>();
+
+  for (const source of inspection.sources) {
+    sourceMap.set(source.path, source);
+  }
+  sourceMap.set(sourceRelPath, { path: sourceRelPath, hash: sourceHash });
+
+  const styleCheck = await runStyleCheck({
+    cwd: projectRoot,
+    scope: "chapter",
+    target: targetChapter.id,
+    maxChars,
+  });
+  const profileState = await activeStyleProfileState(projectRoot, sourceMap);
+  const sources = [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path));
+  const writes: EnvelopeWrite[] = previewOnly
+    ? [
+        {
+          path: proposalRelPath,
+          change_type: "created",
+          reason: "style_revision_proposal",
+        },
+        {
+          path: runRelPath,
+          change_type: "created",
+          reason: "style_revision_run_record",
+        },
+      ]
+    : [
+        {
+          path: sourceRelPath,
+          change_type: "modified",
+          reason: "confirmed_style_revision",
+        },
+        {
+          path: "outline/chapters.yaml",
+          change_type: "modified",
+          reason: "confirmed_style_revision_outline",
+        },
+        {
+          path: ".openathor/manuscript.index.yaml",
+          change_type: "modified",
+          reason: "confirmed_style_revision_index",
+        },
+        {
+          path: runRelPath,
+          change_type: "created",
+          reason: "confirmed_style_revision_run_record",
+        },
+      ];
+
+  if (!previewOnly && !revisedText) {
+    throw new OpenAthorError(
+      "OA_STYLE_REVISE_TEXT_REQUIRED",
+      "Confirmed style revision writes require --text <manuscript text>.",
+      { exitCode: 2 },
+    );
+  }
+
+  if (!previewOnly && !options.baseHash) {
+    throw new OpenAthorError(
+      "OA_BASE_HASH_REQUIRED",
+      "Confirmed style revision writes require --base-hash <sha256:...>.",
+      { exitCode: 2 },
+    );
+  }
+
+  if (!previewOnly && sourceHash !== options.baseHash) {
+    throw new OpenAthorError(
+      "OA_MANUSCRIPT_CHANGED",
+      `Refusing to style-revise ${targetChapter.id} because the source hash changed.`,
+      {
+        exitCode: 3,
+        hints: [
+          `Expected ${options.baseHash}.`,
+          `Current ${sourceHash}.`,
+          "Regenerate style revision from the latest chapter text before confirming.",
+        ],
+      },
+    );
+  }
+
+  if (proposalWrite) {
+    await writeText(
+      projectRoot,
+      proposalRelPath,
+      styleReviseProposalMarkdown({
+        goal,
+        target: targetChapter,
+        sourceHash,
+        profileState,
+        styleCheckData: styleCheck.data,
+        revisedText,
+      }),
+    );
+    await writeYaml(projectRoot, runRelPath, {
+      agent_role: "openathor-cli",
+      command: "openathor style revise",
+      created_at: new Date().toISOString(),
+      mode: diff ? "diff" : "proposal",
+      goal,
+      target: styleReviseTarget(targetChapter, sourceHash),
+      profile: profileState.activeProfile,
+      active_profile_required: false,
+      style_check: styleCheck.data,
+      writes,
+      sources,
+      user_confirmation_required: true,
+    });
+  }
+
+  if (!previewOnly && revisedText) {
+    await writeText(projectRoot, sourceRelPath, ensureTrailingNewline(revisedText));
+    const contentHash = await sha256File(sourceFullPath);
+    const title = firstMarkdownHeading(revisedText) ?? targetChapter.title;
+    const updatedChapters: ChapterOutline = {
+      chapters: inspection.chapters.chapters.map((outlineChapter) =>
+        outlineChapter.id === targetChapter.id
+          ? {
+              ...outlineChapter,
+              title,
+              status: "revised",
+              manuscript_path: sourceRelPath,
+            }
+          : outlineChapter,
+      ),
+    };
+    const updatedIndex: ManuscriptIndex = {
+      ...inspection.manuscriptIndex,
+      generated_at: new Date().toISOString(),
+      chapters: inspection.manuscriptIndex.chapters.map((indexedChapter) =>
+        indexedChapter.id === targetChapter.id
+          ? {
+              ...indexedChapter,
+              title,
+              status: "revised",
+              content_hash: contentHash,
+              detected_title: title,
+            }
+          : indexedChapter,
+      ),
+    };
+
+    await writeYaml(projectRoot, "outline/chapters.yaml", updatedChapters);
+    await writeYaml(projectRoot, ".openathor/manuscript.index.yaml", updatedIndex);
+    await writeYaml(projectRoot, runRelPath, {
+      agent_role: "openathor-cli",
+      command: "openathor style revise",
+      created_at: new Date().toISOString(),
+      mode: "confirmed_write",
+      goal,
+      target: {
+        id: targetChapter.id,
+        display_order: targetChapter.display_order,
+        title,
+        source_path: sourceRelPath,
+      },
+      base_hash: options.baseHash,
+      previous_hash: sourceHash,
+      content_hash: contentHash,
+      profile: profileState.activeProfile,
+      style_check_before: styleCheck.data,
+      writes,
+      sources,
+      user_confirmation_required: false,
+      manuscript_generated_by_cli: false,
+    });
+  }
+
+  const mode = previewOnly ? (diff ? "diff" : "proposal") : "confirmed_write";
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources,
+    writes: dryRun || diff ? [] : writes,
+    warnings: uniqueWarnings([
+      ...inspection.warnings,
+      ...styleReviseWarnings(profileState, styleCheck.warnings),
+    ]),
+    data: {
+      dry_run: dryRun,
+      mode,
+      command: "openathor style revise",
+      goal,
+      target: styleReviseTarget(targetChapter, sourceHash),
+      base_hash: options.baseHash ?? null,
+      current_hash: sourceHash,
+      profile: profileState.activeProfile,
+      active_profile_present: profileState.activeProfile !== null,
+      style_check: styleCheck.data,
+      diff: {
+        summary: "Style revision is externally generated by Pi/model and safely applied by OpenAthor CLI.",
+        source_path: sourceRelPath,
+        old_hash: sourceHash,
+        text_supplied: Boolean(revisedText),
+        manuscript_generated_by_cli: false,
+      },
+      planned_writes: dryRun || diff ? writes : [],
+      proposal_path: previewOnly ? proposalRelPath : null,
+      run_path: runRelPath,
+      user_confirmation_required: previewOnly,
+      result: {
+        applied: !previewOnly && !dryRun,
+        manuscript_modified: !previewOnly && !dryRun,
+        outline_modified: !previewOnly && !dryRun,
+        index_modified: !previewOnly && !dryRun,
+        reference_text_copied: false,
+      },
+      next_agent_action: previewOnly
+        ? "Generate or review revised prose, show the proposal to the user, then rerun with --confirm-write --base-hash after explicit approval."
+        : "Run openathor style check chapter <target> --json and openathor assets audit --json before claiming the revision is stable.",
     },
   };
 }
@@ -7118,27 +7380,15 @@ function assetSyncWrites(
   }
 
   if (plan.new_characters.length > 0) {
-    writes.push({
-      path: "bible/characters.md",
-      change_type: "modified",
-      reason: "assets_sync_new_characters",
-    });
+    upsertWriteReason(writes, "bible/characters.md", "assets_sync_confirmed_character_profiles");
   }
 
   if (plan.new_timeline_events.length > 0) {
-    writes.push({
-      path: "bible/timeline.md",
-      change_type: "modified",
-      reason: "assets_sync_new_timeline_events",
-    });
+    upsertWriteReason(writes, "bible/timeline.md", "assets_sync_confirmed_timeline_events");
   }
 
   if (plan.new_hooks.length > 0) {
-    writes.push({
-      path: "notes/hooks.md",
-      change_type: "modified",
-      reason: "assets_sync_new_hooks",
-    });
+    upsertWriteReason(writes, "notes/hooks.md", "assets_sync_confirmed_hooks");
   }
 
   if (plan.outline_modified) {
@@ -7150,18 +7400,36 @@ function assetSyncWrites(
   }
 
   if (
-    plan.existing_characters.length > 0 ||
-    plan.existing_timeline_events.length > 0 ||
-    plan.existing_hooks.length > 0
+    plan.existing_characters.length > 0
   ) {
-    writes.push({
-      path: proposalRelPath,
-      change_type: "modified",
-      reason: "assets_sync_existing_asset_update_pending",
-    });
+    upsertWriteReason(writes, "bible/characters.md", "assets_sync_confirmed_character_profiles");
+  }
+
+  if (plan.existing_timeline_events.length > 0) {
+    upsertWriteReason(writes, "bible/timeline.md", "assets_sync_confirmed_timeline_events");
+  }
+
+  if (plan.existing_hooks.length > 0) {
+    upsertWriteReason(writes, "notes/hooks.md", "assets_sync_confirmed_hooks");
   }
 
   return writes;
+}
+
+function upsertWriteReason(
+  writes: EnvelopeWrite[],
+  pathValue: string,
+  reason: string,
+): void {
+  if (writes.some((write) => write.path === pathValue)) {
+    return;
+  }
+
+  writes.push({
+    path: pathValue,
+    change_type: "modified",
+    reason,
+  });
 }
 
 async function writeAssetSyncConfirmed(
@@ -7171,34 +7439,68 @@ async function writeAssetSyncConfirmed(
   plan: AssetSyncPlan,
 ): Promise<void> {
   if (plan.new_characters.length > 0) {
-    await appendText(
-      projectRoot,
-      "bible/characters.md",
-      assetSyncCharactersMarkdown(plan.new_characters),
+    const charactersPath = path.join(projectRoot, "bible/characters.md");
+    await writeFile(
+      charactersPath,
+      upsertAssetSyncCharactersMarkdown(
+        await readFile(charactersPath, "utf8"),
+        plan.new_characters,
+      ),
+      "utf8",
+    );
+  }
+
+  if (plan.existing_characters.length > 0) {
+    const charactersPath = path.join(projectRoot, "bible/characters.md");
+    await writeFile(
+      charactersPath,
+      upsertAssetSyncCharactersMarkdown(
+        await readFile(charactersPath, "utf8"),
+        plan.existing_characters,
+      ),
+      "utf8",
     );
   }
 
   if (plan.new_timeline_events.length > 0) {
-    await appendText(
-      projectRoot,
-      "bible/timeline.md",
-      assetSyncTimelineMarkdown(plan.new_timeline_events),
+    const timelinePath = path.join(projectRoot, "bible/timeline.md");
+    await writeFile(
+      timelinePath,
+      upsertAssetSyncTimelineMarkdown(
+        await readFile(timelinePath, "utf8"),
+        plan.new_timeline_events,
+      ),
+      "utf8",
+    );
+  }
+
+  if (plan.existing_timeline_events.length > 0) {
+    const timelinePath = path.join(projectRoot, "bible/timeline.md");
+    await writeFile(
+      timelinePath,
+      upsertAssetSyncTimelineMarkdown(
+        await readFile(timelinePath, "utf8"),
+        plan.existing_timeline_events,
+      ),
+      "utf8",
     );
   }
 
   if (plan.new_hooks.length > 0) {
-    await appendText(projectRoot, "notes/hooks.md", assetSyncHooksMarkdown(plan.new_hooks));
+    const hooksPath = path.join(projectRoot, "notes/hooks.md");
+    await writeFile(
+      hooksPath,
+      upsertAssetSyncHooksMarkdown(await readFile(hooksPath, "utf8"), plan.new_hooks),
+      "utf8",
+    );
   }
 
-  if (
-    plan.existing_characters.length > 0 ||
-    plan.existing_timeline_events.length > 0 ||
-    plan.existing_hooks.length > 0
-  ) {
-    await appendText(
-      projectRoot,
-      "bible/canon.pending.md",
-      assetSyncExistingUpdatePendingText(plan),
+  if (plan.existing_hooks.length > 0) {
+    const hooksPath = path.join(projectRoot, "notes/hooks.md");
+    await writeFile(
+      hooksPath,
+      upsertAssetSyncHooksMarkdown(await readFile(hooksPath, "utf8"), plan.existing_hooks),
+      "utf8",
     );
   }
 
@@ -7245,7 +7547,7 @@ function assetSyncPendingText(
     `- new_characters: ${plan.new_characters.map((item) => `${item.name} (${item.id})`).join(", ") || "none"}`,
     `- new_timeline_events: ${plan.new_timeline_events.map((item) => `${item.title} (${item.id})`).join(", ") || "none"}`,
     `- new_hooks: ${plan.new_hooks.map((item) => `${item.title} (${item.id})`).join(", ") || "none"}`,
-    `- existing_asset_updates_pending: ${
+    `- existing_asset_updates_review: ${
       plan.existing_characters.length + plan.existing_timeline_events.length + plan.existing_hooks.length
     }`,
     "",
@@ -7262,36 +7564,116 @@ function assetSyncPendingText(
   ].join("\n");
 }
 
-function assetSyncExistingUpdatePendingText(plan: AssetSyncPlan): string {
+async function activeStyleProfileState(
+  projectRoot: string,
+  sourceMap: Map<string, EnvelopeSource>,
+): Promise<{
+  activeProfile: Record<string, unknown> | null;
+  profilesHash: string | null;
+}> {
+  const profilesRelPath = "style/profiles.yaml";
+  const profilesPath = path.join(projectRoot, profilesRelPath);
+  const profilesHash = (await pathExists(profilesPath)) ? await sha256File(profilesPath) : null;
+  const profilesData = await readYamlObjectFile(profilesPath, { profiles: [] });
+  const profiles = asRecordArray(profilesData.profiles);
+  const activeProfile =
+    profiles.find(
+      (profile) => profile.status === "confirmed" && profile.active === true,
+    ) ?? null;
+
+  if (profilesHash) {
+    sourceMap.set(profilesRelPath, { path: profilesRelPath, hash: profilesHash });
+  }
+
+  return { activeProfile, profilesHash };
+}
+
+function styleReviseTarget(
+  chapter: IndexedChapter,
+  sourceHash: string,
+): {
+  id: string;
+  display_order: number;
+  title: string;
+  source_path: string;
+  content_hash: string;
+} {
+  return {
+    id: chapter.id,
+    display_order: chapter.display_order,
+    title: chapter.title,
+    source_path: chapter.source_path,
+    content_hash: sourceHash,
+  };
+}
+
+function styleReviseWarnings(
+  profileState: { activeProfile: Record<string, unknown> | null },
+  styleCheckWarnings: EnvelopeWarning[] | undefined,
+): EnvelopeWarning[] {
+  const warnings = [...(styleCheckWarnings ?? [])];
+
+  if (!profileState.activeProfile) {
+    warnings.push({
+      code: "OA_STYLE_ACTIVE_PROFILE_MISSING",
+      message: "No confirmed active style profile was found; style revision can only use manual style guidance and deterministic checks.",
+      severity: "low",
+    });
+  }
+
+  return warnings;
+}
+
+function styleReviseProposalMarkdown(input: {
+  goal: string;
+  target: IndexedChapter;
+  sourceHash: string;
+  profileState: { activeProfile: Record<string, unknown> | null; profilesHash: string | null };
+  styleCheckData: unknown;
+  revisedText?: string;
+}): string {
+  const styleCheckSummary = styleCheckDataSummary(input.styleCheckData);
+
   return [
+    "# Style Revision Proposal",
     "",
-    "## Asset Update Candidates",
-    "",
-    "- status: pending",
-    "- reason: asset_sync_existing_asset_update",
+    `- target: ${input.target.id}`,
+    `- display_order: ${input.target.display_order}`,
+    `- source_path: ${input.target.source_path}`,
+    `- source_hash: ${input.sourceHash}`,
+    `- goal: ${input.goal}`,
+    `- active_profile_id: ${String(input.profileState.activeProfile?.id ?? "none")}`,
+    `- profiles_hash: ${input.profileState.profilesHash ?? "missing"}`,
+    "- manuscript_generated_by_cli: false",
     "- user_confirmation_required: true",
     "",
-    ...plan.existing_characters.flatMap((item) => [
-      `### Character: ${item.name} (${item.id})`,
-      "",
-      item.current_state ? `- current_state: ${item.current_state}` : "- current_state: (unspecified)",
-      item.traits.length > 0 ? `- traits: ${item.traits.join(", ")}` : "- traits: (unspecified)",
-      "",
-    ]),
-    ...plan.existing_timeline_events.flatMap((item) => [
-      `### Timeline Event: ${item.title} (${item.id})`,
-      "",
-      item.summary ? `- summary: ${item.summary}` : "- summary: (unspecified)",
-      "",
-    ]),
-    ...plan.existing_hooks.flatMap((item) => [
-      `### Hook: ${item.title} (${item.id})`,
-      "",
-      item.status ? `- status: ${item.status}` : "- status: (unspecified)",
-      item.summary ? `- summary: ${item.summary}` : "- summary: (unspecified)",
-      "",
-    ]),
+    "## Style Check Summary",
+    "",
+    `- verdict: ${styleCheckSummary.verdict ?? "unknown"}`,
+    `- finding_count: ${styleCheckSummary.findingCount}`,
+    "",
+    "## Revised Text",
+    "",
+    input.revisedText
+      ? input.revisedText
+      : "No revised text was supplied. Pi/Operator Agent should generate prose externally, show it to the user, then confirm with --text and --base-hash.",
+    "",
   ].join("\n");
+}
+
+function styleCheckDataSummary(data: unknown): {
+  verdict?: string;
+  findingCount: number;
+} {
+  if (typeof data !== "object" || data === null) {
+    return { findingCount: 0 };
+  }
+
+  const record = data as { verdict?: unknown; findings?: unknown };
+  return {
+    verdict: typeof record.verdict === "string" ? record.verdict : undefined,
+    findingCount: Array.isArray(record.findings) ? record.findings.length : 0,
+  };
 }
 
 function assetSyncCharactersMarkdown(characters: AssetSyncCharacter[]): string {
@@ -7311,6 +7693,29 @@ function assetSyncCharactersMarkdown(characters: AssetSyncCharacter[]): string {
   ].join("\n");
 }
 
+function upsertAssetSyncCharactersMarkdown(
+  currentText: string,
+  characters: AssetSyncCharacter[],
+): string {
+  const existingCharacters = assetLookup(
+    extractMarkdownEntities(currentText, "bible/characters.md", "character"),
+  );
+  const mergedCharacters = characters.map((character) =>
+    mergeAssetSyncCharacter(
+      character,
+      existingCharacters.get(character.id) ?? existingCharacters.get(character.name),
+    ),
+  );
+
+  return upsertAssetSyncBlocks(
+    currentText,
+    mergedCharacters,
+    "Characters",
+    (character) => character.id,
+    (items) => assetSyncCharactersMarkdown(items),
+  );
+}
+
 function assetSyncTimelineMarkdown(events: AssetSyncTimelineEvent[]): string {
   return [
     "",
@@ -7324,6 +7729,29 @@ function assetSyncTimelineMarkdown(events: AssetSyncTimelineEvent[]): string {
       "",
     ].filter((line): line is string => line !== null)),
   ].join("\n");
+}
+
+function upsertAssetSyncTimelineMarkdown(
+  currentText: string,
+  events: AssetSyncTimelineEvent[],
+): string {
+  const existingEvents = assetLookup(
+    extractMarkdownEntities(currentText, "bible/timeline.md", "timeline_event"),
+  );
+  const mergedEvents = events.map((event) =>
+    mergeAssetSyncTimelineEvent(
+      event,
+      existingEvents.get(event.id) ?? existingEvents.get(event.title),
+    ),
+  );
+
+  return upsertAssetSyncBlocks(
+    currentText,
+    mergedEvents,
+    "Timeline",
+    (event) => event.id,
+    (items) => assetSyncTimelineMarkdown(items),
+  );
 }
 
 function assetSyncHooksMarkdown(hooks: AssetSyncHook[]): string {
@@ -7340,6 +7768,234 @@ function assetSyncHooksMarkdown(hooks: AssetSyncHook[]): string {
       "",
     ].filter((line): line is string => line !== null)),
   ].join("\n");
+}
+
+function upsertAssetSyncHooksMarkdown(
+  currentText: string,
+  hooks: AssetSyncHook[],
+): string {
+  const existingHooks = assetLookup(extractMarkdownEntities(currentText, "notes/hooks.md", "hook"));
+  const mergedHooks = hooks.map((hook) =>
+    mergeAssetSyncHook(hook, existingHooks.get(hook.id) ?? existingHooks.get(hook.title)),
+  );
+
+  return upsertAssetSyncBlocks(
+    currentText,
+    mergedHooks,
+    "Hooks",
+    (hook) => hook.id,
+    (items) => assetSyncHooksMarkdown(items),
+  );
+}
+
+function mergeAssetSyncCharacter(
+  incoming: AssetSyncCharacter,
+  existing: AssetEntity | undefined,
+): AssetSyncCharacter {
+  if (!existing) {
+    return incoming;
+  }
+
+  const existingCurrentStates = existing.profile.current_state ?? [];
+  const previousStates =
+    incoming.current_state === null
+      ? []
+      : existingCurrentStates
+          .filter((state) => state !== incoming.current_state)
+          .map((state) => `previous_state: ${state}`);
+
+  return {
+    id: incoming.id,
+    name: incoming.name || existing.name,
+    role: incoming.role ?? firstAssetProfileValue(existing.profile.role),
+    traits: uniqueLimited(
+      [
+        ...splitAssetSyncValues(existing.profile.traits ?? []),
+        ...incoming.traits,
+      ],
+      50,
+    ),
+    current_state:
+      incoming.current_state ?? firstAssetProfileValue(existing.profile.current_state),
+    notes: uniqueLimited(
+      [
+        ...(existing.profile.notes ?? []),
+        ...previousStates,
+        ...incoming.notes,
+      ],
+      100,
+    ),
+  };
+}
+
+function mergeAssetSyncTimelineEvent(
+  incoming: AssetSyncTimelineEvent,
+  existing: AssetEntity | undefined,
+): AssetSyncTimelineEvent {
+  if (!existing) {
+    return incoming;
+  }
+
+  const existingSummary = firstAssetProfileValue(existing.profile.summary);
+  const previousSummaries =
+    incoming.summary && existingSummary && incoming.summary !== existingSummary
+      ? [`previous_summary: ${existingSummary}`]
+      : [];
+
+  return {
+    id: incoming.id,
+    title: incoming.title || existing.name,
+    summary: incoming.summary ?? existingSummary,
+    notes: uniqueLimited(
+      [
+        ...(existing.profile.notes ?? []),
+        ...previousSummaries,
+        ...incoming.notes,
+      ],
+      100,
+    ),
+  };
+}
+
+function mergeAssetSyncHook(
+  incoming: AssetSyncHook,
+  existing: AssetEntity | undefined,
+): AssetSyncHook {
+  if (!existing) {
+    return incoming;
+  }
+
+  const existingStatus = firstAssetProfileValue(existing.profile.status);
+  const existingSummary = firstAssetProfileValue(existing.profile.summary);
+  const previousStatus =
+    incoming.status && existingStatus && incoming.status !== existingStatus
+      ? [`previous_status: ${existingStatus}`]
+      : [];
+  const previousSummaries =
+    incoming.summary && existingSummary && incoming.summary !== existingSummary
+      ? [`previous_summary: ${existingSummary}`]
+      : [];
+
+  return {
+    id: incoming.id,
+    title: incoming.title || existing.name,
+    status: incoming.status ?? existingStatus,
+    summary: incoming.summary ?? existingSummary,
+    notes: uniqueLimited(
+      [
+        ...(existing.profile.notes ?? []),
+        ...previousStatus,
+        ...previousSummaries,
+        ...incoming.notes,
+      ],
+      100,
+    ),
+  };
+}
+
+function firstAssetProfileValue(values: string[] | undefined): string | null {
+  return values?.find((value) => value.trim().length > 0) ?? null;
+}
+
+function splitAssetSyncValues(values: string[]): string[] {
+  return uniqueLimited(
+    values.flatMap((value) =>
+      value
+        .split(/[、,，;；]/u)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0),
+    ),
+    100,
+  );
+}
+
+function upsertAssetSyncBlocks<T>(
+  currentText: string,
+  items: T[],
+  sectionTitle: string,
+  idOf: (item: T) => string,
+  markdownFor: (items: T[]) => string,
+): string {
+  const text = currentText.endsWith("\n") ? currentText : `${currentText}\n`;
+  let nextText = text;
+  const appendItems = [];
+
+  for (const item of items) {
+    const block = assetSyncItemBlocksMarkdown(markdownFor([item]), sectionTitle);
+    const replaced = replaceAssetSyncBlock(nextText, idOf(item), block);
+
+    if (replaced === null) {
+      appendItems.push(item);
+      continue;
+    }
+
+    nextText = replaced;
+  }
+
+  if (appendItems.length === 0) {
+    return nextText;
+  }
+
+  return `${nextText.trimEnd()}${markdownForSection(sectionTitle, appendItems, markdownFor)}\n`;
+}
+
+function assetSyncItemBlocksMarkdown(sectionMarkdown: string, sectionTitle: string): string {
+  const lines = sectionMarkdown.trim().split(/\r?\n/);
+  const headingPattern = new RegExp(`^##\\s+${escapeRegExp(sectionTitle)}\\s*$`, "iu");
+  const firstContentIndex = lines.findIndex((line, index) => {
+    if (index === 0 && headingPattern.test(line.trim())) {
+      return false;
+    }
+    return line.trim().length > 0;
+  });
+
+  return lines.slice(Math.max(firstContentIndex, 0)).join("\n").trim();
+}
+
+function markdownForSection<T>(
+  sectionTitle: string,
+  items: T[],
+  markdownFor: (items: T[]) => string,
+): string {
+  const rendered = markdownFor(items).trim();
+  return rendered.startsWith(`## ${sectionTitle}`) ? `\n\n${rendered}` : `\n\n## ${sectionTitle}\n\n${rendered}`;
+}
+
+function replaceAssetSyncBlock(text: string, id: string, replacementBlock: string): string | null {
+  const lines = text.split(/\r?\n/);
+  const idLinePattern = new RegExp(
+    `^[-*]\\s+(?:\\*\\*)?id(?:\\*\\*)?\\s*[:：]\\s*\\x60?${escapeRegExp(id)}\\x60?\\s*$`,
+    "iu",
+  );
+  const start = lines.findIndex((line) =>
+    idLinePattern.test(line.trim()),
+  );
+
+  if (start === -1) {
+    return null;
+  }
+
+  let end = lines.length;
+  for (let cursor = start + 1; cursor < lines.length; cursor += 1) {
+    const trimmed = lines[cursor].trim();
+    if (/^#{1,6}\s+/u.test(trimmed) || /^[-*]\s+(?:\*\*)?id(?:\*\*)?\s*[:：]/iu.test(trimmed)) {
+      end = cursor;
+      break;
+    }
+  }
+
+  const before = lines.slice(0, start);
+  const after = lines.slice(end);
+  const replacement = replacementBlock.split(/\r?\n/);
+  if (after[0]?.trim() && !/^#{1,6}\s+/u.test(after[0].trim())) {
+    replacement.push("");
+  }
+
+  return [...before, ...replacement, ...after].join("\n").replace(/\n{3,}/g, "\n\n");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function assetSyncSummary(plan: AssetSyncPlan): Record<string, number | boolean> {
@@ -7850,6 +8506,23 @@ function uniqueLimited(values: string[], limit: number): string[] {
     if (result.length >= limit) {
       break;
     }
+  }
+
+  return result;
+}
+
+function uniqueWarnings(warnings: EnvelopeWarning[]): EnvelopeWarning[] {
+  const seen = new Set<string>();
+  const result = [];
+
+  for (const warning of warnings) {
+    const key = `${warning.code}\u0000${warning.severity}\u0000${warning.message}`;
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    result.push(warning);
   }
 
   return result;
