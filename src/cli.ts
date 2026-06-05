@@ -26,6 +26,7 @@ import {
   runSkillInstallPi,
   runStyleAnalyze,
   runStyleCheck,
+  runStyleProfileApply,
   runStyleProfileShow,
   runWritingProposal,
 } from "./protocol/kernel.js";
@@ -399,14 +400,22 @@ styleProfileCommand
   .argument("<profile>", "style profile id")
   .option("--json", "emit JSON")
   .option("--diff", "show structured diff without changing files")
-  .action(async (_profile: string, options: { json?: boolean; diff?: boolean }) => {
+  .option("--confirm", "write confirmed profile activation")
+  .option("--base-hash <hash>", "expected hash for style/profiles.yaml")
+  .option("--dry-run", "show planned writes without changing files")
+  .action(async (
+    profile: string,
+    options: { json?: boolean; diff?: boolean; confirm?: boolean; baseHash?: string; dryRun?: boolean },
+  ) => {
     await emitResult(
       "openathor style profile apply",
       options.json,
-      runNotImplemented({
-        command: "openathor style profile apply",
-        feature: "Style profile application",
-        hints: ["Confirmed style profile application is not implemented yet."],
+      runStyleProfileApply({
+        profileId: profile,
+        diff: options.diff,
+        confirm: options.confirm,
+        baseHash: options.baseHash,
+        dryRun: options.dryRun,
       }),
     );
   });

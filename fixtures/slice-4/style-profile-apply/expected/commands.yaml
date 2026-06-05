@@ -1,0 +1,57 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor style analyze style/samples/sample-001.md --profile-id style_sample --name "授权样稿风格" --permission user_owned --source-type user_provided --json
+    ok: true
+    expect_data:
+      mode: pending_profile
+      profile.id: style_sample
+      profile.name: 授权样稿风格
+      profile.status: pending
+      profile.source: user_reference
+      profile.method: deterministic_style_metric_scan
+      reference.id: ref_c0f77ba4
+      reference.path: style/samples/sample-001.md
+      reference.permission: user_owned
+      reference.allowed_use: style_analysis
+      result.profile_written: true
+      result.profile_status: pending
+      result.manuscript_modified: false
+      result.reference_text_copied: false
+  - run: openathor style profile apply style_sample --diff --json
+    ok: true
+    expect_data:
+      mode: diff
+      profile_id: style_sample
+      profile.status: confirmed
+      result.applied: false
+      result.manuscript_modified: false
+      result.reference_text_copied: false
+    expect_data_path: diff.changes
+    expect_no_writes: true
+  - run: openathor style profile apply style_sample --confirm --base-hash sha256:0000000000000000000000000000000000000000000000000000000000000000 --json
+    ok: false
+    error_code: OA_STYLE_PROFILE_CHANGED
+  - run: openathor style profile apply style_sample --confirm --base-hash current:style/profiles.yaml --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      profile_id: style_sample
+      profile.status: confirmed
+      result.applied: true
+      result.profile_status: confirmed
+      result.active_profile_id: style_sample
+      result.manuscript_modified: false
+      result.reference_text_copied: false
+  - run: openathor style profile show --json
+    ok: true
+    expect_data:
+      profile_source: style/profiles.yaml
+    expect_data_path: profiles.text
+  - run: openathor context project --json
+    ok: true
+    expect_data_path: style_profiles.profiles.text
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

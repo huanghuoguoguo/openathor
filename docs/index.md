@@ -6,9 +6,9 @@
 
 当前阶段是 Slice 2/3/4 能力并行补齐。Slice 1 协议内核已完成，项目已具备 TypeScript/Node.js CLI、协议 schema、fixture 回归、deterministic check 入口和 LLM-as-judge smoke 入口。
 
-当前可用范围包括创建项目、非侵入式接管已有小说、检查项目协议、重建派生索引、安装项目级 Pi Skill、生成写作 proposal、确认写入下一章、带 hash 保护改写已有章节、planned 章节插入、章节展示顺序移动、拆章 proposal、确认拆章写入、合章 proposal、确认合章写入、重规划 proposal、确认替换 planned future outline、章节归档最小闭环、确定性文本检索、确定性相关检索、可选派生向量检索，以及 LLM-as-judge evidence package smoke。
+当前可用范围包括创建项目、非侵入式接管已有小说、检查项目协议、重建派生索引、安装项目级 Pi Skill、生成写作 proposal、确认写入下一章、带 hash 保护改写已有章节、授权参考文本风格分析、确认激活 style profile、planned 章节插入、章节展示顺序移动、拆章 proposal、确认拆章写入、合章 proposal、确认合章写入、重规划 proposal、确认替换 planned future outline、章节归档最小闭环、确定性文本检索、确定性相关检索、可选派生向量检索，以及 LLM-as-judge evidence package smoke。
 
-仍待补齐的是 style revise/profile apply、更复杂的 replan 场景和真实 Pi Agent 端到端场景集等后续能力。真实 Pi Agent transcript 和 LLM judge scores 已可作为本地/手动评估证据保存，不进入必跑 CI。
+仍待补齐的是 style revise、更复杂的 replan 场景和真实 Pi Agent 端到端场景集等后续能力。真实 Pi Agent transcript 和 LLM judge scores 已可作为本地/手动评估证据保存，不进入必跑 CI。
 
 ## 主要文档
 

@@ -58,6 +58,46 @@ openathor style profile show [--json]
 
 无。
 
+## `openathor style profile apply`
+
+把已审阅的 pending style profile 确认为 active project style。它不修改正文，不复制参考文本原文。
+
+```bash
+openathor style profile apply <profile-id> [--json] [--diff] [--dry-run]
+openathor style profile apply <profile-id> --confirm --base-hash <sha256:...> [--json]
+```
+
+默认和 `--diff` 只返回 proposal/diff。确认写入必须提供最新 `style/profiles.yaml` hash；hash 不匹配时返回 `OA_STYLE_PROFILE_CHANGED`，不得写文件。
+
+### Output data
+
+`data` 包含：
+
+- `mode`
+- `profile_id`
+- `profile`
+- `base_hash`
+- `current_hash`
+- `diff`
+- `result`
+- `next_agent_action`
+
+### Expected writes
+
+confirmed apply 写：
+
+- `style/profiles.yaml`
+- `runs/run_*_style_profile_apply.json`
+
+它不得写 manuscript、confirmed canon 或参考文本。
+
+### Errors
+
+- `OA_STYLE_PROFILE_INVALID`
+- `OA_STYLE_PROFILE_NOT_FOUND`
+- `OA_BASE_HASH_REQUIRED`
+- `OA_STYLE_PROFILE_CHANGED`
+
 ## `openathor style check`
 
 检查目标章节相对项目风格说明和其他章节基线的确定性指标。
@@ -122,6 +162,5 @@ openathor style check chapter <target> [--json] [--max-chars <count>]
 以下命令仍返回结构化 `OA_COMMAND_NOT_IMPLEMENTED`：
 
 - `openathor style revise`
-- `openathor style profile apply`
 
 这些能力仍是目标命令面，但不能伪装成已交付。
