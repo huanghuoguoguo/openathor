@@ -19,9 +19,7 @@ import {
   assetSyncSummary,
   assetSyncWrites,
   buildAssetSyncPlan,
-  upsertAssetSyncCharactersMarkdown,
-  upsertAssetSyncHooksMarkdown,
-  upsertAssetSyncTimelineMarkdown,
+  writeAssetSyncConfirmed,
 } from "./asset-sync.js";
 import { normalizeAssetSyncPackagePath, readAssetSyncPackage } from "./asset-sync-package.js";
 import { detectCanonConflicts } from "./canon-conflict.js";
@@ -187,7 +185,6 @@ import { shortHash } from "./identifiers.js";
 import { isTextCandidate } from "./text-path.js";
 import type {
   AdoptOptions,
-  AssetSyncPlan,
   AssetsAuditOptions,
   AssetsSyncOptions,
   ChapterOutline,
@@ -1502,7 +1499,7 @@ export async function runAssetsSync(
 
   if (!dryRun) {
     if (confirm) {
-      await writeAssetSyncConfirmed(projectRoot, inspection, targetChapter, plan);
+      await writeAssetSyncConfirmed(projectRoot, inspection.chapters, targetChapter, plan);
     } else {
       await appendText(
         projectRoot,
@@ -1577,7 +1574,7 @@ export async function runAssetsSync(
           "The CLI validates and merges structured asset packages; it does not infer complex story facts from prose.",
       },
       next_agent_action: confirm
-        ? "Run openathor assets audit --json and refresh context before continuing the longform draft."
+        ? "Run openathor index rebuild --json, then openathor assets audit --json and refresh context before continuing the longform draft."
         : "Show this pending asset sync to the user, then rerun with --confirm --base-hash only after explicit approval.",
     },
   };
@@ -3455,100 +3452,6 @@ async function writeAdoptSidecars(
     created_at: new Date().toISOString(),
     warnings: input.warnings,
   });
-}
-
-async function writeAssetSyncConfirmed(
-  projectRoot: string,
-  inspection: Awaited<ReturnType<typeof inspectProject>>,
-  targetChapter: IndexedChapter,
-  plan: AssetSyncPlan,
-): Promise<void> {
-  if (plan.new_characters.length > 0) {
-    const charactersPath = path.join(projectRoot, "bible/characters.md");
-    await writeFile(
-      charactersPath,
-      upsertAssetSyncCharactersMarkdown(
-        await readFile(charactersPath, "utf8"),
-        plan.new_characters,
-      ),
-      "utf8",
-    );
-  }
-
-  if (plan.existing_characters.length > 0) {
-    const charactersPath = path.join(projectRoot, "bible/characters.md");
-    await writeFile(
-      charactersPath,
-      upsertAssetSyncCharactersMarkdown(
-        await readFile(charactersPath, "utf8"),
-        plan.existing_characters,
-      ),
-      "utf8",
-    );
-  }
-
-  if (plan.new_timeline_events.length > 0) {
-    const timelinePath = path.join(projectRoot, "bible/timeline.md");
-    await writeFile(
-      timelinePath,
-      upsertAssetSyncTimelineMarkdown(
-        await readFile(timelinePath, "utf8"),
-        plan.new_timeline_events,
-      ),
-      "utf8",
-    );
-  }
-
-  if (plan.existing_timeline_events.length > 0) {
-    const timelinePath = path.join(projectRoot, "bible/timeline.md");
-    await writeFile(
-      timelinePath,
-      upsertAssetSyncTimelineMarkdown(
-        await readFile(timelinePath, "utf8"),
-        plan.existing_timeline_events,
-      ),
-      "utf8",
-    );
-  }
-
-  if (plan.new_hooks.length > 0) {
-    const hooksPath = path.join(projectRoot, "notes/hooks.md");
-    await writeFile(
-      hooksPath,
-      upsertAssetSyncHooksMarkdown(await readFile(hooksPath, "utf8"), plan.new_hooks),
-      "utf8",
-    );
-  }
-
-  if (plan.existing_hooks.length > 0) {
-    const hooksPath = path.join(projectRoot, "notes/hooks.md");
-    await writeFile(
-      hooksPath,
-      upsertAssetSyncHooksMarkdown(await readFile(hooksPath, "utf8"), plan.existing_hooks),
-      "utf8",
-    );
-  }
-
-  if (plan.outline_modified) {
-    const updatedChapters: ChapterOutline = {
-      chapters: inspection.chapters.chapters.map((chapter) =>
-        chapter.id === targetChapter.id
-          ? {
-              ...chapter,
-              status: chapter.status === "planned" ? "drafted" : chapter.status,
-              summary: plan.package.chapter.summary ?? chapter.summary,
-              links: {
-                ...(chapter.links ?? {}),
-                characters: plan.outline_links.characters,
-                timeline_events: plan.outline_links.timeline_events,
-                hooks: plan.outline_links.hooks,
-              },
-            }
-          : chapter,
-      ),
-    };
-    await writeYaml(projectRoot, "outline/chapters.yaml", updatedChapters);
-  }
 }
 
 async function activeStyleProfileState(
