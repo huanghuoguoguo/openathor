@@ -239,12 +239,18 @@ Slice 1 已实现为 TypeScript/Node.js CLI，并纳入 `npm test`。
 - 写入 `runs/run_*.json`
 - 不覆盖接管原稿路径
 - 不覆盖已有 manuscript 文件
+- 章节标题优先取 `--text` 第一行 Markdown H1；没有 H1 时依次尝试任务中的书名号标题、引号标题、项目标题和 `Chapter N` fallback。
 
 限制：
 
 - 不调用模型，`--text` 必须由 Pi Agent 或用户提供。
 - 只支持写入新的下一章，不覆盖已有章节。
 - 写入后派生 SQLite 索引会变 stale，需要 `openathor index rebuild --json`。
+
+验证：
+
+- `fixtures/slice-2/draft-confirm-write`
+- `fixtures/slice-2/draft-title-fallback`
 
 ## 2026-06-05: 已有章节确认改写和 hash 冲突保护已落地
 
@@ -352,6 +358,7 @@ Slice 1 已实现为 TypeScript/Node.js CLI，并纳入 `npm test`。
 - 覆盖 `fixtures/slice-2/draft-confirm-write` 和 `fixtures/slice-3/outline-archive`。
 - 收集 CLI commands、writes、warnings、file changes、user task 和 agent final response。
 - 默认不调用模型，judge 字段为 `needs_review`，明确缺少真实 Operator Agent transcript 和 LLM judge scores。
+- 支持通过 `--scenario <name> --operator-transcript <path> --agent-final-response <path>` 把本地真实 Operator Agent transcript 和最终回复附加到单个 evidence package。
 - 已接入 `npm test`。
 
 验证：
@@ -360,5 +367,25 @@ Slice 1 已实现为 TypeScript/Node.js CLI，并纳入 `npm test`。
 
 后续：
 
-- 将真实 Pi Agent transcript 写入同一 evidence package。
-- 将 LLM judge scores 和 blocking failures 接入回归门禁。
+- 将 LLM judge scores 和 blocking failures 保存为本地/手动评估证据。
+- 保持真实 Pi Agent transcript attachment 为本地/手动评估流程，不进入必跑 CI。
+
+## 2026-06-05: 真实 Pi Agent 和 LLM Judge 不进入必跑 CI
+
+CI 只运行静态和确定性检查，不接入真实 Pi Agent、LLM judge、外部模型服务或外部 API key。
+
+保留在 CI 中的评估入口：
+
+- schema 校验
+- TypeScript 类型检查和构建
+- deterministic fixture replay
+- `openathor-judge-smoke` evidence package 结构校验
+
+真实 Pi Agent transcript、LLM judge scores 和 blocking failure 分析仍使用同一 evidence package 格式，但只作为本地或手动评估证据保存。
+
+原因：
+
+- 外部 key 和模型服务会让 CI 受成本、速率、网络和供应商状态影响。
+- 模型输出非确定性，容易造成 PR gate 偶发失败。
+- fork PR 和外部贡献场景不应暴露 secrets。
+- 必跑 CI 的职责是阻止确定性协议、文件安全和工具链回归。

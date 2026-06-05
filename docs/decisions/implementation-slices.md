@@ -86,7 +86,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 新增设定默认进入 pending
 - 用户手写冲突能被发现
 
-当前状态：`openathor context` 已作为只读上下文包命令落地；`plan`、`draft`、`review`、`revise`、`canon sync` 已作为 proposal 入口落地；确认后的 `draft chapter next` 新章写入和 `revise chapter --base-hash` 安全改写已落地，并纳入 fixture 回归。CLI 仍不调用模型。
+当前状态：`openathor context` 已作为只读上下文包命令落地；`plan`、`draft`、`review`、`revise`、`canon sync` 已作为 proposal 入口落地；确认后的 `draft chapter next` 新章写入、标题 fallback 和 `revise chapter --base-hash` 安全改写已落地，并纳入 fixture 回归。CLI 仍不调用模型。
 
 ## Slice 3: Structural Editing
 
@@ -148,10 +148,10 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 
 - smoke 不依赖真实模型，能稳定进入 `npm test`
 - 证据包包含用户任务、命令、输出、文件变化和 agent 最终回复
-- 真实 Pi Agent transcript 和 judge scores 后续能复用同一格式
+- 真实 Pi Agent transcript attachment 和 judge scores 后续能复用同一格式
 - deterministic failures 不会被 judge 分数掩盖
 
-当前状态：第一版 smoke 已覆盖 `fixtures/slice-2/draft-confirm-write` 和 `fixtures/slice-3/outline-archive`。真实 Pi Agent transcript 和 LLM judge scores 仍待进入回归门禁。
+当前状态：第一版 smoke 已覆盖 `fixtures/slice-2/draft-confirm-write` 和 `fixtures/slice-3/outline-archive`，并支持把本地真实 Operator Agent transcript 附加到单个 evidence package。真实 Pi Agent transcript attachment 和 LLM judge scores 保持本地/手动评估，不进入必跑 CI。
 
 ## Slice 5: Delivery And Expansion
 

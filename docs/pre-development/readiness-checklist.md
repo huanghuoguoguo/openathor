@@ -67,6 +67,7 @@
 - [x] 改稿 proposal 入口：`openathor revise`
 - [x] canon 同步 pending 入口：`openathor canon sync`
 - [x] 用户确认后写入下一章新正文：`openathor draft chapter next --confirm-write`
+- [x] 确认写入新章标题 fallback：优先 Markdown H1，其次任务中的书名号/引号标题、项目标题、章节序号
 - [x] 用户确认后改写已有章节正文：`openathor revise chapter --confirm-write --base-hash`
 - [x] 结构编辑最小闭环：`openathor outline show/impact/archive`
 - [x] LLM-as-judge 自动化 smoke：`openathor-judge-smoke`
@@ -179,6 +180,7 @@
 - `fixtures/slice-1/adopt-ambiguous-order`
 - `openathor-fixture-check` 会复制 fixture input、执行 expected commands、校验 JSON envelope、expected files、disallowed writes，并在最终项目上运行 `openathor doctor --json --strict`。
 - `openathor-judge-smoke` 会复用 fixture replay，为已落地写作/结构场景生成 `openathor.judge_evidence.v1` 证据包。
+- `openathor-judge-smoke --scenario <name> --operator-transcript <path> --agent-final-response <path>` 可以把本地真实 Operator Agent 运行记录和最终回复附加到单个 evidence package。
 
 ### 后续切片准备项
 
@@ -198,7 +200,9 @@
 - [ ] 插章、移章、拆分、合并和重规划
 - [ ] 向量语义检索
 - [x] LLM-as-judge 自动化 smoke：证据包结构校验和 deterministic replay 已接入 `npm test`
-- [ ] 真实 Pi Agent transcript 和 LLM judge scores 进入回归门禁
+- [x] 真实 Pi Agent/Operator Agent transcript 可本地附加到单个 evidence package
+- [x] CI 保持静态和确定性检查，不接入真实 Pi Agent、LLM judge 或外部 API key
+- [ ] 真实 Pi Agent transcript 和 LLM judge scores 作为本地/手动评估证据保存
 
 参考：
 

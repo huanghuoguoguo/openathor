@@ -32,6 +32,7 @@ type ExpectedCommand = {
   ok?: boolean;
   error_code?: string;
   expect_data_path?: string;
+  expect_data?: Record<string, unknown>;
 };
 
 type ExpectedCommands = {
@@ -214,6 +215,19 @@ export async function runFixtureCheck(
           `Command ${expectedCommand.run} missing data path ${expectedCommand.expect_data_path}.`,
           { exitCode: 4 },
         );
+      }
+
+      for (const [dataPath, expectedValue] of Object.entries(
+        expectedCommand.expect_data ?? {},
+      )) {
+        const actualValue = getDataPath(result.envelope.data, dataPath);
+        if (actualValue !== expectedValue) {
+          throw new OpenAthorError(
+            "OA_FIXTURE_COMMAND_FAILED",
+            `Command ${expectedCommand.run} data path ${dataPath}=${JSON.stringify(actualValue)}, expected ${JSON.stringify(expectedValue)}.`,
+            { exitCode: 4 },
+          );
+        }
       }
 
       commandResults.push({
@@ -787,17 +801,21 @@ function isJsonEnvelope(value: unknown): boolean {
 }
 
 function hasDataPath(data: unknown, dataPath: string): boolean {
+  return getDataPath(data, dataPath) !== undefined && getDataPath(data, dataPath) !== null;
+}
+
+function getDataPath(data: unknown, dataPath: string): unknown {
   let current: unknown = data;
 
   for (const segment of dataPath.split(".")) {
     if (typeof current !== "object" || current === null || !(segment in current)) {
-      return false;
+      return undefined;
     }
 
     current = (current as Record<string, unknown>)[segment];
   }
 
-  return current !== undefined && current !== null;
+  return current;
 }
 
 async function readExpectedYaml<T>(dir: string, filename: string): Promise<T> {
