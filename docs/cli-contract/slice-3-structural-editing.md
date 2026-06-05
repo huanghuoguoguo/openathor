@@ -319,6 +319,7 @@ proposal 模式下，`result` 标明本次没有应用文件变更：
 - 修改目标章节原正文文件，只保留 `--at-line` 之前的文本
 - 创建后一段新正文文件
 - 修改 `outline/chapters.yaml`：更新目标章节标题和新增后一段章节
+- 新增后一段章节继承原章节的 `summary`、`scenes` 和 `links`，避免拆章时静默丢失人物、timeline 或 hook 引用；拆章后可再用 `assets sync` / `assets audit` 细化归属
 - 修改 `.openathor/manuscript.index.yaml`：更新目标章节 hash、新增后一段章节，并顺延后续 display order
 - 写入 `runs/run_*_outline_split.json`
 - 不修改 confirmed canon

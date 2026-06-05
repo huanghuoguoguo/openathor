@@ -183,6 +183,7 @@ export async function runOutlineSplit(
         };
       }),
       {
+        ...inheritedSplitMetadata(target.outlineChapter),
         id: insertedId,
         display_order: insertedOrder,
         title: splitPlan.after.title,
@@ -263,5 +264,15 @@ export async function runOutlineSplit(
       next_agent_action:
         "Run openathor outline show --json and refresh context before follow-up writing.",
     },
+  };
+}
+
+function inheritedSplitMetadata(
+  chapter: ChapterOutline["chapters"][number] | null,
+): Pick<ChapterOutline["chapters"][number], "summary" | "scenes" | "links"> {
+  return {
+    ...(chapter?.summary ? { summary: chapter.summary } : {}),
+    ...(chapter?.scenes ? { scenes: [...chapter.scenes] } : {}),
+    ...(chapter?.links ? { links: structuredClone(chapter.links) } : {}),
   };
 }
