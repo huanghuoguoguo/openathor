@@ -1,0 +1,34 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor outline split 1 --at-line 6 --title-before "雨夜电话" --title-after "旧案钥匙" --confirm --base-hash current:正文/001-雨夜.md --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      split_at_line: 6
+      target.source_path: 正文/001-雨夜.md
+      inserted.display_order: 2
+      inserted.title: 旧案钥匙
+      inserted.source_path: 正文/001-雨夜-split-002-ch_002.md
+      result.applied: true
+      result.manuscript_file_modified: true
+      result.manuscript_files_created: true
+      result.outline_modified: true
+      result.index_modified: true
+  - run: openathor outline show --json
+    ok: true
+    expect_data:
+      outline.chapter_count: 3
+  - run: openathor context chapter 2 --json
+    ok: true
+    expect_data:
+      context_pack.target.title: 旧案钥匙
+      context_pack.target.source_path: 正文/001-雨夜-split-002-ch_002.md
+  - run: openathor context chapter 3 --json
+    ok: true
+    expect_data:
+      context_pack.target.source_path: 正文/002-追问.md
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

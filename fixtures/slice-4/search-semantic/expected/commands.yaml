@@ -1,0 +1,18 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor search semantic "旧案钥匙 父亲" --json
+    ok: false
+    error_code: OA_VECTOR_INDEX_NOT_FOUND
+  - run: openathor index rebuild --vector --json
+    ok: true
+    expect_data:
+      vector_index: .openathor/vector/index.json
+  - run: openathor search semantic "旧案钥匙 父亲" --json
+    ok: true
+    expect_data:
+      method: deterministic_hash_embedding_v1
+      vector_index: .openathor/vector/index.json
+    expect_data_path: matches
+  - run: openathor doctor --json
+    ok: true

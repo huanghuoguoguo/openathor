@@ -21,6 +21,7 @@ openathor skill install pi
 openathor context
 openathor search text
 openathor search related
+openathor search semantic
 ```
 
 ### Style
@@ -101,7 +102,7 @@ openathor export --format markdown
 - `draft chapter next --confirm-write` 支持写入用户确认后的新章文本。
 - `revise chapter --confirm-write --base-hash` 支持 hash 匹配时确认改写已有章节。
 - CLI 不调用模型，不覆盖已有正文，不直接修改 confirmed canon。
-- 语义检索和自动模型评估仍待后续切片补齐。
+- 真实 LLM judge scores attachment 已支持；更完整的真实 Pi Agent 场景集仍待扩展。
 
 ### Slice 3: Structural Editing
 
@@ -112,8 +113,10 @@ openathor export --format markdown
 - `openathor outline insert`
 - `openathor outline move`
 - `openathor outline split`
+- `openathor outline merge`
+- `openathor outline replan`
 - `openathor outline archive`
-- 后续补齐 confirmed split、`merge`、`replan`
+- 后续补齐 confirmed merge 和 confirmed replan
 
 当前已落地：
 
@@ -122,6 +125,8 @@ openathor export --format markdown
 - `openathor outline insert`
 - `openathor outline move`
 - `openathor outline split`
+- `openathor outline merge`
+- `openathor outline replan`
 - `openathor outline archive`
 
 当前限制：
@@ -129,10 +134,12 @@ openathor export --format markdown
 - `outline impact` 使用确定性文本引用扫描和词项重叠，不做语义向量分析。
 - `outline insert` 只插入 planned 章节元数据，不创建正文文件。
 - `outline move` 只修改 display order，不移动或重命名正文文件。
-- `outline split` 当前只生成拆章 proposal，不修改正文、outline 或 index。
+- `outline split` 默认只生成拆章 proposal；`--confirm --base-hash` 支持确认拆章写入。
+- `outline merge` 当前只生成合章 proposal，不修改正文、outline 或 index。
+- `outline replan` 当前只生成重规划 proposal，不修改正文、outline 或 index。
 - `outline archive` 默认只返回 proposal；只有 `--confirm` 才修改结构化元数据。
 - 归档不物理删除、移动或重命名正文文件。
-- confirmed split、`outline merge` 和 `outline replan` 仍待实现。
+- confirmed merge 和 confirmed replan 仍待实现。
 
 ### Slice 4: Retrieval And Export
 
@@ -140,6 +147,7 @@ openathor export --format markdown
 
 - `openathor search text`
 - `openathor search related`
+- `openathor search semantic`
 - 可选向量检索接口
 - `openathor export --format markdown`
 
@@ -147,12 +155,14 @@ openathor export --format markdown
 
 - `openathor search text`
 - `openathor search related`
+- `openathor search semantic`
 
 当前限制：
 
 - 只做确定性文本检索。
 - `search related` 使用词项重叠，不是向量语义检索。
-- 向量检索和 export 仍待实现。
+- `search semantic` 使用可重建的本地 deterministic hash embedding 向量索引，不调用外部 embedding 服务。
+- export 仍待实现。
 
 ## 命令不变量
 

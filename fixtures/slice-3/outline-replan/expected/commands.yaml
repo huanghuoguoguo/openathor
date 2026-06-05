@@ -1,0 +1,22 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor outline replan --from 2 --task "从追问后重规划，不提前揭露父亲真相" --json
+    ok: true
+    expect_data:
+      mode: proposal
+      task: 从追问后重规划，不提前揭露父亲真相
+      from.source_path: 正文/002-追问.md
+      result.applied: false
+      result.outline_modified: false
+      result.index_modified: false
+      result.manuscript_files_modified: false
+      confirmed_write_supported: false
+  - run: openathor outline show --json
+    ok: true
+    expect_data:
+      outline.chapter_count: 3
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

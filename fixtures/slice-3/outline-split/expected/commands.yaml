@@ -21,7 +21,7 @@ commands:
       result.manuscript_files_created: false
       result.outline_modified: false
       result.index_modified: false
-      confirmed_write_supported: false
+      confirmed_write_supported: true
   - run: openathor outline show --json
     ok: true
     expect_data:

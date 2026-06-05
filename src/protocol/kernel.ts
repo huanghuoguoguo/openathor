@@ -130,6 +130,7 @@ type DoctorOptions = {
 type IndexRebuildOptions = {
   cwd?: string;
   dryRun?: boolean;
+  vector?: boolean;
 };
 
 type SkillInstallOptions = {
@@ -173,12 +174,33 @@ type OutlineMoveOptions = {
   diff?: boolean;
 };
 
+type OutlineMergeOptions = {
+  cwd?: string;
+  target?: string;
+  next?: string;
+  title?: string;
+  dryRun?: boolean;
+  diff?: boolean;
+  maxChars?: number;
+};
+
 type OutlineSplitOptions = {
   cwd?: string;
   target?: string;
   atLine?: number;
   titleBefore?: string;
   titleAfter?: string;
+  confirm?: boolean;
+  dryRun?: boolean;
+  diff?: boolean;
+  maxChars?: number;
+  baseHash?: string;
+};
+
+type OutlineReplanOptions = {
+  cwd?: string;
+  from?: string;
+  task?: string;
   dryRun?: boolean;
   diff?: boolean;
   maxChars?: number;
@@ -222,6 +244,31 @@ type SearchRelatedOptions = {
   maxChars?: number;
 };
 
+type SearchSemanticOptions = {
+  cwd?: string;
+  query?: string;
+  limit?: number;
+  maxChars?: number;
+};
+
+type VectorIndexDocument = {
+  path: string;
+  hash: string;
+  kind: string;
+  title: string | null;
+  terms: string[];
+  vector: number[];
+  preview: string;
+};
+
+type VectorIndex = {
+  schema_version: "openathor.vector_index.v1";
+  generated_at: string;
+  method: "deterministic_hash_embedding_v1";
+  dimensions: number;
+  documents: VectorIndexDocument[];
+};
+
 type ResolvedOutlineChapter = {
   input: string;
   outlineChapter: ChapterOutlineEntry | null;
@@ -248,6 +295,11 @@ type OutlineSplitPlan = {
   line_count: number;
   before: OutlineSplitSegment;
   after: OutlineSplitSegment;
+};
+
+type OutlineSplitParts = OutlineSplitPlan & {
+  before_text: string;
+  after_text: string;
 };
 
 const DEFAULT_PATHS: ProjectConfig["paths"] = {
@@ -508,6 +560,8 @@ export async function runIndexRebuild(
   const inspection = await inspectProject(projectRoot, { includeIndexWarning: false });
   const sqliteRel = inspection.config.paths.sqlite_index;
   const sqlitePath = path.join(projectRoot, sqliteRel);
+  const vectorRel = path.posix.join(inspection.config.paths.vector_index, "index.json");
+  const vectorPath = path.join(projectRoot, vectorRel);
   const writes: EnvelopeWrite[] = [
     {
       path: sqliteRel,
@@ -516,10 +570,26 @@ export async function runIndexRebuild(
     },
   ];
 
+  if (options.vector) {
+    writes.push({
+      path: vectorRel,
+      change_type: (await pathExists(vectorPath)) ? "replaced" : "created",
+      reason: "derived_vector_index_rebuild",
+    });
+  }
+
+  const vectorIndex = options.vector
+    ? await buildVectorIndex(projectRoot, inspection)
+    : null;
+
   if (!dryRun) {
     await mkdir(path.dirname(sqlitePath), { recursive: true });
     await rm(sqlitePath, { force: true });
     await writeSqliteIndex(sqlitePath, inspection);
+
+    if (vectorIndex) {
+      await writeText(projectRoot, vectorRel, `${JSON.stringify(vectorIndex, null, 2)}\n`);
+    }
   }
 
   return {
@@ -532,6 +602,8 @@ export async function runIndexRebuild(
       planned_writes: dryRun ? writes : [],
       chapters_indexed: inspection.manuscriptIndex.chapters.length,
       sqlite_index: sqliteRel,
+      vector_index: options.vector ? vectorRel : null,
+      vector_documents_indexed: vectorIndex?.documents.length ?? 0,
     },
   };
 }
@@ -1162,6 +1234,85 @@ export async function runOutlineMove(
   };
 }
 
+export async function runOutlineMerge(
+  options: OutlineMergeOptions = {},
+): Promise<CommandResult> {
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
+  const target = resolveOutlineTarget(
+    options.target,
+    inspection.chapters,
+    inspection.manuscriptIndex,
+  );
+  const next = resolveOutlineTarget(
+    options.next,
+    inspection.chapters,
+    inspection.manuscriptIndex,
+  );
+
+  if (target.id === next.id) {
+    throw new OpenAthorError(
+      "OA_OUTLINE_MERGE_INVALID",
+      "Cannot merge a chapter with itself.",
+      { exitCode: 2 },
+    );
+  }
+
+  if (next.display_order !== target.display_order + 1) {
+    throw new OpenAthorError(
+      "OA_OUTLINE_MERGE_INVALID",
+      "openathor outline merge currently requires adjacent chapters.",
+      {
+        exitCode: 2,
+        hints: ["Use openathor outline move first if the chapters are not adjacent."],
+      },
+    );
+  }
+
+  const maxChars = normalizeSnippetChars(options.maxChars);
+  const sourceMap = new Map<string, EnvelopeSource>();
+  addKnownSource(sourceMap, inspection.sources, "outline/chapters.yaml");
+  addKnownSource(sourceMap, inspection.sources, inspection.config.paths.manuscript_index);
+  const targetSource = target.source_path
+    ? await readImpactSource(projectRoot, target.source_path, sourceMap)
+    : null;
+  const nextSource = next.source_path
+    ? await readImpactSource(projectRoot, next.source_path, sourceMap)
+    : null;
+  const mergedTitle = options.title?.trim() || `${target.title} / ${next.title}`;
+  const plan = mergePlan(target, next, mergedTitle, targetSource?.text, nextSource?.text, maxChars);
+  const plannedWrites = mergeWrites(target, next);
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources: [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path)),
+    writes: [],
+    warnings: inspection.warnings,
+    data: {
+      dry_run: options.dryRun ?? false,
+      mode: options.diff ? "diff" : "proposal",
+      command: "openathor outline merge",
+      target: outlineTargetData(target, targetSource?.hash ?? null),
+      next: outlineTargetData(next, nextSource?.hash ?? null),
+      merged: plan,
+      result: {
+        applied: false,
+        manuscript_file_modified: false,
+        manuscript_files_deleted: false,
+        outline_modified: false,
+        index_modified: false,
+      },
+      user_confirmation_required: true,
+      confirmed_write_supported: false,
+      planned_writes: plannedWrites,
+      diff: mergeDiff(target, next, plan),
+      next_agent_action:
+        "Show the merge proposal to the user. Confirmed merge writes are not implemented yet, so do not modify manuscript, outline, or index files automatically.",
+    },
+  };
+}
+
 export async function runOutlineSplit(
   options: OutlineSplitOptions = {},
 ): Promise<CommandResult> {
@@ -1198,41 +1349,268 @@ export async function runOutlineSplit(
   const splitAtLine = normalizeSplitLine(options.atLine);
   const maxChars = normalizeSnippetChars(options.maxChars);
   const targetSource = await readImpactSource(projectRoot, target.source_path);
-  const splitPlan = outlineSplitPlan(
+  const splitPlan = outlineSplitParts(
     targetSource.text,
     splitAtLine,
     titleBefore,
     titleAfter,
     maxChars,
   );
-  const plannedWrites = splitWrites(target);
+  const dryRun = options.dryRun ?? false;
+  const confirm = options.confirm ?? false;
+  const diff = options.diff ?? false;
+  const previewOnly = dryRun || diff || !confirm;
+  const insertedOrder = target.display_order + 1;
+  const insertedId = uniqueNewOutlineChapterId(
+    insertedOrder,
+    inspection.chapters,
+    inspection.manuscriptIndex,
+  );
+  const insertedSourcePath = splitSourcePath(target.source_path, insertedOrder, insertedId);
+  const fullInsertedPath = path.join(projectRoot, insertedSourcePath);
+  const shiftsIndexedChapters = inspection.manuscriptIndex.chapters.some(
+    (chapter) => chapter.display_order >= insertedOrder && chapter.id !== target.id,
+  );
+  const stamp = runStamp();
+  const runRelPath = `runs/run_${stamp}_outline_split.json`;
+  const plannedWrites = splitWrites(
+    target,
+    insertedSourcePath,
+    runRelPath,
+    shiftsIndexedChapters,
+  );
+  const splitData = splitProposalData(
+    target,
+    targetSource.hash,
+    splitPlan,
+    insertedId,
+    insertedSourcePath,
+    dryRun,
+    diff,
+    previewOnly,
+    plannedWrites,
+  );
+
+  if (options.baseHash && options.baseHash !== targetSource.hash) {
+    throw new OpenAthorError(
+      "OA_MANUSCRIPT_CHANGED",
+      `Refusing to split ${target.id} because the source hash changed.`,
+      {
+        exitCode: 3,
+        hints: [
+          `Expected ${options.baseHash}.`,
+          `Current ${targetSource.hash}.`,
+          "Run openathor outline split again before confirming the split.",
+        ],
+      },
+    );
+  }
+
+  if (confirm && !options.baseHash) {
+    throw new OpenAthorError(
+      "OA_BASE_HASH_REQUIRED",
+      "Confirmed split writes require --base-hash <sha256:...>.",
+      { exitCode: 2 },
+    );
+  }
+
+  if (!previewOnly && (await pathExists(fullInsertedPath))) {
+    throw new OpenAthorError(
+      "OA_MANUSCRIPT_TARGET_EXISTS",
+      `Refusing to overwrite existing manuscript file ${insertedSourcePath}.`,
+      { exitCode: 3 },
+    );
+  }
+
+  if (previewOnly) {
+    return {
+      projectRoot,
+      projectId: inspection.config.project.id,
+      sources: splitSources(inspection.sources, target.source_path, targetSource.hash),
+      writes: [],
+      warnings: inspection.warnings,
+      data: splitData,
+    };
+  }
+
+  const beforeText = ensureTrailingNewline(splitPlan.before_text);
+  const afterText = ensureTrailingNewline(splitPlan.after_text);
+  await writeText(projectRoot, target.source_path, beforeText);
+  await writeText(projectRoot, insertedSourcePath, afterText);
+  const beforeHash = await sha256File(path.join(projectRoot, target.source_path));
+  const afterHash = await sha256File(fullInsertedPath);
+  const displayOrderById = splitDisplayOrderById(
+    inspection.chapters,
+    insertedOrder,
+    target.id,
+  );
+  const updatedChapters: ChapterOutline = {
+    chapters: [
+      ...inspection.chapters.chapters.map((chapter) => {
+        if (chapter.id === target.id) {
+          return {
+            ...chapter,
+            title: splitPlan.before.title,
+            status: "revised" as const,
+            manuscript_path: target.source_path ?? undefined,
+          };
+        }
+
+        return {
+          ...chapter,
+          display_order: displayOrderById.get(chapter.id) ?? chapter.display_order,
+        };
+      }),
+      {
+        id: insertedId,
+        display_order: insertedOrder,
+        title: splitPlan.after.title,
+        status: "drafted" as const,
+        manuscript_path: insertedSourcePath,
+      },
+    ].sort((a, b) => a.display_order - b.display_order || a.id.localeCompare(b.id)),
+  };
+  const updatedIndex: ManuscriptIndex = {
+    ...inspection.manuscriptIndex,
+    generated_at: new Date().toISOString(),
+    chapters: [
+      ...inspection.manuscriptIndex.chapters.map((chapter) => {
+        if (chapter.id === target.id) {
+          return {
+            ...chapter,
+            title: splitPlan.before.title,
+            status: "revised" as const,
+            content_hash: beforeHash,
+            detected_title: splitPlan.before.title,
+          };
+        }
+
+        return {
+          ...chapter,
+          display_order: displayOrderById.get(chapter.id) ?? chapter.display_order,
+        };
+      }),
+      {
+        id: insertedId,
+        display_order: insertedOrder,
+        title: splitPlan.after.title,
+        source_path: insertedSourcePath,
+        status: "drafted" as const,
+        origin: "created" as const,
+        content_hash: afterHash,
+        detected_title: splitPlan.after.title,
+        confidence: "high" as const,
+      },
+    ].sort((a, b) => a.display_order - b.display_order || a.id.localeCompare(b.id)),
+  };
+
+  await writeYaml(projectRoot, "outline/chapters.yaml", updatedChapters);
+  await writeYaml(projectRoot, ".openathor/manuscript.index.yaml", updatedIndex);
+  await writeYaml(projectRoot, runRelPath, {
+    agent_role: "openathor-cli",
+    command: "openathor outline split",
+    created_at: new Date().toISOString(),
+    mode: "confirmed_write",
+    target: outlineTargetData(target, targetSource.hash),
+    inserted: {
+      id: insertedId,
+      display_order: insertedOrder,
+      title: splitPlan.after.title,
+      source_path: insertedSourcePath,
+      content_hash: afterHash,
+    },
+    split_at_line: splitPlan.split_at_line,
+    base_hash: options.baseHash,
+    writes: plannedWrites,
+    sources: splitSources(inspection.sources, target.source_path, targetSource.hash),
+    user_confirmation_required: false,
+  });
 
   return {
     projectRoot,
     projectId: inspection.config.project.id,
-    sources: splitSources(
-      inspection.sources,
-      target.source_path,
-      targetSource.hash,
-    ),
+    sources: splitSources(inspection.sources, target.source_path, targetSource.hash),
+    writes: plannedWrites,
+    warnings: inspection.warnings,
+    data: {
+      ...splitData,
+      mode: "confirmed_write",
+      planned_writes: [],
+      confirmed_write_supported: true,
+      run_path: runRelPath,
+      result: splitResult(splitPlan, true),
+      next_agent_action:
+        "Run openathor outline show --json and refresh context before follow-up writing.",
+    },
+  };
+}
+
+export async function runOutlineReplan(
+  options: OutlineReplanOptions = {},
+): Promise<CommandResult> {
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
+  const from = resolveOutlineTarget(
+    options.from,
+    inspection.chapters,
+    inspection.manuscriptIndex,
+  );
+  const task = options.task?.trim();
+
+  if (!task) {
+    throw new OpenAthorError(
+      "OA_TASK_REQUIRED",
+      "openathor outline replan requires --task <text>.",
+      { exitCode: 2 },
+    );
+  }
+
+  const maxChars = normalizeSnippetChars(options.maxChars);
+  const indexedById = new Map(
+    inspection.manuscriptIndex.chapters.map((chapter) => [chapter.id, chapter]),
+  );
+  const affected = inspection.chapters.chapters
+    .filter((chapter) => chapter.display_order >= from.display_order)
+    .sort((a, b) => a.display_order - b.display_order)
+    .map((chapter) => {
+      const indexedChapter = indexedById.get(chapter.id);
+      return {
+        id: chapter.id,
+        display_order: chapter.display_order,
+        title: chapter.title,
+        status: chapter.status,
+        source_path: indexedChapter?.source_path ?? chapter.manuscript_path ?? null,
+        summary: chapter.summary
+          ? snippetAround(chapter.summary.replace(/\s+/g, " "), 0, 0, maxChars)
+          : null,
+      };
+    });
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources: replanSources(inspection.sources),
     writes: [],
     warnings: inspection.warnings,
     data: {
       dry_run: options.dryRun ?? false,
       mode: options.diff ? "diff" : "proposal",
-      command: "openathor outline split",
-      target: outlineTargetData(target, targetSource.hash),
-      split_at_line: splitPlan.split_at_line,
-      line_count: splitPlan.line_count,
-      before: splitPlan.before,
-      after: splitPlan.after,
-      result: splitResult(splitPlan, false),
+      command: "openathor outline replan",
+      task,
+      from: outlineTargetData(from, null),
+      affected_chapters: affected,
+      result: {
+        applied: false,
+        outline_modified: false,
+        index_modified: false,
+        manuscript_files_modified: false,
+      },
       user_confirmation_required: true,
       confirmed_write_supported: false,
-      planned_writes: plannedWrites,
-      diff: splitDiff(target, splitPlan),
+      planned_writes: replanWrites(affected),
+      diff: replanDiff(from, affected),
       next_agent_action:
-        "Show the split proposal to the user. Confirmed split writes are not implemented yet, so do not modify manuscript, outline, or index files automatically.",
+        "Use this proposal as a planning boundary. Confirmed replan writes are not implemented yet; create plan/revise proposals instead of editing outline metadata directly.",
     },
   };
 }
@@ -1940,6 +2318,108 @@ function moveSources(sources: EnvelopeSource[]): EnvelopeSource[] {
     .sort((a, b) => a.path.localeCompare(b.path));
 }
 
+function mergePlan(
+  target: ResolvedOutlineChapter,
+  next: ResolvedOutlineChapter,
+  title: string,
+  targetText: string | undefined,
+  nextText: string | undefined,
+  maxChars: number,
+): {
+  title: string;
+  kept_chapter_id: string;
+  archived_chapter_id: string;
+  display_order: number;
+  source_paths: string[];
+  preview: string;
+} {
+  const preview = [targetText ?? target.title, nextText ?? next.title]
+    .map((text) => text.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    title,
+    kept_chapter_id: target.id,
+    archived_chapter_id: next.id,
+    display_order: target.display_order,
+    source_paths: [target.source_path, next.source_path].filter(
+      (value): value is string => Boolean(value),
+    ),
+    preview: snippetAround(preview, 0, 0, maxChars),
+  };
+}
+
+function mergeWrites(
+  target: ResolvedOutlineChapter,
+  next: ResolvedOutlineChapter,
+): EnvelopeWrite[] {
+  const writes: EnvelopeWrite[] = [
+    {
+      path: "outline/chapters.yaml",
+      change_type: "modified",
+      reason: "future_outline_merge_metadata",
+    },
+  ];
+
+  if (target.indexedChapter || next.indexedChapter) {
+    writes.push({
+      path: ".openathor/manuscript.index.yaml",
+      change_type: "modified",
+      reason: "future_outline_merge_index",
+    });
+  }
+
+  if (target.source_path) {
+    writes.push({
+      path: target.source_path,
+      change_type: "modified",
+      reason: "future_outline_merge_manuscript_source",
+    });
+  }
+
+  return writes;
+}
+
+function mergeDiff(
+  target: ResolvedOutlineChapter,
+  next: ResolvedOutlineChapter,
+  plan: ReturnType<typeof mergePlan>,
+): {
+  summary: string;
+  changes: Array<{
+    path: string;
+    field: string;
+    from: string | number | null;
+    to: string | number | null;
+  }>;
+} {
+  return {
+    summary:
+      "Proposal only: merge adjacent chapter intent into one kept chapter; no files are changed.",
+    changes: [
+      {
+        path: "outline/chapters.yaml",
+        field: `chapters[${target.id}].title`,
+        from: target.title,
+        to: plan.title,
+      },
+      {
+        path: "outline/chapters.yaml",
+        field: `chapters[${next.id}].status`,
+        from: next.outline_status,
+        to: "archived",
+      },
+      {
+        path: ".openathor/manuscript.index.yaml",
+        field: `chapters[${next.id}].status`,
+        from: next.index_status,
+        to: "archived",
+      },
+    ],
+  };
+}
+
 function normalizeSplitLine(atLine: number | undefined): number {
   if (atLine === undefined) {
     throw new OpenAthorError(
@@ -1960,13 +2440,13 @@ function normalizeSplitLine(atLine: number | undefined): number {
   return atLine;
 }
 
-function outlineSplitPlan(
+function outlineSplitParts(
   text: string,
   splitAtLine: number,
   titleBefore: string,
   titleAfter: string,
   maxChars: number,
-): OutlineSplitPlan {
+): OutlineSplitParts {
   const lines = splitSourceLines(text);
 
   if (splitAtLine > lines.length) {
@@ -1996,7 +2476,21 @@ function outlineSplitPlan(
     line_count: lines.length,
     before: splitSegment(titleBefore, beforeLines, 1, maxChars),
     after: splitSegment(titleAfter, afterLines, splitAtLine, maxChars),
+    before_text: beforeLines.join("\n"),
+    after_text: afterLines.join("\n"),
   };
+}
+
+function outlineSplitPlan(
+  text: string,
+  splitAtLine: number,
+  titleBefore: string,
+  titleAfter: string,
+  maxChars: number,
+): OutlineSplitPlan {
+  const { before_text: _beforeText, after_text: _afterText, ...plan } =
+    outlineSplitParts(text, splitAtLine, titleBefore, titleAfter, maxChars);
+  return plan;
 }
 
 function splitSourceLines(text: string): string[] {
@@ -2036,10 +2530,10 @@ function splitResult(
   split_at_line: number;
   before_line_range: { start: number; end: number };
   after_line_range: { start: number; end: number };
-  manuscript_file_modified: false;
-  manuscript_files_created: false;
-  outline_modified: false;
-  index_modified: false;
+  manuscript_file_modified: boolean;
+  manuscript_files_created: boolean;
+  outline_modified: boolean;
+  index_modified: boolean;
 } {
   return {
     applied,
@@ -2052,37 +2546,108 @@ function splitResult(
       start: splitPlan.after.line_start,
       end: splitPlan.after.line_end,
     },
-    manuscript_file_modified: false,
-    manuscript_files_created: false,
-    outline_modified: false,
-    index_modified: false,
+    manuscript_file_modified: applied,
+    manuscript_files_created: applied,
+    outline_modified: applied,
+    index_modified: applied,
   };
 }
 
-function splitWrites(target: ResolvedOutlineChapter): EnvelopeWrite[] {
+function splitProposalData(
+  target: ResolvedOutlineChapter,
+  targetHash: string,
+  splitPlan: OutlineSplitPlan,
+  insertedId: string,
+  insertedSourcePath: string,
+  dryRun: boolean,
+  diff: boolean,
+  previewOnly: boolean,
+  plannedWrites: EnvelopeWrite[],
+): {
+  dry_run: boolean;
+  mode: "proposal" | "diff" | "confirmed_write";
+  command: "openathor outline split";
+  target: ReturnType<typeof outlineTargetData>;
+  split_at_line: number;
+  line_count: number;
+  before: OutlineSplitSegment;
+  after: OutlineSplitSegment;
+  inserted: {
+    id: string;
+    display_order: number;
+    title: string;
+    source_path: string;
+  };
+  result: ReturnType<typeof splitResult>;
+  user_confirmation_required: boolean;
+  confirmed_write_supported: boolean;
+  planned_writes: EnvelopeWrite[];
+  diff: ReturnType<typeof splitDiff>;
+  next_agent_action: string;
+} {
+  return {
+    dry_run: dryRun,
+    mode: previewOnly ? (diff ? "diff" : "proposal") : "confirmed_write",
+    command: "openathor outline split",
+    target: outlineTargetData(target, targetHash),
+    split_at_line: splitPlan.split_at_line,
+    line_count: splitPlan.line_count,
+    before: splitPlan.before,
+    after: splitPlan.after,
+    inserted: {
+      id: insertedId,
+      display_order: target.display_order + 1,
+      title: splitPlan.after.title,
+      source_path: insertedSourcePath,
+    },
+    result: splitResult(splitPlan, false),
+    user_confirmation_required: previewOnly,
+    confirmed_write_supported: true,
+    planned_writes: previewOnly ? plannedWrites : [],
+    diff: splitDiff(target, splitPlan, insertedId, insertedSourcePath),
+    next_agent_action: previewOnly
+      ? "Show the split proposal to the user and rerun with --confirm --base-hash only after explicit approval."
+      : "Run openathor outline show --json and refresh context before follow-up writing.",
+  };
+}
+
+function splitWrites(
+  target: ResolvedOutlineChapter,
+  insertedSourcePath: string,
+  runRelPath: string,
+  shiftsIndexedChapters: boolean,
+): EnvelopeWrite[] {
   const writes: EnvelopeWrite[] = [
+    {
+      path: target.source_path ?? "",
+      change_type: "modified",
+      reason: "outline_split_source_before_segment",
+    },
+    {
+      path: insertedSourcePath,
+      change_type: "created",
+      reason: "outline_split_source_after_segment",
+    },
     {
       path: "outline/chapters.yaml",
       change_type: "modified",
-      reason: "future_outline_split_metadata",
+      reason: "outline_split_metadata",
     },
   ];
 
-  if (target.indexedChapter) {
+  if (target.indexedChapter || shiftsIndexedChapters) {
     writes.push({
       path: ".openathor/manuscript.index.yaml",
       change_type: "modified",
-      reason: "future_outline_split_index",
+      reason: "outline_split_index",
     });
   }
 
-  if (target.source_path) {
-    writes.push({
-      path: target.source_path,
-      change_type: "modified",
-      reason: "future_outline_split_manuscript_source",
-    });
-  }
+  writes.push({
+    path: runRelPath,
+    change_type: "created",
+    reason: "outline_split_run_record",
+  });
 
   return writes;
 }
@@ -2090,6 +2655,8 @@ function splitWrites(target: ResolvedOutlineChapter): EnvelopeWrite[] {
 function splitDiff(
   target: ResolvedOutlineChapter,
   splitPlan: OutlineSplitPlan,
+  insertedId?: string,
+  insertedSourcePath?: string,
 ): {
   summary: string;
   changes: Array<{
@@ -2122,6 +2689,18 @@ function splitDiff(
         to: splitPlan.after.title,
       },
       {
+        path: "outline/chapters.yaml",
+        field: `insert_after[${target.id}].id`,
+        from: null,
+        to: insertedId ?? null,
+      },
+      {
+        path: insertedSourcePath ?? "",
+        field: "created_source",
+        from: null,
+        to: splitPlan.after.title,
+      },
+      {
         path: ".openathor/manuscript.index.yaml",
         field: `chapters[${target.id}].source_split`,
         from: null,
@@ -2129,6 +2708,32 @@ function splitDiff(
       },
     ],
   };
+}
+
+function splitSourcePath(
+  sourcePath: string,
+  insertedOrder: number,
+  insertedId: string,
+): string {
+  const dir = path.posix.dirname(toPosix(sourcePath));
+  const ext = path.posix.extname(sourcePath) || ".md";
+  const base = path.posix.basename(sourcePath, ext);
+  return path.posix.join(
+    dir,
+    `${base}-split-${String(insertedOrder).padStart(3, "0")}-${insertedId}${ext}`,
+  );
+}
+
+function splitDisplayOrderById(
+  chapters: ChapterOutline,
+  insertedOrder: number,
+  targetId: string,
+): Map<string, number> {
+  return new Map(
+    chapters.chapters
+      .filter((chapter) => chapter.id !== targetId && chapter.display_order >= insertedOrder)
+      .map((chapter) => [chapter.id, chapter.display_order + 1]),
+  );
 }
 
 function splitSources(
@@ -2150,6 +2755,72 @@ function splitSources(
   sourceMap.set(sourcePath, { path: sourcePath, hash: sourceHash });
 
   return [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function replanWrites(
+  affected: Array<{ source_path: string | null }>,
+): EnvelopeWrite[] {
+  const writes: EnvelopeWrite[] = [
+    {
+      path: "outline/chapters.yaml",
+      change_type: "modified",
+      reason: "future_outline_replan_metadata",
+    },
+  ];
+
+  if (affected.some((chapter) => chapter.source_path)) {
+    writes.push({
+      path: ".openathor/manuscript.index.yaml",
+      change_type: "modified",
+      reason: "future_outline_replan_index",
+    });
+  }
+
+  return writes;
+}
+
+function replanDiff(
+  from: ResolvedOutlineChapter,
+  affected: Array<{
+    id: string;
+    display_order: number;
+    title: string;
+  }>,
+): {
+  summary: string;
+  changes: Array<{
+    path: string;
+    field: string;
+    from: string | number | null;
+    to: string | number | null;
+  }>;
+} {
+  return {
+    summary:
+      "Proposal only: define a replan boundary and affected chapters; no files are changed.",
+    changes: [
+      {
+        path: "outline/chapters.yaml",
+        field: "replan_from",
+        from: null,
+        to: from.id,
+      },
+      ...affected.map((chapter) => ({
+        path: "outline/chapters.yaml",
+        field: `chapters[${chapter.id}].review_for_replan`,
+        from: chapter.display_order,
+        to: chapter.title,
+      })),
+    ],
+  };
+}
+
+function replanSources(sources: EnvelopeSource[]): EnvelopeSource[] {
+  const relevant = new Set(["outline/chapters.yaml", ".openathor/manuscript.index.yaml"]);
+
+  return sources
+    .filter((source) => relevant.has(source.path))
+    .sort((a, b) => a.path.localeCompare(b.path));
 }
 
 function archiveResult(
@@ -2393,6 +3064,84 @@ export async function runSearchRelated(
       limit,
       match_count: matches.length,
       target_terms: targetTerms.slice(0, 20),
+      matches,
+    },
+  };
+}
+
+export async function runSearchSemantic(
+  options: SearchSemanticOptions = {},
+): Promise<CommandResult> {
+  const query = options.query?.trim();
+  if (!query) {
+    throw new OpenAthorError(
+      "OA_SEARCH_QUERY_REQUIRED",
+      "openathor search semantic requires a query.",
+      { exitCode: 2 },
+    );
+  }
+
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
+  const vectorRel = path.posix.join(inspection.config.paths.vector_index, "index.json");
+  const vectorPath = path.join(projectRoot, vectorRel);
+
+  if (!(await pathExists(vectorPath))) {
+    throw new OpenAthorError(
+      "OA_VECTOR_INDEX_NOT_FOUND",
+      "Semantic search requires a vector index.",
+      {
+        exitCode: 3,
+        hints: ["Run openathor index rebuild --vector --json first."],
+      },
+    );
+  }
+
+  const vectorIndex = JSON.parse(await readFile(vectorPath, "utf8")) as VectorIndex;
+  if (vectorIndex.schema_version !== "openathor.vector_index.v1") {
+    throw new OpenAthorError(
+      "OA_VECTOR_INDEX_INVALID",
+      "Unsupported vector index schema_version.",
+      { exitCode: 3 },
+    );
+  }
+
+  const limit = normalizeLimit(options.limit, 10);
+  const maxChars = normalizeSnippetChars(options.maxChars);
+  const queryTerms = extractSearchTerms(query);
+  const queryVector = deterministicEmbedding(queryTerms.length > 0 ? queryTerms : [query]);
+  const matches = vectorIndex.documents
+    .map((document) => ({
+      path: document.path,
+      hash: document.hash,
+      kind: document.kind,
+      title: document.title,
+      score: cosineSimilarity(queryVector, document.vector),
+      shared_terms: document.terms.filter((term) => queryTerms.includes(term)).slice(0, 12),
+      snippet: snippetAround(document.preview, 0, 0, maxChars),
+    }))
+    .filter((match) => match.score > 0)
+    .sort((a, b) => b.score - a.score || a.path.localeCompare(b.path, "zh-Hans-CN"))
+    .slice(0, limit);
+
+  const sources = [
+    { path: vectorRel, hash: await sha256File(vectorPath) },
+    ...matches.map((match) => ({ path: match.path, hash: match.hash })),
+  ];
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources,
+    writes: [],
+    warnings: inspection.warnings,
+    data: {
+      query,
+      method: vectorIndex.method,
+      vector_index: vectorRel,
+      limit,
+      match_count: matches.length,
+      query_terms: queryTerms.slice(0, 20),
       matches,
     },
   };
@@ -3254,6 +4003,62 @@ async function searchCandidatePaths(
   return existing.sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
 }
 
+async function buildVectorIndex(
+  projectRoot: string,
+  inspection: Awaited<ReturnType<typeof inspectProject>>,
+): Promise<VectorIndex> {
+  const documents: VectorIndexDocument[] = [];
+  const relPaths = await searchCandidatePaths(projectRoot, inspection);
+  const indexedBySource = new Map(
+    inspection.manuscriptIndex.chapters.map((chapter) => [chapter.source_path, chapter]),
+  );
+
+  for (const relPath of relPaths) {
+    const fullPath = path.join(projectRoot, relPath);
+    const text = await readFile(fullPath, "utf8");
+    const terms = extractSearchTerms(text);
+
+    if (terms.length === 0) {
+      continue;
+    }
+
+    const indexedChapter = indexedBySource.get(relPath);
+    documents.push({
+      path: relPath,
+      hash: await sha256File(fullPath),
+      kind: indexedChapter ? "chapter" : vectorDocumentKind(relPath),
+      title: indexedChapter?.title ?? firstMarkdownHeading(text),
+      terms: terms.slice(0, 40),
+      vector: deterministicEmbedding(terms),
+      preview: snippetAround(text.replace(/\s+/g, " ").trim(), 0, 0, 360),
+    });
+  }
+
+  return {
+    schema_version: "openathor.vector_index.v1",
+    generated_at: new Date().toISOString(),
+    method: "deterministic_hash_embedding_v1",
+    dimensions: VECTOR_DIMENSIONS,
+    documents,
+  };
+}
+
+function vectorDocumentKind(relPath: string): string {
+  if (relPath.startsWith("bible/")) {
+    return "bible";
+  }
+  if (relPath.startsWith("outline/")) {
+    return "outline";
+  }
+  if (relPath.startsWith("notes/")) {
+    return "note";
+  }
+  if (relPath.startsWith("reviews/")) {
+    return "review";
+  }
+  return "text";
+}
+
 async function listProjectTextFiles(projectRoot: string): Promise<string[]> {
   const files: string[] = [];
 
@@ -3420,6 +4225,37 @@ function relatedScore(
     sharedTerms,
     snippet: snippetAround(text.replace(/\s+/g, " "), Math.max(0, index), firstTerm.length, maxChars),
   };
+}
+
+const VECTOR_DIMENSIONS = 64;
+
+function deterministicEmbedding(terms: string[]): number[] {
+  const vector = Array.from({ length: VECTOR_DIMENSIONS }, () => 0);
+
+  for (const term of terms) {
+    const hash = createHash("sha256").update(term).digest();
+    const index = hash[0] % VECTOR_DIMENSIONS;
+    const sign = hash[1] % 2 === 0 ? 1 : -1;
+    vector[index] += sign;
+  }
+
+  const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
+  if (magnitude === 0) {
+    return vector;
+  }
+
+  return vector.map((value) => Number((value / magnitude).toFixed(6)));
+}
+
+function cosineSimilarity(left: number[], right: number[]): number {
+  const length = Math.min(left.length, right.length);
+  let dot = 0;
+
+  for (let index = 0; index < length; index += 1) {
+    dot += left[index] * right[index];
+  }
+
+  return Number(Math.max(0, dot).toFixed(6));
 }
 
 const SEARCH_STOP_WORDS = new Set([

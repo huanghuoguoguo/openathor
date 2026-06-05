@@ -1,0 +1,25 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor outline merge 1 2 --title "雨夜追问" --json
+    ok: true
+    expect_data:
+      mode: proposal
+      target.source_path: 正文/001-雨夜.md
+      next.source_path: 正文/002-追问.md
+      merged.title: 雨夜追问
+      merged.display_order: 1
+      result.applied: false
+      result.manuscript_file_modified: false
+      result.manuscript_files_deleted: false
+      result.outline_modified: false
+      result.index_modified: false
+      confirmed_write_supported: false
+  - run: openathor outline show --json
+    ok: true
+    expect_data:
+      outline.chapter_count: 2
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true
