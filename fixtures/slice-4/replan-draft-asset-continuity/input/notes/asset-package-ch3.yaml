@@ -1,0 +1,67 @@
+characters:
+  - id: lin-che
+    name: 林澈
+    role: 调查记者
+    traits:
+      - 克制
+      - 证据优先
+      - 不急于下结论
+    current_state: 在星桥仓库取得许岚证词和封蜡账册，并把第三次雾笛列为关键暗号而非结论。
+    notes:
+      - 仍未把林砚写成暗号发出者，只标出父亲可能在保护没有登船签名的人。
+  - id: meng-xia
+    name: 孟夏
+    role: 船务档案员
+    traits:
+      - 谨慎
+      - 只相信盖章记录
+      - 对客轮旧案保持距离
+    current_state: 要求许岚按日期复述证词，确认许岚记得失火前夜、潮湿船票和空位。
+    notes:
+      - 继续承担证据校验角色，避免林澈把林砚身份提前写实。
+  - id: lin-yan
+    name: 林砚
+    role: 失踪检修员
+    traits:
+      - 熟悉客轮下层线路
+      - 行踪被证据间接指向
+      - 真相未确认
+    current_state: 被许岚证实客轮失火前夜到过星桥仓库并交出封蜡账册，但是否发出第三次雾笛仍未确认。
+    notes:
+      - 可能在保护没有登船签名的人，但保护对象和动机仍未确认。
+  - id: xu-lan
+    name: 许岚
+    role: 星桥仓库管理员
+    traits:
+      - 记日期准确
+      - 保管证物谨慎
+      - 对林砚承诺守口如瓶
+    current_state: 承认林砚失火前夜到过星桥仓库，并交出封蜡账册。
+    notes:
+      - 她按日期复述客轮失火前夜、潮湿船票和没有登船签名的空位。
+timeline_events:
+  - id: event-xu-lan-testimony
+    title: 许岚证实林砚失火前夜到过星桥仓库
+    summary: 许岚承认客轮失火前夜见过林砚，林砚交给她封蜡账册并要求等蓝钥匙出现。
+  - id: event-third-fog-horn-ledger
+    title: 封蜡账册记录第三次雾笛暗号
+    summary: 封蜡账册记录第三次雾笛代表有人从船舱内部开锁的暗号。
+hooks:
+  - id: hook-third-fog-horn
+    title: 第三次雾笛是谁发出
+    status: opened
+    summary: 封蜡账册说明第三次雾笛是内部开锁暗号，但发出者和保护对象未确认。
+chapter:
+  summary: 林澈和孟夏在星桥仓库见到许岚，许岚证实林砚失火前夜到过仓库并交出封蜡账册，第三次雾笛成为内部开锁暗号的新疑点。
+  links:
+    characters:
+      - lin-che
+      - meng-xia
+      - lin-yan
+      - xu-lan
+    timeline_events:
+      - event-xu-lan-testimony
+      - event-third-fog-horn-ledger
+    hooks:
+      - hook-empty-berth-ticket
+      - hook-third-fog-horn

@@ -1,0 +1,86 @@
+commands:
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor outline insert --after 3 --title "雾笛后的名单" --confirm --json
+    ok: true
+    expect_data:
+      result.inserted_chapter.id: ch_004
+      result.inserted_chapter.status: planned
+  - run: openathor outline insert --after 4 --title "蓝钥匙回声" --confirm --json
+    ok: true
+    expect_data:
+      result.inserted_chapter.id: ch_005
+      result.inserted_chapter.status: planned
+  - run: openathor outline replan --from 4 --task "重规划后续 planned 章节，不改已写正文" --from-package notes/replan-package-canary.yaml --json
+    ok: true
+    expect_data:
+      mode: proposal
+      result.applied: false
+      result.replaced_chapter_count: 2
+      result.replacement_chapter_count: 2
+      result.manuscript_files_modified: false
+  - run: openathor outline replan --from 4 --task "重规划后续 planned 章节，不改已写正文" --from-package notes/replan-package-canary.yaml --confirm --base-hash current:outline/chapters.yaml --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      result.applied: true
+      result.replaced_chapter_count: 2
+      result.replacement_chapter_count: 2
+      result.manuscript_files_modified: false
+  - run: openathor outline show --json
+    ok: true
+    expect_data:
+      outline.chapter_count: 5
+      outline.chapters.3.id: ch_plan_004
+      outline.chapters.3.status: planned
+      outline.chapters.4.id: ch_plan_005
+      outline.chapters.4.status: planned
+  - run: openathor draft chapter next --task "用户确认写入第四章《空位名单》" --text "# 空位名单\n\n林澈和孟夏把没有登船签名的空位名单摊在星桥仓库的长桌上。名单里有一个被墨水划掉的号码，号码旁边写着蓝钥匙回声。\n\n许岚确认这份名单来自封蜡账册的夹层。她没有说保护对象是谁，只提醒林澈：第三次雾笛响起时，船舱内部开锁的人不一定是林砚。\n\n林澈把空位名单、第三次雾笛和林砚可能保护的人并列记录。孟夏继续核对日期，确认名单时间在客轮失火前夜之后，不能把它写成林砚发出雾笛的证据。" --confirm-write --json
+    ok: true
+    expect_data:
+      filled_planned_chapter: true
+      target.id: ch_plan_004
+      target.display_order: 4
+      target.title: 空位名单
+      target.source_path: manuscript/chapter-004.md
+  - run: openathor assets sync chapter 4 --from notes/asset-package-ch4.yaml --confirm --base-hash current:manuscript/chapter-004.md --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      sync.summary.existing_characters: 4
+      result.characters_added: 0
+      result.timeline_events_added: 1
+      result.hooks_added: 1
+      result.outline_modified: true
+      result.confirmed_assets_written: true
+  - run: openathor index rebuild --json
+    ok: true
+    expect_data:
+      chapters_indexed: 4
+  - run: openathor assets audit --json
+    ok: true
+    expect_data:
+      audit.counts.chapters: 5
+      audit.counts.indexed_chapters: 4
+      audit.counts.characters: 4
+      audit.counts.timeline_events: 7
+      audit.counts.hooks: 4
+      audit.counts.unresolved_outline_links: 0
+      audit.counts.character_link_drifts: 0
+      audit.counts.weak_character_profile_summaries: 0
+      audit.assets.characters.0.profile.current_state.0: 在星桥仓库核对空位名单，并把第三次雾笛和林砚可能保护的人并列记录。
+  - run: openathor context chapter 4 --json
+    ok: true
+    expect_data:
+      context_pack.target.id: ch_plan_004
+      outline.chapters.3.links.hooks.2: hook-protected-passenger
+    expect_data_path: assets.characters.text
+  - run: openathor export --format markdown --out exports/replan-draft-asset-continuity.md --json
+    ok: true
+    expect_data:
+      chapter_count: 4
+  - run: openathor doctor --json --strict
+    ok: true
+    expect_data:
+      checks.manuscript_index_matches_outline: true
+      checks.derived_index_current: true
