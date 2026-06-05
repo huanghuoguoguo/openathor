@@ -48,13 +48,24 @@ commands:
       audit.counts.hooks: 3
       audit.counts.unresolved_outline_links: 0
       audit.counts.character_link_drifts: 0
+      audit.counts.weak_character_profile_coverages: 2
       audit.counts.summary_drift_candidates: 0
       audit.counts.unlinked_characters: 0
       audit.assets.characters.0.id: lin-zhi-yu
+      audit.assets.characters.0.profile.current_state.0: 在旧档案室发现地下联络道地图，并把九点水印列为核心证据。
       audit.assets.characters.1.id: zhou-yan
       audit.assets.characters.2.id: chen-mo
       audit.assets.characters.3.id: xu-man
       audit.chapter_entity_coverage.2.linked_character_names.3: 许曼
+      audit.character_profile_coverage.6.character_id: zhou-yan
+      audit.character_profile_coverage.6.matched_fields: 4
+      audit.character_profile_coverage.7.character_id: chen-mo
+      audit.character_profile_coverage.7.fields.2.field: current_state
+      audit.character_profile_coverage.7.fields.2.coverage_ratio: 0.54
+      audit.character_profile_coverage.8.character_id: xu-man
+      audit.character_profile_coverage.8.matched_fields: 3
+      audit.character_profile_coverage.8.fields.2.field: current_state
+      audit.character_profile_coverage.8.fields.2.coverage_ratio: 0.91
   - run: openathor context chapter 3 --json
     ok: true
     expect_data:
