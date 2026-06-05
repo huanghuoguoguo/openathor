@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import {
   mkdir,
   readdir,
@@ -10,6 +9,13 @@ import {
 import path from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { PROTOCOL_VERSION } from "./constants.js";
+import {
+  buildAdoptQuestions,
+  buildIndexedChapters,
+  classifyFile,
+  duplicateNumericOrders,
+  scanUserFiles,
+} from "./adopt-files.js";
 import {
   addLinkedAssetRef,
   assetLookup,
@@ -117,6 +123,16 @@ import {
 import { firstMarkdownHeading, titleFromTask } from "./title.js";
 import { isPlainRecord, optionalString, stringArray, uniqueLimited } from "./value.js";
 import { PI_SKILL_TEXT } from "../skills/pi-skill.js";
+import {
+  STANDARD_ASSET_DIRECTORIES,
+  STANDARD_ASSET_FILES,
+  REQUIRED_DIRECTORIES,
+  adoptWrites,
+  createProjectConfig,
+  skeletonWrites,
+} from "./project-layout.js";
+import { shortHash, slugAscii } from "./identifiers.js";
+import { isTextCandidate, SKIPPED_TEXT_SCAN_DIRS } from "./text-path.js";
 import type {
   AdoptOptions,
   AssetSyncPlan,
@@ -163,53 +179,6 @@ import type {
 } from "./model.js";
 
 export type { CommandResult } from "./model.js";
-
-const DEFAULT_PATHS: ProjectConfig["paths"] = {
-  bible: "bible",
-  outline: "outline",
-  manuscript: "manuscript",
-  notes: "notes",
-  reviews: "reviews",
-  runs: "runs",
-  manuscript_index: ".openathor/manuscript.index.yaml",
-  sqlite_index: ".openathor/index.sqlite",
-  vector_index: ".openathor/vector",
-};
-
-const REQUIRED_DIRECTORIES = [
-  "bible",
-  "outline",
-  "manuscript",
-  "notes",
-  "style",
-  "reviews",
-  "runs",
-] as const;
-
-const STANDARD_ASSET_DIRECTORIES = ["style", "style/samples"] as const;
-
-const STANDARD_ASSET_FILES = [
-  "bible/premise.md",
-  "bible/style.md",
-  "bible/world.md",
-  "bible/characters.md",
-  "bible/timeline.md",
-  "bible/canon.md",
-  "bible/canon.pending.md",
-  "notes/hooks.md",
-  "notes/unresolved.md",
-  "notes/import-questions.md",
-  "style/profiles.yaml",
-  "style/references.yaml",
-] as const;
-
-const SYSTEM_DIRS = new Set([
-  ".git",
-  ".openathor",
-  "node_modules",
-  "dist",
-  "coverage",
-]);
 
 export async function runInit(options: InitOptions): Promise<CommandResult> {
   const projectRoot = path.resolve(options.targetPath ?? process.cwd());
@@ -4092,29 +4061,6 @@ async function runConfirmedRevision(
   };
 }
 
-function createProjectConfig(title: string, language: string): ProjectConfig {
-  return {
-    protocol_version: PROTOCOL_VERSION,
-    project: {
-      id: stableProjectId(title),
-      title,
-      language,
-      created_at: new Date().toISOString(),
-      source_policy: "plaintext",
-    },
-    agent: {
-      primary: "pi",
-      skill: "openathor-pi",
-      skill_version: PROTOCOL_VERSION,
-    },
-    paths: DEFAULT_PATHS,
-    features: {
-      vector_search: "optional",
-      sub_agents: "optional",
-    },
-  };
-}
-
 async function writeProjectSkeleton(
   projectRoot: string,
   config: ProjectConfig,
@@ -5483,7 +5429,7 @@ async function listProjectTextFiles(projectRoot: string): Promise<string[]> {
     const entries = await readdir(current, { withFileTypes: true });
 
     for (const entry of entries) {
-      if (SYSTEM_DIRS.has(entry.name)) {
+      if (SKIPPED_TEXT_SCAN_DIRS.has(entry.name)) {
         continue;
       }
 
@@ -5675,293 +5621,6 @@ function ensureTrailingNewline(text: string): string {
 function defaultMarkdownExportPath(config: ProjectConfig): string {
   const filename = `${slugAscii(config.project.title) || "manuscript"}.md`;
   return `exports/${filename}`;
-}
-
-function skeletonWrites(reason: string): EnvelopeWrite[] {
-  return [
-    "openathor.yaml",
-    "bible/",
-    "outline/",
-    "outline/volumes.yaml",
-    "outline/chapters.yaml",
-    "outline/scenes.yaml",
-    "manuscript/",
-    "notes/",
-    "style/",
-    "style/samples/",
-    ...STANDARD_ASSET_FILES,
-    "reviews/",
-    "runs/",
-    ".openathor/",
-    ".openathor/manuscript.index.yaml",
-  ].map((relPath) => ({
-    path: relPath,
-    change_type: "created" as const,
-    reason,
-  }));
-}
-
-function adoptWrites(): EnvelopeWrite[] {
-  return [
-    ...skeletonWrites("adopt_project_skeleton"),
-    {
-      path: ".openathor/import-report.md",
-      change_type: "created" as const,
-      reason: "adopt_import_report",
-    },
-    {
-      path: "runs/run_*.json",
-      change_type: "created" as const,
-      reason: "adopt_run_record",
-    },
-  ];
-}
-
-async function scanUserFiles(root: string): Promise<string[]> {
-  const files: string[] = [];
-
-  async function visit(current: string): Promise<void> {
-    const entries = await readdir(current, { withFileTypes: true });
-
-    for (const entry of entries) {
-      if (SYSTEM_DIRS.has(entry.name)) {
-        continue;
-      }
-
-      const fullPath = path.join(current, entry.name);
-
-      if (entry.isDirectory()) {
-        await visit(fullPath);
-        continue;
-      }
-
-      if (!entry.isFile()) {
-        continue;
-      }
-
-      const relPath = toPosix(path.relative(root, fullPath));
-      if (isTextCandidate(relPath)) {
-        files.push(relPath);
-      }
-    }
-  }
-
-  await visit(root);
-  return files.sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
-}
-
-function classifyFile(relPath: string): ClassifiedFile {
-  const normalized = relPath.toLowerCase();
-  const basename = path.posix.basename(relPath, path.posix.extname(relPath));
-  const parsed = parseChapterOrder(basename);
-  const inManuscriptDir =
-    normalized.includes("正文/") ||
-    normalized.includes("manuscript/") ||
-    normalized.includes("chapter") ||
-    normalized.includes("chapters/");
-
-  if (parsed.order !== null || inManuscriptDir) {
-    return {
-      path: relPath,
-      kind: "chapter",
-      title: parsed.title || basename,
-      order: parsed.order,
-      reason: parsed.order === null ? "chapter path without stable numeric order" : "chapter",
-    };
-  }
-
-  if (
-    normalized.includes("设定") ||
-    normalized.includes("人物") ||
-    normalized.includes("世界观") ||
-    normalized.includes("bible") ||
-    normalized.includes("setting") ||
-    normalized.includes("notes/")
-  ) {
-    return {
-      path: relPath,
-      kind: "note",
-      title: basename,
-      order: null,
-      reason: "project note or setting",
-    };
-  }
-
-  if (normalized.includes("风格") || normalized.includes("style")) {
-    return {
-      path: relPath,
-      kind: "style_reference",
-      title: basename,
-      order: null,
-      reason: "style reference candidate",
-    };
-  }
-
-  if (
-    normalized.includes("废稿") ||
-    normalized.includes("scrap") ||
-    normalized.includes("trash") ||
-    normalized.includes("discard")
-  ) {
-    return {
-      path: relPath,
-      kind: "scrap",
-      title: basename,
-      order: null,
-      reason: "scrap draft must not become confirmed canon",
-    };
-  }
-
-  return {
-    path: relPath,
-    kind: "unclassified",
-    title: basename,
-    order: null,
-    reason: "unclassified text file",
-  };
-}
-
-function parseChapterOrder(basename: string): { order: number | null; title: string } {
-  const arabic = basename.match(/^(?:ch(?:apter)?[-_ ]*)?0*(\d{1,4})(?:[-_. ]+)?(.*)$/i);
-  if (arabic) {
-    return {
-      order: Number(arabic[1]),
-      title: stripTitle(arabic[2] || basename),
-    };
-  }
-
-  const chinese = basename.match(/^第\s*([一二三四五六七八九十百千万两0-9]+)\s*[章节回]\s*(.*)$/);
-  if (chinese) {
-    return {
-      order: parseChineseNumber(chinese[1]),
-      title: stripTitle(chinese[2] || basename),
-    };
-  }
-
-  return { order: null, title: stripTitle(basename) };
-}
-
-function duplicateNumericOrders(chapters: ClassifiedFile[]): Set<number> {
-  const seen = new Set<number>();
-  const duplicated = new Set<number>();
-
-  for (const chapter of chapters) {
-    if (chapter.order === null) {
-      continue;
-    }
-
-    if (seen.has(chapter.order)) {
-      duplicated.add(chapter.order);
-    }
-
-    seen.add(chapter.order);
-  }
-
-  return duplicated;
-}
-
-function buildAdoptQuestions(
-  chapters: ClassifiedFile[],
-  duplicateOrders: Set<number>,
-  scraps: ClassifiedFile[],
-  unclassified: ClassifiedFile[],
-): ManuscriptIndex["questions"] {
-  const questions: NonNullable<ManuscriptIndex["questions"]> = [];
-
-  for (const chapter of chapters) {
-    if (chapter.order === null) {
-      questions.push({
-        id: `confirm_order_${shortHash(chapter.path)}`,
-        path: chapter.path,
-        question: "Confirm this chapter's display order.",
-        reason: "No stable chapter number was detected.",
-      });
-    } else if (duplicateOrders.has(chapter.order)) {
-      questions.push({
-        id: `dedupe_order_${shortHash(chapter.path)}`,
-        path: chapter.path,
-        question: `Resolve duplicate chapter order ${chapter.order}.`,
-        reason: "Two or more files share the same detected chapter number.",
-      });
-    }
-  }
-
-  for (const file of [...scraps, ...unclassified]) {
-    questions.push({
-      id: `classify_${shortHash(file.path)}`,
-      path: file.path,
-      question: "Confirm whether this file should be imported, ignored, or archived.",
-      reason: file.reason,
-    });
-  }
-
-  return questions;
-}
-
-async function buildIndexedChapters(
-  root: string,
-  chapters: ClassifiedFile[],
-  duplicateOrders: Set<number>,
-): Promise<IndexedChapter[]> {
-  const sorted = [...chapters].sort((a, b) => {
-    if (a.order !== null && b.order !== null && a.order !== b.order) {
-      return a.order - b.order;
-    }
-
-    if (a.order !== null && b.order === null) {
-      return -1;
-    }
-
-    if (a.order === null && b.order !== null) {
-      return 1;
-    }
-
-    return a.path.localeCompare(b.path, "zh-Hans-CN");
-  });
-
-  const usedIds = new Set<string>();
-  const result: IndexedChapter[] = [];
-
-  for (let index = 0; index < sorted.length; index += 1) {
-    const chapter = sorted[index];
-    const displayOrder = index + 1;
-    const id = uniqueChapterId(chapter, displayOrder, usedIds);
-    const confidence =
-      chapter.order === null || duplicateOrders.has(chapter.order) ? "low" : "high";
-
-    usedIds.add(id);
-    result.push({
-      id,
-      display_order: displayOrder,
-      title: chapter.title,
-      source_path: chapter.path,
-      status: "existing",
-      origin: "adopted",
-      content_hash: await sha256File(path.join(root, chapter.path)),
-      detected_title: chapter.title,
-      confidence,
-    });
-  }
-
-  return result;
-}
-
-function uniqueChapterId(
-  chapter: ClassifiedFile,
-  displayOrder: number,
-  usedIds: Set<string>,
-): string {
-  const orderPart = String(chapter.order ?? displayOrder).padStart(3, "0");
-  const titlePart = slugAscii(chapter.title) || shortHash(chapter.path);
-  let candidate = `ch_${orderPart}_${titlePart}`;
-  let suffix = 2;
-
-  while (usedIds.has(candidate)) {
-    candidate = `ch_${orderPart}_${titlePart}_${suffix}`;
-    suffix += 1;
-  }
-
-  return candidate;
 }
 
 async function findProjectRoot(start: string): Promise<string> {
@@ -6223,32 +5882,6 @@ function proposalNextAction(kind: WritingProposalKind): string {
   return "Extract candidate facts into pending canon only; do not modify confirmed canon without user confirmation.";
 }
 
-function isTextCandidate(relPath: string): boolean {
-  const ext = path.posix.extname(relPath).toLowerCase();
-  return ext === ".md" || ext === ".markdown" || ext === ".txt";
-}
-
-function stableProjectId(title: string): string {
-  return slugAscii(title) || `project_${shortHash(title)}`;
-}
-
-function slugAscii(value: string): string {
-  return value
-    .normalize("NFKD")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .replace(/_+/g, "_");
-}
-
-function stripTitle(value: string): string {
-  return value.replace(/^[-_.\s]+/, "").trim();
-}
-
-function shortHash(value: string): string {
-  return createHash("sha256").update(value).digest("hex").slice(0, 8);
-}
-
 function runStamp(): string {
   return new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
 }
@@ -6265,39 +5898,4 @@ function osHome(): string {
   }
 
   return home;
-}
-
-function parseChineseNumber(value: string): number {
-  if (/^\d+$/.test(value)) {
-    return Number(value);
-  }
-
-  const digitByChar: Record<string, number> = {
-    零: 0,
-    一: 1,
-    二: 2,
-    两: 2,
-    三: 3,
-    四: 4,
-    五: 5,
-    六: 6,
-    七: 7,
-    八: 8,
-    九: 9,
-  };
-
-  if (value === "十") {
-    return 10;
-  }
-
-  const tenIndex = value.indexOf("十");
-  if (tenIndex >= 0) {
-    const left = value.slice(0, tenIndex);
-    const right = value.slice(tenIndex + 1);
-    const tens = left ? digitByChar[left] ?? 1 : 1;
-    const ones = right ? digitByChar[right] ?? 0 : 0;
-    return tens * 10 + ones;
-  }
-
-  return digitByChar[value] ?? 0;
 }
