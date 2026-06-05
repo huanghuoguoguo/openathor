@@ -1,0 +1,13 @@
+required:
+  - openathor.yaml
+  - bible/characters.md
+  - bible/timeline.md
+  - bible/canon.pending.md
+  - notes/hooks.md
+  - notes/asset-package-pi.yaml
+  - outline/chapters.yaml
+  - 正文/001-开端.md
+  - manuscript/chapter-002.md
+  - .openathor/manuscript.index.yaml
+  - .openathor/index.sqlite
+absent: []

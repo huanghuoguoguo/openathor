@@ -1,0 +1,33 @@
+# Pi-shaped package: links object arrays plus updates entries.
+chapter:
+  summary: 沈砚和顾青禾在旧钟楼齿轮室发现北港纹章铜钥匙，港口蓝灯异常亮起，失踪钟表匠线索被重新打开。
+links:
+  characters:
+    - id: shen-yan
+      name: 沈砚
+      role: 钟楼调查者
+      constraints:
+        - 只相信机械证据
+    - id: gu-qing-he
+      name: 顾青禾
+      role: 港口记录员
+  timeline_events:
+    - id: event_blue_light_anomaly
+      description: 港口蓝灯异常亮起
+      date: 当前时间线
+    - id: event-key-found
+      description: 沈砚和顾青禾发现北港纹章铜钥匙
+      date: 当前时间线
+  hooks:
+    - id: hook-blue-light
+      status: active
+      description: 港口蓝灯异常和失踪钟表匠有关
+      chapter_reference: 2
+updates:
+  hooks:
+    - action: advance
+      id: hook-blue-light
+      new_evidence: 齿轮室发现北港纹章铜钥匙时蓝灯同时异常亮起
+    - action: reference
+      id: hook-blue-light
+      note: 第2章确认蓝灯异常不是普通电路故障

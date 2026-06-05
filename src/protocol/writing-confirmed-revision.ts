@@ -98,6 +98,7 @@ export function confirmedRevisionUpdates(input: {
 export function confirmedRevisionRunRecord(input: {
   task: string;
   plan: ConfirmedRevisionPlan;
+  contentHash: string;
   sources: EnvelopeSource[];
   createdAt: string;
 }): Record<string, unknown> {
@@ -109,6 +110,7 @@ export function confirmedRevisionRunRecord(input: {
     mode: "confirmed_write",
     target: input.plan.target,
     base_hash: input.plan.baseHash,
+    source_hash: input.contentHash,
     writes: input.plan.writes,
     sources: input.sources,
     user_confirmation_required: false,
@@ -119,6 +121,7 @@ export function confirmedRevisionResultData(input: {
   dryRun: boolean;
   task: string;
   plan: ConfirmedRevisionPlan;
+  contentHash: string | null;
 }): Record<string, unknown> {
   return {
     dry_run: input.dryRun,
@@ -127,6 +130,7 @@ export function confirmedRevisionResultData(input: {
     task: input.task,
     target: input.plan.target,
     base_hash: input.plan.baseHash,
+    source_hash: input.contentHash,
     planned_writes: input.dryRun ? input.plan.writes : [],
     run_path: input.plan.runRelPath,
     user_confirmation_required: false,

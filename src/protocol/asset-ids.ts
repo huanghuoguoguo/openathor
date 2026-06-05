@@ -25,7 +25,7 @@ export function isLegacyAssetIdForKind(id: string, kind: AssetEntity["kind"]): b
     return normalized.startsWith("char_");
   }
   if (kind === "timeline_event") {
-    return normalized.startsWith("ev_");
+    return normalized.startsWith("ev_") || normalized.startsWith("event_");
   }
   if (kind === "hook") {
     return normalized.startsWith("hook_");
