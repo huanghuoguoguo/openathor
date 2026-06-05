@@ -17,10 +17,13 @@ import {
   runOutlineArchive,
   runOutlineImpact,
   runOutlineInsert,
+  runOutlineMerge,
   runOutlineMove,
+  runOutlineReplan,
   runOutlineShow,
   runOutlineSplit,
   runSearchRelated,
+  runSearchSemantic,
   runSearchText,
   runSkillInstallPi,
   runWritingProposal,
@@ -421,6 +424,15 @@ async function dispatchCommand(
     });
   }
 
+  if (parsed.name === "search semantic") {
+    return runSearchSemantic({
+      cwd,
+      query: parsed.pathArg,
+      limit: parsed.options.limit,
+      maxChars: parsed.options.maxChars,
+    });
+  }
+
   if (parsed.name === "outline show") {
     return runOutlineShow({ cwd });
   }
@@ -455,6 +467,18 @@ async function dispatchCommand(
     });
   }
 
+  if (parsed.name === "outline merge") {
+    return runOutlineMerge({
+      cwd,
+      target: parsed.pathArg,
+      next: parsed.secondPathArg,
+      title: parsed.options.title,
+      dryRun: parsed.options.dryRun,
+      diff: parsed.options.diff,
+      maxChars: parsed.options.maxChars,
+    });
+  }
+
   if (parsed.name === "outline split") {
     return runOutlineSplit({
       cwd,
@@ -462,6 +486,21 @@ async function dispatchCommand(
       atLine: parsed.options.atLine,
       titleBefore: parsed.options.titleBefore,
       titleAfter: parsed.options.titleAfter,
+      confirm: parsed.options.confirm,
+      dryRun: parsed.options.dryRun,
+      diff: parsed.options.diff,
+      maxChars: parsed.options.maxChars,
+      baseHash: parsed.options.baseHash
+        ? await resolveFixtureHash(cwd, parsed.options.baseHash)
+        : undefined,
+    });
+  }
+
+  if (parsed.name === "outline replan") {
+    return runOutlineReplan({
+      cwd,
+      from: parsed.options.from,
+      task: parsed.options.task,
       dryRun: parsed.options.dryRun,
       diff: parsed.options.diff,
       maxChars: parsed.options.maxChars,
@@ -504,7 +543,11 @@ async function dispatchCommand(
   }
 
   if (parsed.name === "index rebuild") {
-    return runIndexRebuild({ cwd, dryRun: parsed.options.dryRun });
+    return runIndexRebuild({
+      cwd,
+      dryRun: parsed.options.dryRun,
+      vector: parsed.options.vector,
+    });
   }
 
   if (parsed.name === "skill install pi") {
@@ -531,11 +574,14 @@ function parseCommand(command: string): {
     | "context"
     | "search text"
     | "search related"
+    | "search semantic"
     | "outline show"
     | "outline impact"
     | "outline insert"
     | "outline move"
+    | "outline merge"
     | "outline split"
+    | "outline replan"
     | "outline archive"
     | "plan"
     | "draft"
@@ -545,6 +591,7 @@ function parseCommand(command: string): {
     | "index rebuild"
     | "skill install pi";
   pathArg?: string;
+  secondPathArg?: string;
   options: {
     title?: string;
     language?: string;
@@ -566,6 +613,8 @@ function parseCommand(command: string): {
     atLine?: number;
     titleBefore?: string;
     titleAfter?: string;
+    from?: string;
+    vector?: boolean;
   };
 } {
   const tokens = command.match(/"[^"]*"|'[^']*'|\S+/g)?.map((token) =>
@@ -625,6 +674,11 @@ function parseCommand(command: string): {
       continue;
     }
 
+    if (token === "--vector") {
+      options.vector = true;
+      continue;
+    }
+
     if (token === "--title") {
       index += 1;
       options.title = tokens[index];
@@ -675,6 +729,12 @@ function parseCommand(command: string): {
     if (token === "--after") {
       index += 1;
       options.after = tokens[index];
+      continue;
+    }
+
+    if (token === "--from") {
+      index += 1;
+      options.from = tokens[index];
       continue;
     }
 
@@ -766,6 +826,15 @@ function parseCommand(command: string): {
     };
   }
 
+  if (positional[0] === "search" && positional[1] === "semantic") {
+    return {
+      display: "openathor search semantic",
+      name: "search semantic",
+      pathArg: positional[2],
+      options,
+    };
+  }
+
   if (positional[0] === "outline" && positional[1] === "show") {
     return {
       display: "openathor outline show",
@@ -800,11 +869,29 @@ function parseCommand(command: string): {
     };
   }
 
+  if (positional[0] === "outline" && positional[1] === "merge") {
+    return {
+      display: "openathor outline merge",
+      name: "outline merge",
+      pathArg: positional[2],
+      secondPathArg: positional[3],
+      options,
+    };
+  }
+
   if (positional[0] === "outline" && positional[1] === "split") {
     return {
       display: "openathor outline split",
       name: "outline split",
       pathArg: positional[2],
+      options,
+    };
+  }
+
+  if (positional[0] === "outline" && positional[1] === "replan") {
+    return {
+      display: "openathor outline replan",
+      name: "outline replan",
       options,
     };
   }

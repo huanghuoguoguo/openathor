@@ -73,6 +73,9 @@
 - [x] 用户确认后插入 planned 章节元数据：`openathor outline insert --confirm`
 - [x] 用户确认后移动章节展示顺序：`openathor outline move --confirm`
 - [x] 拆章 proposal：`openathor outline split`
+- [x] 用户确认后拆章写入：`openathor outline split --confirm --base-hash`
+- [x] 合章 proposal：`openathor outline merge`
+- [x] 重规划 proposal：`openathor outline replan`
 - [x] LLM-as-judge 自动化 smoke：`openathor-judge-smoke`
 
 ## 项目协议
@@ -201,14 +204,18 @@
 - [x] 插章 planned 元数据闭环：`openathor outline insert`
 - [x] 移章 display order 元数据闭环：`openathor outline move`
 - [x] 拆章 proposal：`openathor outline split`
+- [x] 确认拆章写入：`openathor outline split --confirm --base-hash`
+- [x] 合章 proposal：`openathor outline merge`
+- [x] 重规划 proposal：`openathor outline replan`
 - [x] 确定性文本检索：`openathor search text`
 - [x] 确定性相关检索：`openathor search related`
-- [ ] confirmed split、合并和重规划
-- [ ] 向量语义检索
+- [x] 可选派生向量检索：`openathor index rebuild --vector` + `openathor search semantic`
+- [ ] confirmed merge 和 confirmed replan
 - [x] LLM-as-judge 自动化 smoke：证据包结构校验和 deterministic replay 已接入 `npm test`
 - [x] 真实 Pi Agent/Operator Agent transcript 可本地附加到单个 evidence package
+- [x] LLM judge scores 可本地附加到单个 evidence package
 - [x] CI 保持静态和确定性检查，不接入真实 Pi Agent、LLM judge 或外部 API key
-- [ ] 真实 Pi Agent transcript 和 LLM judge scores 作为本地/手动评估证据保存
+- [x] 真实 Pi Agent transcript 和 LLM judge scores 作为本地/手动评估证据保存
 
 参考：
 

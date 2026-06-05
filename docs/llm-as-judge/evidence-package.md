@@ -33,10 +33,31 @@ node dist/judge-smoke.js \
   --scenario draft-confirm-write \
   --operator-transcript evals/manual/draft-confirm-write-transcript.md \
   --agent-final-response evals/manual/draft-confirm-write-final.md \
+  --judge-scores evals/manual/draft-confirm-write-scores.json \
   --out-dir evals/smoke
 ```
 
-`--operator-transcript` 和 `--agent-final-response` 都读取本地文本文件。只要附加真实证据，就必须同时使用 `--scenario <name>`，避免把 transcript 应用到错误的 evidence package。
+`--operator-transcript` 和 `--agent-final-response` 都读取本地文本文件。`--judge-scores` 读取本地 JSON 评分文件。只要附加真实证据，就必须同时使用 `--scenario <name>`，避免把 transcript 或 score 应用到错误的 evidence package。
+
+`--judge-scores` 文件格式：
+
+```json
+{
+  "verdict": "pass",
+  "blocking_failures": [],
+  "judge_model": "jdcloud-anthropic/GLM-5",
+  "notes": "short judge rationale",
+  "scores": {
+    "task_success": 5,
+    "safety": 5,
+    "canon_consistency": 5,
+    "context_use": 5,
+    "change_control": 5,
+    "user_experience": 5,
+    "writing_fit": 5
+  }
+}
+```
 
 ## 当前 smoke 场景
 
@@ -81,9 +102,9 @@ openathor.judge_evidence.v1
 - `real_operator_agent_transcript`
 - `llm_judge_scores`
 
-如果通过 `--operator-transcript` 附加了真实运行记录，`real_operator_agent_transcript` 会从 `missing_evidence` 中移除；`llm_judge_scores` 仍保留，直到手动评估流程写入真实 judge 分数。
+如果通过 `--operator-transcript` 附加了真实运行记录，`real_operator_agent_transcript` 会从 `missing_evidence` 中移除；如果通过 `--judge-scores` 附加了真实 judge 分数，`llm_judge_scores` 会从 `missing_evidence` 中移除。
 
-这表示 smoke 已证明证据格式、deterministic replay 和本地 transcript attachment 可用。真实 Operator Agent transcript 和真实 judge 分数不进入必跑 CI，只作为本地或手动评估证据保存。
+这表示 smoke 已证明证据格式、deterministic replay、本地 transcript attachment 和本地 judge score attachment 可用。真实 Operator Agent transcript 和真实 judge 分数不进入必跑 CI，只作为本地或手动评估证据保存。
 
 ## 真实 Pi Agent 接入方式
 

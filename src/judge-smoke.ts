@@ -25,10 +25,12 @@ type SmokeScenario = {
 };
 
 type JudgePlaceholder = {
-  verdict: "needs_review";
+  verdict: "needs_review" | "pass" | "fail";
   blocking_failures: string[];
-  scores: Record<JudgeDimension, null>;
+  scores: Record<JudgeDimension, number | null>;
   missing_evidence: string[];
+  judge_model?: string;
+  notes?: string;
 };
 
 type JudgeEvidencePackage = {
@@ -132,6 +134,10 @@ program
     "--agent-final-response <path>",
     "attach a real Operator Agent final response file to a single scenario",
   )
+  .option(
+    "--judge-scores <path>",
+    "attach a real LLM judge scores JSON file to a single scenario",
+  )
   .action(
     async (options: {
       json?: boolean;
@@ -139,6 +145,7 @@ program
       scenario?: string;
       operatorTranscript?: string;
       agentFinalResponse?: string;
+      judgeScores?: string;
     }) => {
       const command = "openathor-judge-smoke";
 
@@ -149,6 +156,7 @@ program
           scenario: options.scenario,
           operatorTranscript: options.operatorTranscript,
           agentFinalResponse: options.agentFinalResponse,
+          judgeScores: options.judgeScores,
         });
         const output = envelope({
           ok: true,
@@ -215,16 +223,20 @@ async function runJudgeSmoke(input: {
   scenario?: string;
   operatorTranscript?: string;
   agentFinalResponse?: string;
+  judgeScores?: string;
 }): Promise<JudgeSmokeResult> {
   const scenarios = selectScenarios(input.scenario);
   const evidencePackages: JudgeEvidencePackage[] = [];
   const evidenceFiles: string[] = [];
   const outDir = input.outDir ? path.resolve(input.cwd, input.outDir) : undefined;
 
-  if ((input.operatorTranscript || input.agentFinalResponse) && scenarios.length !== 1) {
+  if (
+    (input.operatorTranscript || input.agentFinalResponse || input.judgeScores) &&
+    scenarios.length !== 1
+  ) {
     throw new OpenAthorError(
       "OA_JUDGE_SCENARIO_REQUIRED",
-      "Attach real Operator Agent evidence with --scenario <name> so it cannot be applied to the wrong package.",
+      "Attach real Operator Agent or judge evidence with --scenario <name> so it cannot be applied to the wrong package.",
       { exitCode: 2 },
     );
   }
@@ -234,6 +246,9 @@ async function runJudgeSmoke(input: {
     : undefined;
   const agentFinalResponse = input.agentFinalResponse
     ? await readAttachment(input.cwd, input.agentFinalResponse)
+    : undefined;
+  const judgeScores = input.judgeScores
+    ? await readJudgeScoresAttachment(input.cwd, input.judgeScores)
     : undefined;
 
   if (outDir) {
@@ -246,6 +261,7 @@ async function runJudgeSmoke(input: {
     const evidencePackage = buildEvidencePackage(scenario, fixtureResult, {
       operatorTranscript,
       agentFinalResponse,
+      judgeScores,
     });
 
     validateEvidencePackage(evidencePackage);
@@ -290,6 +306,7 @@ function buildEvidencePackage(
   attachments: {
     operatorTranscript?: { path: string; text: string };
     agentFinalResponse?: { path: string; text: string };
+    judgeScores?: JudgeScoresAttachment;
   } = {},
 ): JudgeEvidencePackage {
   const commands = fixtureResult.command_results.map((result) => ({
@@ -302,7 +319,7 @@ function buildEvidencePackage(
 
   const missingEvidence = [
     ...(attachments.operatorTranscript ? [] : ["real_operator_agent_transcript"]),
-    "llm_judge_scores",
+    ...(attachments.judgeScores ? [] : ["llm_judge_scores"]),
   ];
 
   return {
@@ -332,12 +349,17 @@ function buildEvidencePackage(
       attachments.agentFinalResponse?.text.trim() || scenario.expected_agent_reply,
     judge_focus: scenario.judge_focus,
     judge: {
-      verdict: "needs_review",
-      blocking_failures: [],
-      scores: Object.fromEntries(
-        scoreDimensions.map((dimension) => [dimension, null]),
-      ) as Record<JudgeDimension, null>,
+      verdict: attachments.judgeScores?.verdict ?? "needs_review",
+      blocking_failures: attachments.judgeScores?.blocking_failures ?? [],
+      scores: attachments.judgeScores?.scores ??
+        (Object.fromEntries(
+          scoreDimensions.map((dimension) => [dimension, null]),
+        ) as Record<JudgeDimension, null>),
       missing_evidence: missingEvidence,
+      ...(attachments.judgeScores?.judge_model
+        ? { judge_model: attachments.judgeScores.judge_model }
+        : {}),
+      ...(attachments.judgeScores?.notes ? { notes: attachments.judgeScores.notes } : {}),
     },
   };
 }
@@ -379,6 +401,78 @@ function validateEvidencePackage(evidencePackage: JudgeEvidencePackage): void {
       { exitCode: 4 },
     );
   }
+}
+
+type JudgeScoresAttachment = {
+  verdict: "pass" | "fail" | "needs_review";
+  blocking_failures: string[];
+  scores: Record<JudgeDimension, number>;
+  judge_model?: string;
+  notes?: string;
+};
+
+async function readJudgeScoresAttachment(
+  cwd: string,
+  relOrAbsPath: string,
+): Promise<JudgeScoresAttachment> {
+  const absolutePath = path.resolve(cwd, relOrAbsPath);
+  const text = await readFile(absolutePath, "utf8");
+  const parsed = JSON.parse(text) as Partial<JudgeScoresAttachment>;
+
+  if (
+    parsed.verdict !== "pass" &&
+    parsed.verdict !== "fail" &&
+    parsed.verdict !== "needs_review"
+  ) {
+    throw new OpenAthorError(
+      "OA_JUDGE_SCORES_INVALID",
+      "Judge scores must include verdict: pass, fail, or needs_review.",
+      { exitCode: 4 },
+    );
+  }
+
+  if (!Array.isArray(parsed.blocking_failures)) {
+    throw new OpenAthorError(
+      "OA_JUDGE_SCORES_INVALID",
+      "Judge scores must include blocking_failures as an array.",
+      { exitCode: 4 },
+    );
+  }
+
+  const scores = parsed.scores as Record<string, unknown> | undefined;
+  if (!scores) {
+    throw new OpenAthorError(
+      "OA_JUDGE_SCORES_INVALID",
+      "Judge scores must include all rubric score dimensions.",
+      { exitCode: 4 },
+    );
+  }
+
+  for (const dimension of scoreDimensions) {
+    const score = scores[dimension];
+    if (
+      typeof score !== "number" ||
+      !Number.isInteger(score) ||
+      score < 1 ||
+      score > 5
+    ) {
+      throw new OpenAthorError(
+        "OA_JUDGE_SCORES_INVALID",
+        `Judge score ${dimension} must be an integer from 1 to 5.`,
+        { exitCode: 4 },
+      );
+    }
+  }
+
+  return {
+    verdict: parsed.verdict,
+    blocking_failures: parsed.blocking_failures,
+    scores: Object.fromEntries(
+      scoreDimensions.map((dimension) => [dimension, scores[dimension] as number]),
+    ) as Record<JudgeDimension, number>,
+    judge_model: parsed.judge_model,
+    notes: parsed.notes,
+  };
 }
 
 function isDirectRun(): boolean {

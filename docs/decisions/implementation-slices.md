@@ -99,17 +99,21 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - `openathor outline insert`
 - `openathor outline move`
 - `openathor outline split`
+- `openathor outline merge`
+- `openathor outline replan`
 - `openathor outline archive`
-- 后续补齐 confirmed split、`merge`、`replan`
+- 后续补齐 confirmed merge、confirmed replan
 
 验收重点：
 
 - 插章不改变已有章节 ID
+- 拆章确认写入必须检查 base hash
+- 合章和重规划在没有 confirmed write 前只能 proposal
 - 归档不物理删除正文
 - 影响分析覆盖 canon、伏笔、人物状态和后续章节
 - 结构变更后 context 可刷新
 
-当前状态：`openathor outline show`、`openathor outline impact`、`openathor outline insert`、`openathor outline move`、`openathor outline split` 和 `openathor outline archive` 已作为结构编辑最小闭环落地，并纳入 fixture 回归。`split` 当前是 proposal-only；confirmed split、`merge` 和 `replan` 仍待实现。
+当前状态：`openathor outline show`、`openathor outline impact`、`openathor outline insert`、`openathor outline move`、`openathor outline split`、`openathor outline merge`、`openathor outline replan` 和 `openathor outline archive` 已作为结构编辑最小闭环落地，并纳入 fixture 回归。`split --confirm --base-hash` 支持确认拆章写入；`merge` 和 `replan` 当前是 proposal-only，confirmed write 仍待实现。
 
 ## Slice 4: Long Project Retrieval
 
@@ -119,6 +123,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 
 - `openathor search text`
 - `openathor search related`
+- `openathor search semantic`
 - SQLite 结构化查询
 - 可选向量检索接口
 - context pack 压缩策略
@@ -130,7 +135,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 向量索引仍是派生数据
 - context 包含来源证据
 
-当前状态：`openathor search text` 和 `openathor search related` 已作为只读确定性检索落地，并纳入 fixture 回归。向量语义检索仍待实现。
+当前状态：`openathor search text`、`openathor search related` 和 `openathor search semantic` 已落地，并纳入 fixture 回归。`search semantic` 使用 `openathor index rebuild --vector` 生成的本地 deterministic hash embedding 派生索引，不调用外部 embedding 服务。
 
 ## Cross-Slice: LLM-as-Judge Smoke
 
@@ -152,7 +157,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 真实 Pi Agent transcript attachment 和 judge scores 后续能复用同一格式
 - deterministic failures 不会被 judge 分数掩盖
 
-当前状态：第一版 smoke 已覆盖 `fixtures/slice-2/draft-confirm-write` 和 `fixtures/slice-3/outline-archive`，并支持把本地真实 Operator Agent transcript 附加到单个 evidence package。真实 Pi Agent transcript attachment 和 LLM judge scores 保持本地/手动评估，不进入必跑 CI。
+当前状态：第一版 smoke 已覆盖 `fixtures/slice-2/draft-confirm-write` 和 `fixtures/slice-3/outline-archive`，并支持把本地真实 Operator Agent transcript、agent final response 和 LLM judge scores 附加到单个 evidence package。真实 Pi Agent transcript attachment 和 LLM judge scores 保持本地/手动评估，不进入必跑 CI。
 
 ## Slice 5: Delivery And Expansion
 

@@ -20,8 +20,10 @@ openathor doctor --json
 openathor adopt --dry-run --json
 openathor adopt --json
 openathor index rebuild --json
+openathor index rebuild --vector --json
 openathor search text "<query>" --json
 openathor search related chapter <id-or-order> --json
+openathor search semantic "<query>" --json
 openathor outline show --json
 openathor outline impact <id-or-order> --json
 \`\`\`
@@ -42,7 +44,8 @@ Before writing or advising on project state:
 3. If doctor reports \`OA_INDEX_STALE\`, run or suggest \`openathor index rebuild --json\` before relying on derived indexes.
 4. Use \`openathor search text "<query>" --json\` to find keyword evidence across plaintext project files.
 5. Use \`openathor search related chapter <id-or-order> --json\` to find deterministic related context by term overlap.
-6. Use \`openathor outline impact <id-or-order> --json\` before proposing any chapter archive/delete action.
+6. Use \`openathor index rebuild --vector --json\` and \`openathor search semantic "<query>" --json\` when the user asks for looser thematic or similarity retrieval.
+7. Use \`openathor outline impact <id-or-order> --json\` before proposing any chapter archive/delete action.
 
 ## Adopting Existing Manuscripts
 
@@ -56,7 +59,7 @@ For existing novels:
 
 ## Writing And Revision Safety
 
-Current OpenAthor implements deterministic context packs and proposal-mode writing commands. It does not directly generate final manuscript prose, apply manuscript diffs, or perform semantic search.
+Current OpenAthor implements deterministic context packs, proposal-mode writing commands, controlled confirmed manuscript writes, and optional derived semantic search. It does not directly generate final manuscript prose.
 
 Use these commands as task packages:
 
@@ -93,6 +96,24 @@ When using proposal commands:
 - ask before any file write that affects manuscript, outline, or confirmed canon
 
 ## Outline Safety
+
+Use proposal commands before broad structure edits:
+
+\`\`\`bash
+openathor outline insert --after <id-or-order> --title "<title>" --json
+openathor outline move <id-or-order> --after <id-or-order> --json
+openathor outline split <id-or-order> --at-line <line> --title-before "<title>" --title-after "<title>" --json
+openathor outline merge <id-or-order> <next-id-or-order> --title "<title>" --json
+openathor outline replan --from <id-or-order> --task "<task>" --json
+\`\`\`
+
+Confirmed split is allowed only after explicit user confirmation and a fresh source hash:
+
+\`\`\`bash
+openathor outline split <id-or-order> --at-line <line> --title-before "<title>" --title-after "<title>" --confirm --base-hash "sha256:..." --json
+\`\`\`
+
+Confirmed merge and confirmed replan are not implemented. Do not edit outline/index manually to simulate them.
 
 Before archiving or deleting a chapter:
 

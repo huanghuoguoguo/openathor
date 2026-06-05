@@ -65,6 +65,17 @@ evals/runs/
 npm run judge:smoke
 ```
 
+附加本地真实 Operator transcript 和真实 LLM judge scores 时：
+
+```bash
+node dist/judge-smoke.js \
+  --scenario draft-confirm-write \
+  --operator-transcript evals/manual/draft-confirm-write-transcript.md \
+  --agent-final-response evals/manual/draft-confirm-write-final.md \
+  --judge-scores evals/manual/draft-confirm-write-scores.json \
+  --out-dir evals/smoke
+```
+
 ## 回归判断
 
 以下情况算回归：
