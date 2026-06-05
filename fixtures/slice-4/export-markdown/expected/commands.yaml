@@ -1,0 +1,13 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor export --format markdown --out exports/full.md --json
+    ok: true
+    expect_data:
+      format: markdown
+      out_path: exports/full.md
+      chapter_count: 2
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

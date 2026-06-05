@@ -22,7 +22,7 @@
     "test:fixtures:slice1": "npm run fixture -- fixtures/slice-1/new-project && npm run fixture -- fixtures/slice-1/adopt-3-chapters && npm run fixture -- fixtures/slice-1/scattered-drafts && npm run fixture -- fixtures/slice-1/adopt-ambiguous-order",
     "test:fixtures:slice2": "npm run fixture -- fixtures/slice-2/draft-confirm-write && npm run fixture -- fixtures/slice-2/draft-title-fallback && npm run fixture -- fixtures/slice-2/revise-confirm-write && npm run fixture -- fixtures/slice-2/revise-hash-conflict",
     "test:fixtures:slice3": "npm run fixture -- fixtures/slice-3/outline-archive && npm run fixture -- fixtures/slice-3/outline-insert && npm run fixture -- fixtures/slice-3/outline-move && npm run fixture -- fixtures/slice-3/outline-split && npm run fixture -- fixtures/slice-3/outline-merge && npm run fixture -- fixtures/slice-3/outline-replan && npm run fixture -- fixtures/slice-3/outline-split-confirm",
-    "test:fixtures:slice4": "npm run fixture -- fixtures/slice-4/search-text && npm run fixture -- fixtures/slice-4/search-semantic",
+    "test:fixtures:slice4": "npm run fixture -- fixtures/slice-4/search-text && npm run fixture -- fixtures/slice-4/search-semantic && npm run fixture -- fixtures/slice-4/export-markdown",
     "test:judge:smoke": "node dist/judge-smoke.js",
     "judge:smoke": "node dist/judge-smoke.js --out-dir evals/smoke",
     "fixture": "node dist/fixture-check.js"

@@ -6,6 +6,7 @@ import {
   runAdopt,
   runContext,
   runDoctor,
+  runExport,
   runIndexRebuild,
   runInit,
   runOutlineArchive,
@@ -607,6 +608,34 @@ program
           kind: "canon_sync",
           target,
           task: options.task,
+          dryRun: options.dryRun,
+        }),
+      );
+    },
+  );
+
+program
+  .command("export")
+  .description("Export manuscript deliverables from plaintext sources.")
+  .requiredOption("--format <format>", "export format; currently markdown")
+  .option("--out <path>", "relative output path")
+  .option("--json", "emit JSON")
+  .option("--dry-run", "show planned writes without changing files")
+  .action(
+    async (
+      options: {
+        format: string;
+        out?: string;
+        json?: boolean;
+        dryRun?: boolean;
+      },
+    ) => {
+      await emitResult(
+        "openathor export",
+        options.json,
+        runExport({
+          format: options.format,
+          out: options.out,
           dryRun: options.dryRun,
         }),
       );

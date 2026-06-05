@@ -12,6 +12,7 @@ import {
   runAdopt,
   runContext,
   runDoctor,
+  runExport,
   runIndexRebuild,
   runInit,
   runOutlineArchive,
@@ -550,6 +551,15 @@ async function dispatchCommand(
     });
   }
 
+  if (parsed.name === "export") {
+    return runExport({
+      cwd,
+      format: parsed.options.format,
+      out: parsed.options.out,
+      dryRun: parsed.options.dryRun,
+    });
+  }
+
   if (parsed.name === "skill install pi") {
     return runSkillInstallPi({
       cwd,
@@ -588,6 +598,7 @@ function parseCommand(command: string): {
     | "review"
     | "revise"
     | "canon sync"
+    | "export"
     | "index rebuild"
     | "skill install pi";
   pathArg?: string;
@@ -615,6 +626,8 @@ function parseCommand(command: string): {
     titleAfter?: string;
     from?: string;
     vector?: boolean;
+    format?: string;
+    out?: string;
   };
 } {
   const tokens = command.match(/"[^"]*"|'[^']*'|\S+/g)?.map((token) =>
@@ -676,6 +689,18 @@ function parseCommand(command: string): {
 
     if (token === "--vector") {
       options.vector = true;
+      continue;
+    }
+
+    if (token === "--format") {
+      index += 1;
+      options.format = unescapeFixtureArgument(tokens[index]);
+      continue;
+    }
+
+    if (token === "--out") {
+      index += 1;
+      options.out = unescapeFixtureArgument(tokens[index]);
       continue;
     }
 
@@ -764,6 +789,14 @@ function parseCommand(command: string): {
       display: "openathor index rebuild",
       name: "index rebuild",
       pathArg: positional[2],
+      options,
+    };
+  }
+
+  if (positional[0] === "export") {
+    return {
+      display: "openathor export",
+      name: "export",
       options,
     };
   }

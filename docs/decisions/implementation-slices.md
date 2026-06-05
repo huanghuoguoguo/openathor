@@ -135,7 +135,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 向量索引仍是派生数据
 - context 包含来源证据
 
-当前状态：`openathor search text`、`openathor search related` 和 `openathor search semantic` 已落地，并纳入 fixture 回归。`search semantic` 使用 `openathor index rebuild --vector` 生成的本地 deterministic hash embedding 派生索引，不调用外部 embedding 服务。
+当前状态：`openathor search text`、`openathor search related`、`openathor search semantic` 和 `openathor export --format markdown` 已落地，并纳入 fixture 回归。`search semantic` 使用 `openathor index rebuild --vector` 生成的本地 deterministic hash embedding 派生索引，不调用外部 embedding 服务；export 当前只支持从明文 manuscript source 合并导出 Markdown。
 
 ## Cross-Slice: LLM-as-Judge Smoke
 

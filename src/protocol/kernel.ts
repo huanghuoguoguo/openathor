@@ -133,6 +133,13 @@ type IndexRebuildOptions = {
   vector?: boolean;
 };
 
+type ExportOptions = {
+  cwd?: string;
+  format?: string;
+  out?: string;
+  dryRun?: boolean;
+};
+
 type SkillInstallOptions = {
   cwd?: string;
   target?: "project" | "global";
@@ -604,6 +611,92 @@ export async function runIndexRebuild(
       sqlite_index: sqliteRel,
       vector_index: options.vector ? vectorRel : null,
       vector_documents_indexed: vectorIndex?.documents.length ?? 0,
+    },
+  };
+}
+
+export async function runExport(options: ExportOptions = {}): Promise<CommandResult> {
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: false });
+  const format = options.format ?? "markdown";
+  const dryRun = options.dryRun ?? false;
+
+  if (format !== "markdown") {
+    throw new OpenAthorError(
+      "OA_EXPORT_FORMAT_UNSUPPORTED",
+      `Unsupported export format ${format}.`,
+      {
+        exitCode: 2,
+        hints: ["Supported format: markdown."],
+      },
+    );
+  }
+
+  const outPath = options.out?.trim() || defaultMarkdownExportPath(inspection.config);
+  ensureSafeRelativePath(outPath, "--out");
+
+  const chapters = inspection.manuscriptIndex.chapters
+    .filter((chapter) => chapter.status !== "archived")
+    .sort((a, b) => a.display_order - b.display_order || a.id.localeCompare(b.id));
+  const sourceMap = new Map<string, EnvelopeSource>();
+  addKnownSource(sourceMap, inspection.sources, "openathor.yaml");
+  addKnownSource(sourceMap, inspection.sources, "outline/chapters.yaml");
+  addKnownSource(sourceMap, inspection.sources, inspection.config.paths.manuscript_index);
+
+  const chapterParts = [];
+  let totalChars = 0;
+
+  for (const chapter of chapters) {
+    const fullPath = path.join(projectRoot, chapter.source_path);
+    if (!(await pathExists(fullPath))) {
+      throw new OpenAthorError(
+        "OA_MANUSCRIPT_SOURCE_MISSING",
+        `Cannot export missing manuscript source ${chapter.source_path}.`,
+        { exitCode: 3 },
+      );
+    }
+
+    const text = await readFile(fullPath, "utf8");
+    const hash = await sha256File(fullPath);
+    sourceMap.set(chapter.source_path, { path: chapter.source_path, hash });
+    const normalizedText = ensureTrailingNewline(text.trimEnd());
+    totalChars += normalizedText.length;
+    chapterParts.push(normalizedText);
+  }
+
+  const markdown = chapterParts.join("\n");
+  const writes: EnvelopeWrite[] = [
+    {
+      path: outPath,
+      change_type: (await pathExists(path.join(projectRoot, outPath))) ? "modified" : "created",
+      reason: "export_markdown",
+    },
+  ];
+
+  if (!dryRun) {
+    await writeText(projectRoot, outPath, markdown);
+  }
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources: [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path)),
+    writes: dryRun ? [] : writes,
+    warnings: inspection.warnings,
+    data: {
+      dry_run: dryRun,
+      format,
+      out_path: outPath,
+      chapter_count: chapters.length,
+      chapters: chapters.map((chapter) => ({
+        id: chapter.id,
+        display_order: chapter.display_order,
+        title: chapter.title,
+        source_path: chapter.source_path,
+        status: chapter.status,
+      })),
+      char_count: totalChars,
+      planned_writes: dryRun ? writes : [],
     },
   };
 }
@@ -4450,6 +4543,11 @@ function titleFromTask(task: string): string | null {
 
 function ensureTrailingNewline(text: string): string {
   return text.endsWith("\n") ? text : `${text}\n`;
+}
+
+function defaultMarkdownExportPath(config: ProjectConfig): string {
+  const filename = `${slugAscii(config.project.title) || "manuscript"}.md`;
+  return `exports/${filename}`;
 }
 
 function skeletonWrites(reason: string): EnvelopeWrite[] {
