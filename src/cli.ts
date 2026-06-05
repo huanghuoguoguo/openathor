@@ -13,6 +13,7 @@ import {
   runOutlineInsert,
   runOutlineMove,
   runOutlineShow,
+  runOutlineSplit,
   runSearchRelated,
   runSearchText,
   runSkillInstallPi,
@@ -302,6 +303,46 @@ outlineCommand
           confirm: options.confirm,
           dryRun: options.dryRun,
           diff: options.diff,
+        }),
+      );
+    },
+  );
+
+outlineCommand
+  .command("split")
+  .description("Propose a chapter split boundary without changing files.")
+  .argument("<target>", "chapter id or display order to split")
+  .requiredOption("--at-line <line>", "first source line of the second split segment")
+  .requiredOption("--title-before <title>", "title for the first proposed segment")
+  .requiredOption("--title-after <title>", "title for the second proposed segment")
+  .option("--json", "emit JSON")
+  .option("--dry-run", "emit the proposal without changing files")
+  .option("--diff", "show structured future diff without changing files")
+  .option("--max-chars <count>", "maximum characters per segment preview")
+  .action(
+    async (
+      target: string,
+      options: {
+        atLine: string;
+        titleBefore: string;
+        titleAfter: string;
+        json?: boolean;
+        dryRun?: boolean;
+        diff?: boolean;
+        maxChars?: string;
+      },
+    ) => {
+      await emitResult(
+        "openathor outline split",
+        options.json,
+        runOutlineSplit({
+          target,
+          atLine: Number(options.atLine),
+          titleBefore: options.titleBefore,
+          titleAfter: options.titleAfter,
+          dryRun: options.dryRun,
+          diff: options.diff,
+          maxChars: options.maxChars ? Number(options.maxChars) : undefined,
         }),
       );
     },

@@ -19,6 +19,7 @@ import {
   runOutlineInsert,
   runOutlineMove,
   runOutlineShow,
+  runOutlineSplit,
   runSearchRelated,
   runSearchText,
   runSkillInstallPi,
@@ -454,6 +455,19 @@ async function dispatchCommand(
     });
   }
 
+  if (parsed.name === "outline split") {
+    return runOutlineSplit({
+      cwd,
+      target: parsed.pathArg,
+      atLine: parsed.options.atLine,
+      titleBefore: parsed.options.titleBefore,
+      titleAfter: parsed.options.titleAfter,
+      dryRun: parsed.options.dryRun,
+      diff: parsed.options.diff,
+      maxChars: parsed.options.maxChars,
+    });
+  }
+
   if (parsed.name === "outline archive") {
     return runOutlineArchive({
       cwd,
@@ -521,6 +535,7 @@ function parseCommand(command: string): {
     | "outline impact"
     | "outline insert"
     | "outline move"
+    | "outline split"
     | "outline archive"
     | "plan"
     | "draft"
@@ -548,6 +563,9 @@ function parseCommand(command: string): {
     confirmWrite?: boolean;
     baseHash?: string;
     after?: string;
+    atLine?: number;
+    titleBefore?: string;
+    titleAfter?: string;
   };
 } {
   const tokens = command.match(/"[^"]*"|'[^']*'|\S+/g)?.map((token) =>
@@ -660,6 +678,24 @@ function parseCommand(command: string): {
       continue;
     }
 
+    if (token === "--at-line") {
+      index += 1;
+      options.atLine = Number(tokens[index]);
+      continue;
+    }
+
+    if (token === "--title-before") {
+      index += 1;
+      options.titleBefore = tokens[index];
+      continue;
+    }
+
+    if (token === "--title-after") {
+      index += 1;
+      options.titleAfter = tokens[index];
+      continue;
+    }
+
     positional.push(token);
   }
 
@@ -759,6 +795,15 @@ function parseCommand(command: string): {
     return {
       display: "openathor outline move",
       name: "outline move",
+      pathArg: positional[2],
+      options,
+    };
+  }
+
+  if (positional[0] === "outline" && positional[1] === "split") {
+    return {
+      display: "openathor outline split",
+      name: "outline split",
       pathArg: positional[2],
       options,
     };

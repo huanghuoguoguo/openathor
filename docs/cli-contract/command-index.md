@@ -111,8 +111,9 @@ openathor export --format markdown
 - `openathor outline impact`
 - `openathor outline insert`
 - `openathor outline move`
+- `openathor outline split`
 - `openathor outline archive`
-- 后续补齐 `split`、`merge`、`replan`
+- 后续补齐 confirmed split、`merge`、`replan`
 
 当前已落地：
 
@@ -120,6 +121,7 @@ openathor export --format markdown
 - `openathor outline impact`
 - `openathor outline insert`
 - `openathor outline move`
+- `openathor outline split`
 - `openathor outline archive`
 
 当前限制：
@@ -127,9 +129,10 @@ openathor export --format markdown
 - `outline impact` 使用确定性文本引用扫描和词项重叠，不做语义向量分析。
 - `outline insert` 只插入 planned 章节元数据，不创建正文文件。
 - `outline move` 只修改 display order，不移动或重命名正文文件。
+- `outline split` 当前只生成拆章 proposal，不修改正文、outline 或 index。
 - `outline archive` 默认只返回 proposal；只有 `--confirm` 才修改结构化元数据。
 - 归档不物理删除、移动或重命名正文文件。
-- `outline split/merge/replan` 仍待实现。
+- confirmed split、`outline merge` 和 `outline replan` 仍待实现。
 
 ### Slice 4: Retrieval And Export
 

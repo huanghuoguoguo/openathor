@@ -173,6 +173,17 @@ type OutlineMoveOptions = {
   diff?: boolean;
 };
 
+type OutlineSplitOptions = {
+  cwd?: string;
+  target?: string;
+  atLine?: number;
+  titleBefore?: string;
+  titleAfter?: string;
+  dryRun?: boolean;
+  diff?: boolean;
+  maxChars?: number;
+};
+
 type OutlineArchiveOptions = {
   cwd?: string;
   target?: string;
@@ -221,6 +232,22 @@ type ResolvedOutlineChapter = {
   source_path: string | null;
   outline_status: ChapterOutlineEntry["status"] | null;
   index_status: IndexedChapter["status"] | null;
+};
+
+type OutlineSplitSegment = {
+  title: string;
+  line_start: number;
+  line_end: number;
+  char_count: number;
+  preview: string;
+  starts_with_heading: boolean;
+};
+
+type OutlineSplitPlan = {
+  split_at_line: number;
+  line_count: number;
+  before: OutlineSplitSegment;
+  after: OutlineSplitSegment;
 };
 
 const DEFAULT_PATHS: ProjectConfig["paths"] = {
@@ -1135,6 +1162,81 @@ export async function runOutlineMove(
   };
 }
 
+export async function runOutlineSplit(
+  options: OutlineSplitOptions = {},
+): Promise<CommandResult> {
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
+  const target = resolveOutlineTarget(
+    options.target,
+    inspection.chapters,
+    inspection.manuscriptIndex,
+  );
+
+  if (!target.source_path) {
+    throw new OpenAthorError(
+      "OA_OUTLINE_SPLIT_SOURCE_REQUIRED",
+      `Cannot split ${target.id} because it has no manuscript source file.`,
+      {
+        exitCode: 2,
+        hints: ["Use openathor outline show --json to inspect chapter source paths."],
+      },
+    );
+  }
+
+  const titleBefore = options.titleBefore?.trim();
+  const titleAfter = options.titleAfter?.trim();
+
+  if (!titleBefore || !titleAfter) {
+    throw new OpenAthorError(
+      "OA_OUTLINE_TITLE_REQUIRED",
+      "openathor outline split requires --title-before <title> and --title-after <title>.",
+      { exitCode: 2 },
+    );
+  }
+
+  const splitAtLine = normalizeSplitLine(options.atLine);
+  const maxChars = normalizeSnippetChars(options.maxChars);
+  const targetSource = await readImpactSource(projectRoot, target.source_path);
+  const splitPlan = outlineSplitPlan(
+    targetSource.text,
+    splitAtLine,
+    titleBefore,
+    titleAfter,
+    maxChars,
+  );
+  const plannedWrites = splitWrites(target);
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources: splitSources(
+      inspection.sources,
+      target.source_path,
+      targetSource.hash,
+    ),
+    writes: [],
+    warnings: inspection.warnings,
+    data: {
+      dry_run: options.dryRun ?? false,
+      mode: options.diff ? "diff" : "proposal",
+      command: "openathor outline split",
+      target: outlineTargetData(target, targetSource.hash),
+      split_at_line: splitPlan.split_at_line,
+      line_count: splitPlan.line_count,
+      before: splitPlan.before,
+      after: splitPlan.after,
+      result: splitResult(splitPlan, false),
+      user_confirmation_required: true,
+      confirmed_write_supported: false,
+      planned_writes: plannedWrites,
+      diff: splitDiff(target, splitPlan),
+      next_agent_action:
+        "Show the split proposal to the user. Confirmed split writes are not implemented yet, so do not modify manuscript, outline, or index files automatically.",
+    },
+  };
+}
+
 export async function runOutlineArchive(
   options: OutlineArchiveOptions = {},
 ): Promise<CommandResult> {
@@ -1836,6 +1938,218 @@ function moveSources(sources: EnvelopeSource[]): EnvelopeSource[] {
   return sources
     .filter((source) => relevant.has(source.path))
     .sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function normalizeSplitLine(atLine: number | undefined): number {
+  if (atLine === undefined) {
+    throw new OpenAthorError(
+      "OA_OUTLINE_SPLIT_LINE_REQUIRED",
+      "openathor outline split requires --at-line <line>.",
+      { exitCode: 2 },
+    );
+  }
+
+  if (!Number.isFinite(atLine) || !Number.isInteger(atLine) || atLine < 2) {
+    throw new OpenAthorError(
+      "OA_OUTLINE_SPLIT_INVALID",
+      "--at-line must be an integer line number greater than 1.",
+      { exitCode: 2 },
+    );
+  }
+
+  return atLine;
+}
+
+function outlineSplitPlan(
+  text: string,
+  splitAtLine: number,
+  titleBefore: string,
+  titleAfter: string,
+  maxChars: number,
+): OutlineSplitPlan {
+  const lines = splitSourceLines(text);
+
+  if (splitAtLine > lines.length) {
+    throw new OpenAthorError(
+      "OA_OUTLINE_SPLIT_INVALID",
+      `--at-line ${splitAtLine} is outside the manuscript source line range.`,
+      {
+        exitCode: 2,
+        hints: [`The source has ${lines.length} line(s).`],
+      },
+    );
+  }
+
+  const beforeLines = lines.slice(0, splitAtLine - 1);
+  const afterLines = lines.slice(splitAtLine - 1);
+
+  if (!hasMeaningfulLines(beforeLines) || !hasMeaningfulLines(afterLines)) {
+    throw new OpenAthorError(
+      "OA_OUTLINE_SPLIT_INVALID",
+      "Split must leave non-empty text before and after --at-line.",
+      { exitCode: 2 },
+    );
+  }
+
+  return {
+    split_at_line: splitAtLine,
+    line_count: lines.length,
+    before: splitSegment(titleBefore, beforeLines, 1, maxChars),
+    after: splitSegment(titleAfter, afterLines, splitAtLine, maxChars),
+  };
+}
+
+function splitSourceLines(text: string): string[] {
+  const withoutFinalNewline = text.replace(/\r?\n$/, "");
+  return withoutFinalNewline.length > 0 ? withoutFinalNewline.split(/\r?\n/) : [""];
+}
+
+function hasMeaningfulLines(lines: string[]): boolean {
+  return lines.some((line) => line.trim().length > 0);
+}
+
+function splitSegment(
+  title: string,
+  lines: string[],
+  lineStart: number,
+  maxChars: number,
+): OutlineSplitSegment {
+  const rawText = lines.join("\n");
+  const compactText = rawText.replace(/\s+/g, " ").trim();
+  const firstMeaningfulLine = lines.find((line) => line.trim().length > 0)?.trim() ?? "";
+
+  return {
+    title,
+    line_start: lineStart,
+    line_end: lineStart + lines.length - 1,
+    char_count: rawText.trim().length,
+    preview: snippetAround(compactText, 0, 0, maxChars),
+    starts_with_heading: firstMeaningfulLine.startsWith("#"),
+  };
+}
+
+function splitResult(
+  splitPlan: OutlineSplitPlan,
+  applied: boolean,
+): {
+  applied: boolean;
+  split_at_line: number;
+  before_line_range: { start: number; end: number };
+  after_line_range: { start: number; end: number };
+  manuscript_file_modified: false;
+  manuscript_files_created: false;
+  outline_modified: false;
+  index_modified: false;
+} {
+  return {
+    applied,
+    split_at_line: splitPlan.split_at_line,
+    before_line_range: {
+      start: splitPlan.before.line_start,
+      end: splitPlan.before.line_end,
+    },
+    after_line_range: {
+      start: splitPlan.after.line_start,
+      end: splitPlan.after.line_end,
+    },
+    manuscript_file_modified: false,
+    manuscript_files_created: false,
+    outline_modified: false,
+    index_modified: false,
+  };
+}
+
+function splitWrites(target: ResolvedOutlineChapter): EnvelopeWrite[] {
+  const writes: EnvelopeWrite[] = [
+    {
+      path: "outline/chapters.yaml",
+      change_type: "modified",
+      reason: "future_outline_split_metadata",
+    },
+  ];
+
+  if (target.indexedChapter) {
+    writes.push({
+      path: ".openathor/manuscript.index.yaml",
+      change_type: "modified",
+      reason: "future_outline_split_index",
+    });
+  }
+
+  if (target.source_path) {
+    writes.push({
+      path: target.source_path,
+      change_type: "modified",
+      reason: "future_outline_split_manuscript_source",
+    });
+  }
+
+  return writes;
+}
+
+function splitDiff(
+  target: ResolvedOutlineChapter,
+  splitPlan: OutlineSplitPlan,
+): {
+  summary: string;
+  changes: Array<{
+    path: string;
+    field: string;
+    from: string | number | null;
+    to: string | number | null;
+  }>;
+} {
+  return {
+    summary:
+      "Proposal only: identify a chapter split boundary and future metadata/text edits; no files are changed.",
+    changes: [
+      {
+        path: target.source_path ?? "",
+        field: "split_at_line",
+        from: null,
+        to: splitPlan.split_at_line,
+      },
+      {
+        path: "outline/chapters.yaml",
+        field: `chapters[${target.id}].title`,
+        from: target.title,
+        to: splitPlan.before.title,
+      },
+      {
+        path: "outline/chapters.yaml",
+        field: `insert_after[${target.id}].title`,
+        from: null,
+        to: splitPlan.after.title,
+      },
+      {
+        path: ".openathor/manuscript.index.yaml",
+        field: `chapters[${target.id}].source_split`,
+        from: null,
+        to: splitPlan.after.line_start,
+      },
+    ],
+  };
+}
+
+function splitSources(
+  sources: EnvelopeSource[],
+  sourcePath: string,
+  sourceHash: string,
+): EnvelopeSource[] {
+  const relevant = new Set([
+    "outline/chapters.yaml",
+    ".openathor/manuscript.index.yaml",
+    sourcePath,
+  ]);
+  const sourceMap = new Map(
+    sources
+      .filter((source) => relevant.has(source.path))
+      .map((source) => [source.path, source]),
+  );
+
+  sourceMap.set(sourcePath, { path: sourcePath, hash: sourceHash });
+
+  return [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path));
 }
 
 function archiveResult(
