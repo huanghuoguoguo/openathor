@@ -41,6 +41,10 @@ type JudgeEvidencePackage = {
     mode: "deterministic_fixture_runner";
     model: null;
   };
+  operator_transcript?: {
+    path: string;
+    text: string;
+  };
   deterministic_check: {
     ok: boolean;
     fixture_workspace: string;
@@ -120,8 +124,22 @@ program
   .option("--json", "emit JSON")
   .option("--out-dir <path>", "write evidence packages to this directory")
   .option("--scenario <name>", "run one smoke scenario by name")
+  .option(
+    "--operator-transcript <path>",
+    "attach a real Operator Agent transcript file to a single scenario",
+  )
+  .option(
+    "--agent-final-response <path>",
+    "attach a real Operator Agent final response file to a single scenario",
+  )
   .action(
-    async (options: { json?: boolean; outDir?: string; scenario?: string }) => {
+    async (options: {
+      json?: boolean;
+      outDir?: string;
+      scenario?: string;
+      operatorTranscript?: string;
+      agentFinalResponse?: string;
+    }) => {
       const command = "openathor-judge-smoke";
 
       try {
@@ -129,6 +147,8 @@ program
           cwd: process.cwd(),
           outDir: options.outDir,
           scenario: options.scenario,
+          operatorTranscript: options.operatorTranscript,
+          agentFinalResponse: options.agentFinalResponse,
         });
         const output = envelope({
           ok: true,
@@ -193,11 +213,28 @@ async function runJudgeSmoke(input: {
   cwd: string;
   outDir?: string;
   scenario?: string;
+  operatorTranscript?: string;
+  agentFinalResponse?: string;
 }): Promise<JudgeSmokeResult> {
   const scenarios = selectScenarios(input.scenario);
   const evidencePackages: JudgeEvidencePackage[] = [];
   const evidenceFiles: string[] = [];
   const outDir = input.outDir ? path.resolve(input.cwd, input.outDir) : undefined;
+
+  if ((input.operatorTranscript || input.agentFinalResponse) && scenarios.length !== 1) {
+    throw new OpenAthorError(
+      "OA_JUDGE_SCENARIO_REQUIRED",
+      "Attach real Operator Agent evidence with --scenario <name> so it cannot be applied to the wrong package.",
+      { exitCode: 2 },
+    );
+  }
+
+  const operatorTranscript = input.operatorTranscript
+    ? await readAttachment(input.cwd, input.operatorTranscript)
+    : undefined;
+  const agentFinalResponse = input.agentFinalResponse
+    ? await readAttachment(input.cwd, input.agentFinalResponse)
+    : undefined;
 
   if (outDir) {
     await mkdir(outDir, { recursive: true });
@@ -206,7 +243,10 @@ async function runJudgeSmoke(input: {
   for (const scenario of scenarios) {
     const fixture = path.resolve(input.cwd, scenario.fixture);
     const fixtureResult = await runFixtureCheck(fixture);
-    const evidencePackage = buildEvidencePackage(scenario, fixtureResult);
+    const evidencePackage = buildEvidencePackage(scenario, fixtureResult, {
+      operatorTranscript,
+      agentFinalResponse,
+    });
 
     validateEvidencePackage(evidencePackage);
     evidencePackages.push(evidencePackage);
@@ -247,6 +287,10 @@ function selectScenarios(name: string | undefined): SmokeScenario[] {
 function buildEvidencePackage(
   scenario: SmokeScenario,
   fixtureResult: FixtureCheckResult,
+  attachments: {
+    operatorTranscript?: { path: string; text: string };
+    agentFinalResponse?: { path: string; text: string };
+  } = {},
 ): JudgeEvidencePackage {
   const commands = fixtureResult.command_results.map((result) => ({
     command: result.command,
@@ -255,6 +299,11 @@ function buildEvidencePackage(
     writes: result.envelope.writes,
     warnings: result.envelope.warnings,
   }));
+
+  const missingEvidence = [
+    ...(attachments.operatorTranscript ? [] : ["real_operator_agent_transcript"]),
+    "llm_judge_scores",
+  ];
 
   return {
     schema_version: "openathor.judge_evidence.v1",
@@ -266,6 +315,9 @@ function buildEvidencePackage(
       mode: "deterministic_fixture_runner",
       model: null,
     },
+    ...(attachments.operatorTranscript
+      ? { operator_transcript: attachments.operatorTranscript }
+      : {}),
     deterministic_check: {
       ok: true,
       fixture_workspace: fixtureResult.workspace,
@@ -276,7 +328,8 @@ function buildEvidencePackage(
       absent_files: fixtureResult.absent_files,
       unchanged_files: fixtureResult.unchanged_files,
     },
-    agent_final_response: scenario.expected_agent_reply,
+    agent_final_response:
+      attachments.agentFinalResponse?.text.trim() || scenario.expected_agent_reply,
     judge_focus: scenario.judge_focus,
     judge: {
       verdict: "needs_review",
@@ -284,10 +337,7 @@ function buildEvidencePackage(
       scores: Object.fromEntries(
         scoreDimensions.map((dimension) => [dimension, null]),
       ) as Record<JudgeDimension, null>,
-      missing_evidence: [
-        "real_operator_agent_transcript",
-        "llm_judge_scores",
-      ],
+      missing_evidence: missingEvidence,
     },
   };
 }
@@ -342,4 +392,25 @@ export async function readJudgeEvidencePackage(
 ): Promise<JudgeEvidencePackage> {
   const text = await readFile(filePath, "utf8");
   return JSON.parse(text) as JudgeEvidencePackage;
+}
+
+async function readAttachment(
+  cwd: string,
+  relOrAbsPath: string,
+): Promise<{ path: string; text: string }> {
+  const absolutePath = path.resolve(cwd, relOrAbsPath);
+  const text = await readFile(absolutePath, "utf8");
+
+  if (!text.trim()) {
+    throw new OpenAthorError(
+      "OA_JUDGE_EVIDENCE_INVALID",
+      `Evidence attachment is empty: ${relOrAbsPath}`,
+      { exitCode: 4 },
+    );
+  }
+
+  return {
+    path: relOrAbsPath,
+    text,
+  };
 }

@@ -1615,7 +1615,11 @@ async function runConfirmedWriting(
   const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
   const nextOrder = nextDisplayOrder(inspection.manuscriptIndex);
   const chapterId = uniqueNewChapterId(nextOrder, inspection.manuscriptIndex);
-  const title = firstMarkdownHeading(text) ?? `Chapter ${nextOrder}`;
+  const title =
+    firstMarkdownHeading(text) ??
+    titleFromTask(task) ??
+    inspection.config.project.title ??
+    `Chapter ${nextOrder}`;
   const sourcePath = `manuscript/chapter-${String(nextOrder).padStart(3, "0")}.md`;
   const fullSourcePath = path.join(projectRoot, sourcePath);
   const stamp = runStamp();
@@ -2656,6 +2660,16 @@ function firstMarkdownHeading(text: string): string | null {
     .find((line) => line.startsWith("# "));
 
   return heading ? heading.replace(/^#\s+/, "").trim() || null : null;
+}
+
+function titleFromTask(task: string): string | null {
+  const bookTitle = task.match(/《([^》]+)》/u)?.[1]?.trim();
+  if (bookTitle) {
+    return bookTitle;
+  }
+
+  const quotedTitle = task.match(/["“”]([^"“”]+)["“”]/u)?.[1]?.trim();
+  return quotedTitle || null;
 }
 
 function ensureTrailingNewline(text: string): string {

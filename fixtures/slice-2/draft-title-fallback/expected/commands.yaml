@@ -1,0 +1,17 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor draft chapter next --task "写一篇完整短篇小说《最后一班车》" --text "冬夜的公交站台，冷风卷着几片枯叶。" --confirm-write --json
+    ok: true
+    expect_data:
+      target.title: 最后一班车
+      target.source_path: manuscript/chapter-002.md
+  - run: openathor draft chapter next --task "继续写“隧道尽头”" --text "雾从隧道口涌出来。" --confirm-write --json
+    ok: true
+    expect_data:
+      target.title: 隧道尽头
+      target.source_path: manuscript/chapter-003.md
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

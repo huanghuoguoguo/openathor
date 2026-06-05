@@ -74,6 +74,8 @@ Confirmed new-chapter write is allowed only after explicit user confirmation:
 openathor draft chapter next --task "<task>" --text "<manuscript>" --confirm-write --json
 \`\`\`
 
+For confirmed new-chapter writes, make the first line of \`--text\` a Markdown H1 title, for example \`# 最后一班车\`. OpenAthor uses that heading as the chapter title in outline and index metadata.
+
 Confirmed revision is allowed only with a fresh source hash:
 
 \`\`\`bash

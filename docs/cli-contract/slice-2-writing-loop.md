@@ -92,6 +92,14 @@ proposal 模式不得写入 `manuscript/` 或接管原稿路径。
 - `.openathor/manuscript.index.yaml`
 - `runs/run_*.json`
 
+确认写入新章标题来源顺序：
+
+1. `--text` 第一行 Markdown H1，例如 `# 第二章`
+2. `--task` 中的书名号标题，例如 `《最后一班车》`
+3. `--task` 中的引号标题
+4. `openathor.yaml` 中的项目标题
+5. `Chapter N`
+
 不得覆盖已有 manuscript 文件或接管原稿路径。
 
 ## `openathor review`
