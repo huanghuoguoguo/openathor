@@ -110,7 +110,7 @@ openathor export --format markdown
 - proposal 写入前会对 confirmed canon 中的硬约束做确定性冲突拦截，命中时返回 `OA_CANON_CONFLICT` 且不写文件。
 - `style check` 当前是确定性指标和词项扫描，不是 LLM 文风判断。
 - `style analyze` 当前生成 pending style profile，不生成 confirmed profile，不复制参考文本原文。
-- `style revise/profile apply` 当前返回结构化 `OA_COMMAND_NOT_IMPLEMENTED`，避免 Pi 收到非 JSON Commander 错误；完整 style 改写和应用仍待实现。
+- `style profile apply` 已支持 hash 保护的 confirmed profile 激活；`style revise` 当前返回结构化 `OA_COMMAND_NOT_IMPLEMENTED`，避免 Pi 收到非 JSON Commander 错误；完整 style 改写仍待实现。
 - CLI 不调用模型，不覆盖已有正文，不直接修改 confirmed canon。
 - 真实 LLM judge scores attachment 已支持；更完整的真实 Pi Agent 场景集仍待扩展。
 

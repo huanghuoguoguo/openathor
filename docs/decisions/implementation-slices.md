@@ -86,7 +86,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 新增设定默认进入 pending
 - 用户手写冲突能被发现
 
-当前状态：`openathor context` 已作为只读上下文包命令落地，并暴露人物、世界观、时间线和 style profile 资产；`openathor style analyze` 已支持从授权参考文本生成 pending style profile 和 reference 记录；`openathor style profile show` 已作为只读 profile 检查命令落地；`openathor style check` 已作为确定性文风指标检查落地；`plan`、`draft`、`review`、`revise`、`canon sync` 已作为 proposal 入口落地；proposal 写入前会对 confirmed canon 硬约束做确定性冲突拦截，命中 `OA_CANON_CONFLICT` 时不写 run/proposal；确认后的 `draft chapter next` 可填充下一个 planned outline 章或追加新章，标题 fallback 和 `revise chapter --base-hash` 安全改写已落地，并纳入 fixture 回归。`style revise/profile apply` 当前以结构化 `OA_COMMAND_NOT_IMPLEMENTED` 暴露，避免 agent 收到非 JSON 错误；完整 style 改写和应用仍待实现。CLI 仍不调用模型。
+当前状态：`openathor context` 已作为只读上下文包命令落地，并暴露人物、世界观、时间线和 style profile 资产；`openathor style analyze` 已支持从授权参考文本生成 pending style profile 和 reference 记录；`openathor style profile show` 已作为只读 profile 检查命令落地；`openathor style profile apply --confirm --base-hash` 已支持把已审阅 profile 激活为 confirmed project style；`openathor style check` 已作为确定性文风指标检查落地；`plan`、`draft`、`review`、`revise`、`canon sync` 已作为 proposal 入口落地；proposal 写入前会对 confirmed canon 硬约束做确定性冲突拦截，命中 `OA_CANON_CONFLICT` 时不写 run/proposal；确认后的 `draft chapter next` 可填充下一个 planned outline 章或追加新章，标题 fallback 和 `revise chapter --base-hash` 安全改写已落地，并纳入 fixture 回归。`style revise` 当前以结构化 `OA_COMMAND_NOT_IMPLEMENTED` 暴露，避免 agent 收到非 JSON 错误；完整 style 改写仍待实现。CLI 仍不调用模型。
 
 ## Slice 3: Structural Editing
 

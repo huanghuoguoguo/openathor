@@ -32,6 +32,7 @@ import {
   runSkillInstallPi,
   runStyleAnalyze,
   runStyleCheck,
+  runStyleProfileApply,
   runStyleProfileShow,
   runWritingProposal,
   type CommandResult,
@@ -623,6 +624,19 @@ async function dispatchCommand(
     return runStyleProfileShow({ cwd });
   }
 
+  if (parsed.name === "style profile apply") {
+    return runStyleProfileApply({
+      cwd,
+      profileId: parsed.pathArg,
+      diff: parsed.options.diff,
+      confirm: parsed.options.confirm,
+      baseHash: parsed.options.baseHash
+        ? await resolveFixtureHash(cwd, parsed.options.baseHash)
+        : undefined,
+      dryRun: parsed.options.dryRun,
+    });
+  }
+
   if (parsed.name === "style analyze") {
     return runStyleAnalyze({
       cwd,
@@ -644,10 +658,7 @@ async function dispatchCommand(
     });
   }
 
-  if (
-    parsed.name === "style revise" ||
-    parsed.name === "style profile apply"
-  ) {
+  if (parsed.name === "style revise") {
     return runNotImplemented({
       command: `openathor ${parsed.name}`,
       feature: "Style guidance CLI",

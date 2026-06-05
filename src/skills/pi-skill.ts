@@ -27,6 +27,7 @@ openathor search text "<query>" --json
 openathor search related chapter <id-or-order> --json
 openathor search semantic "<query>" --json
 openathor style analyze <authorized-reference-path> --json
+openathor style profile apply <profile-id> --confirm --base-hash <sha256:...> --json
 openathor outline show --json
 openathor outline impact <id-or-order> --json
 openathor style check chapter <id-or-order> --json
@@ -54,6 +55,7 @@ Before writing or advising on project state:
 9. Use \`openathor style check chapter <id-or-order> --json\` after drafting or revising a chapter when style consistency matters.
 10. Use \`openathor outline impact <id-or-order> --json\` before proposing any chapter archive/delete action.
 11. Use \`openathor style analyze <path> --json\` only for user-owned, licensed, public-domain, or otherwise authorized reference text.
+12. Use \`openathor style profile apply <profile-id> --confirm --base-hash <sha256:...> --json\` only after the user approves a pending style profile.
 
 ## Adopting Existing Manuscripts
 
@@ -109,6 +111,7 @@ When using proposal commands:
 - only after explicit user confirmation, rerun asset sync with \`--confirm --base-hash "sha256:..."\`; use the latest source hash from context, sync proposal, or doctor output
 - run \`openathor assets audit --json\` after confirmed asset sync and report unresolved outline links, character link drift, summary drift, and weak character profile summaries
 - after writing or revising chapter prose, run \`openathor style check chapter <id-or-order> --json\` when style stability is part of the task; treat findings as review prompts, not automatic edits
+- do not treat a pending style profile as confirmed guidance; show it to the user and apply it with \`openathor style profile apply ... --confirm --base-hash\` only after explicit approval
 - ask before any file write that affects manuscript, outline, or confirmed canon
 
 ## Outline Safety
