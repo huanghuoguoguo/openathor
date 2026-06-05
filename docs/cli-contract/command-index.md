@@ -104,7 +104,7 @@ openathor export --format markdown
 当前限制：
 
 - `plan/draft/review/revise/canon sync` 是 proposal 模式。
-- `draft chapter next --confirm-write` 支持写入用户确认后的新章文本。
+- `draft chapter next --confirm-write` 支持写入用户确认后的下一章文本；若 outline 中已有可写 planned 章，则填充该 planned 章，否则追加新章。
 - `revise chapter --confirm-write --base-hash` 支持 hash 匹配时确认改写已有章节。
 - `context` 暴露 `bible/world.md`、`bible/characters.md`、`bible/timeline.md` 和 `style/profiles.yaml`，作为长篇资产沉淀入口。
 - proposal 写入前会对 confirmed canon 中的硬约束做确定性冲突拦截，命中时返回 `OA_CANON_CONFLICT` 且不写文件。
