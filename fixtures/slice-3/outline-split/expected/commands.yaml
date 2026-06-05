@@ -1,0 +1,32 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor outline split 1 --at-line 1 --title-before "雨夜电话" --title-after "旧案钥匙" --json
+    ok: false
+    error_code: OA_OUTLINE_SPLIT_INVALID
+  - run: openathor outline split 1 --at-line 6 --title-before "雨夜电话" --title-after "旧案钥匙" --json
+    ok: true
+    expect_data:
+      mode: proposal
+      split_at_line: 6
+      target.source_path: 正文/001-雨夜.md
+      before.title: 雨夜电话
+      before.line_start: 1
+      before.line_end: 5
+      before.starts_with_heading: true
+      after.title: 旧案钥匙
+      after.line_start: 6
+      result.applied: false
+      result.manuscript_file_modified: false
+      result.manuscript_files_created: false
+      result.outline_modified: false
+      result.index_modified: false
+      confirmed_write_supported: false
+  - run: openathor outline show --json
+    ok: true
+    expect_data:
+      outline.chapter_count: 1
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

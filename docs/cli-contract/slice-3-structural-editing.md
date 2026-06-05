@@ -9,12 +9,15 @@
 - 查看章节大纲
 - 插入 planned 章节
 - 移动章节展示顺序
+- 生成拆章 proposal
 - 归档前影响分析
 - 用户确认后的章节归档
 
 插章只修改结构化元数据，不创建正文文件，不移动、不重命名、不删除已有正文文件。
 
 移章只修改结构化元数据中的 `display_order`，不移动、不重命名、不删除已有正文文件。
+
+拆章当前只生成 proposal，不修改正文、outline 或 index。
 
 归档只修改结构化元数据，不移动、不重命名、不删除正文文件。
 
@@ -258,10 +261,70 @@ openathor outline move <target> --after <target> [--json] [--confirm] [--dry-run
 - `OA_OUTLINE_TARGET_NOT_FOUND`
 - `OA_OUTLINE_MOVE_INVALID`
 
+## `openathor outline split`
+
+### 参数
+
+```bash
+openathor outline split <target> --at-line <line> --title-before <title> --title-after <title> [--json] [--dry-run] [--diff] [--max-chars <count>]
+```
+
+`target` 可以是章节 ID 或 display order。`--at-line` 是第二段正文的第一行。
+
+当前行为始终是 proposal-only：不支持 confirmed write，不修改正文文件，不修改 `outline/chapters.yaml`，不修改 `.openathor/manuscript.index.yaml`。
+
+### Output data
+
+`data` 包含：
+
+- `dry_run`
+- `mode`
+- `command`
+- `target`
+- `split_at_line`
+- `line_count`
+- `before`
+- `after`
+- `result`
+- `user_confirmation_required`
+- `confirmed_write_supported`
+- `planned_writes`
+- `diff`
+- `next_agent_action`
+
+`before` 和 `after` 包含拆分后两段的标题、行号范围、字符数、预览文本和是否以 Markdown heading 开头。
+
+`result` 标明本次没有应用文件变更：
+
+- `applied: false`
+- `manuscript_file_modified: false`
+- `manuscript_files_created: false`
+- `outline_modified: false`
+- `index_modified: false`
+
+### Expected writes
+
+无。
+
+`writes` 必须为空。
+
+`planned_writes` 仅描述未来 confirmed split 可能触碰的文件，供 Pi Agent 向用户解释风险；当前命令不会执行这些写入。
+
+### Errors
+
+- `OA_PROJECT_NOT_FOUND`
+- `OA_SCHEMA_INVALID`
+- `OA_OUTLINE_TARGET_REQUIRED`
+- `OA_OUTLINE_TARGET_NOT_FOUND`
+- `OA_OUTLINE_TITLE_REQUIRED`
+- `OA_OUTLINE_SPLIT_SOURCE_REQUIRED`
+- `OA_OUTLINE_SPLIT_LINE_REQUIRED`
+- `OA_OUTLINE_SPLIT_INVALID`
+
 ## 未实现命令
 
-以下目标命令仍待实现：
+以下目标能力仍待实现：
 
-- `openathor outline split`
+- confirmed write for `openathor outline split`
 - `openathor outline merge`
 - `openathor outline replan`

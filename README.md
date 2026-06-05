@@ -42,6 +42,9 @@ node dist/cli.js index rebuild --json
 node dist/cli.js context chapter 1 --json
 node dist/cli.js outline show --json
 node dist/cli.js outline impact 1 --json
+node dist/cli.js outline insert --after 1 --title "插入章" --confirm --json
+node dist/cli.js outline move 1 --after 2 --confirm --json
+node dist/cli.js outline split 1 --at-line 12 --title-before "前半章" --title-after "后半章" --json
 node dist/cli.js outline archive 1 --confirm --base-hash "sha256:..." --json
 node dist/cli.js search text "关键词" --json
 node dist/cli.js search related chapter 1 --json
@@ -88,7 +91,7 @@ AGENTS.md
 
 ## 开发原则
 
-当前实现覆盖 Slice 1 协议内核、Slice 2 的只读 `context` 入口、plan/draft/review/revise/canon sync 的 proposal 入口、确认后的“下一章”安全写入、带 `--base-hash` 冲突保护的已有章节确认改写、结构编辑 show/impact/archive 最小闭环、只读文本/相关检索，以及 `openathor-judge-smoke` evidence package 自动化。CLI 不调用模型，不做向量语义检索或 sub-agent 调度。进入后续产品切片前，仍需保持以下追溯关系：
+当前实现覆盖 Slice 1 协议内核、Slice 2 的只读 `context` 入口、plan/draft/review/revise/canon sync 的 proposal 入口、确认后的“下一章”安全写入、带 `--base-hash` 冲突保护的已有章节确认改写、结构编辑 show/impact/insert/move/split/archive 最小闭环、只读文本/相关检索，以及 `openathor-judge-smoke` evidence package 自动化。CLI 不调用模型，不做向量语义检索或 sub-agent 调度；`outline split` 当前只生成 proposal，不执行 confirmed write。进入后续产品切片前，仍需保持以下追溯关系：
 
 - 产品形态
 - 目标用户故事

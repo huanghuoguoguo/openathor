@@ -98,8 +98,9 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - `openathor outline impact`
 - `openathor outline insert`
 - `openathor outline move`
+- `openathor outline split`
 - `openathor outline archive`
-- 后续补齐 `split`、`merge`、`replan`
+- 后续补齐 confirmed split、`merge`、`replan`
 
 验收重点：
 
@@ -108,7 +109,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 影响分析覆盖 canon、伏笔、人物状态和后续章节
 - 结构变更后 context 可刷新
 
-当前状态：`openathor outline show`、`openathor outline impact`、`openathor outline insert`、`openathor outline move` 和 `openathor outline archive` 已作为结构编辑最小闭环落地，并纳入 fixture 回归。`split`、`merge` 和 `replan` 仍待实现。
+当前状态：`openathor outline show`、`openathor outline impact`、`openathor outline insert`、`openathor outline move`、`openathor outline split` 和 `openathor outline archive` 已作为结构编辑最小闭环落地，并纳入 fixture 回归。`split` 当前是 proposal-only；confirmed split、`merge` 和 `replan` 仍待实现。
 
 ## Slice 4: Long Project Retrieval
 
