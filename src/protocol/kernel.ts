@@ -2,12 +2,10 @@ import {
   mkdir,
   readdir,
   readFile,
-  rm,
-  stat,
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { parse as parseYaml } from "yaml";
 import { PROTOCOL_VERSION } from "./constants.js";
 import {
   buildAdoptQuestions,
@@ -49,7 +47,6 @@ import type {
 import { OpenAthorError } from "./errors.js";
 import {
   ensureSafeRelativePath,
-  isSafeRelativePath,
   sha256File,
   toPosix,
 } from "./paths.js";
@@ -70,7 +67,6 @@ import {
   resolveOutlineTarget,
   uniqueNewOutlineChapterId,
 } from "./outline-target.js";
-import { readYamlFile, validateSchema } from "./schema.js";
 import {
   archiveDiff,
   archiveResult,
@@ -175,12 +171,27 @@ import { isPlainRecord, optionalString, stringArray } from "./value.js";
 import { PI_SKILL_TEXT } from "../skills/pi-skill.js";
 import {
   STANDARD_ASSET_DIRECTORIES,
-  STANDARD_ASSET_FILES,
   REQUIRED_DIRECTORIES,
   adoptWrites,
   createProjectConfig,
   skeletonWrites,
 } from "./project-layout.js";
+import {
+  inspectionWithManuscriptIndex,
+  inspectProject,
+  readProjectId,
+  rebuildManuscriptIndexFromOutline,
+  writeSqliteIndex,
+} from "./project-inspection.js";
+import {
+  appendText,
+  findProjectRoot,
+  hashSources,
+  hasEntries,
+  pathExists,
+  writeText,
+  writeYaml,
+} from "./project-files.js";
 import { shortHash } from "./identifiers.js";
 import { isTextCandidate } from "./text-path.js";
 import type {
@@ -499,8 +510,6 @@ export async function runIndexRebuild(
 
   if (!dryRun) {
     await writeYaml(projectRoot, manuscriptIndexRel, rebuiltManuscriptIndex);
-    await mkdir(path.dirname(sqlitePath), { recursive: true });
-    await rm(sqlitePath, { force: true });
     await writeSqliteIndex(sqlitePath, inspection);
 
     if (vectorIndex) {
@@ -3991,345 +4000,6 @@ async function writeAdoptSidecars(
   });
 }
 
-async function inspectProject(
-  projectRoot: string,
-  options: { includeIndexWarning: boolean },
-): Promise<{
-  config: ProjectConfig;
-  chapters: ChapterOutline;
-  manuscriptIndex: ManuscriptIndex;
-  sources: EnvelopeSource[];
-  warnings: EnvelopeWarning[];
-  checks: Record<string, boolean>;
-}> {
-  const configPath = path.join(projectRoot, "openathor.yaml");
-  const rawConfig = await readYamlFile(configPath);
-  await validateSchema("openathor", rawConfig, "openathor.yaml");
-  const config = rawConfig as ProjectConfig;
-
-  if (config.protocol_version !== PROTOCOL_VERSION) {
-    throw new OpenAthorError(
-      "OA_PROTOCOL_UNSUPPORTED",
-      `Unsupported protocol_version ${config.protocol_version}.`,
-      { exitCode: 3 },
-    );
-  }
-
-  for (const [field, relPath] of Object.entries(config.paths)) {
-    ensureSafeRelativePath(relPath, `paths.${field}`);
-  }
-
-  const requiredPaths = [
-    config.paths.bible,
-    config.paths.outline,
-    config.paths.manuscript,
-    config.paths.notes,
-    config.paths.reviews,
-    config.paths.runs,
-    path.dirname(config.paths.manuscript_index),
-  ];
-
-  for (const relPath of requiredPaths) {
-    if (!(await isDirectory(path.join(projectRoot, relPath)))) {
-      throw new OpenAthorError(
-        "OA_PROJECT_NOT_FOUND",
-        `Required directory is missing: ${relPath}`,
-        { exitCode: 3 },
-      );
-    }
-  }
-
-  const chaptersRel = path.join(config.paths.outline, "chapters.yaml");
-  const volumesRel = path.join(config.paths.outline, "volumes.yaml");
-  const scenesRel = path.join(config.paths.outline, "scenes.yaml");
-  const manuscriptIndexRel = config.paths.manuscript_index;
-
-  const rawChapters = await readYamlFile(path.join(projectRoot, chaptersRel));
-  await validateSchema("chapters", rawChapters, chaptersRel);
-  const chapters = rawChapters as ChapterOutline;
-
-  if (await pathExists(path.join(projectRoot, volumesRel))) {
-    const rawVolumes = await readYamlFile(path.join(projectRoot, volumesRel));
-    await validateSchema("volumes", rawVolumes, volumesRel);
-  }
-
-  if (await pathExists(path.join(projectRoot, scenesRel))) {
-    const rawScenes = await readYamlFile(path.join(projectRoot, scenesRel));
-    await validateSchema("scenes", rawScenes, scenesRel);
-  }
-
-  const rawIndex = await readYamlFile(path.join(projectRoot, manuscriptIndexRel));
-  await validateSchema("manuscript-index", rawIndex, manuscriptIndexRel);
-  const manuscriptIndex = rawIndex as ManuscriptIndex;
-
-  const chapterIds = new Set<string>();
-  const displayOrders = new Set<number>();
-
-  for (const chapter of chapters.chapters) {
-    if (chapterIds.has(chapter.id)) {
-      throw new OpenAthorError(
-        "OA_OUTLINE_DUPLICATE_ID",
-        `Duplicate chapter id ${chapter.id}.`,
-        { exitCode: 3 },
-      );
-    }
-
-    if (displayOrders.has(chapter.display_order)) {
-      throw new OpenAthorError(
-        "OA_OUTLINE_DUPLICATE_ID",
-        `Duplicate chapter display_order ${chapter.display_order}.`,
-        { exitCode: 3 },
-      );
-    }
-
-    chapterIds.add(chapter.id);
-    displayOrders.add(chapter.display_order);
-  }
-
-  for (const chapter of manuscriptIndex.chapters) {
-    ensureSafeRelativePath(chapter.source_path, "chapters.source_path");
-
-    if (!(await pathExists(path.join(projectRoot, chapter.source_path)))) {
-      throw new OpenAthorError(
-        "OA_MANUSCRIPT_MISSING_SOURCE",
-        `Missing manuscript source file: ${chapter.source_path}`,
-        { exitCode: 3 },
-      );
-    }
-  }
-
-  const sources = await hashSources(projectRoot, [
-    "openathor.yaml",
-    chaptersRel,
-    volumesRel,
-    scenesRel,
-    manuscriptIndexRel,
-    ...STANDARD_ASSET_FILES,
-    ...manuscriptIndex.chapters.map((chapter) => chapter.source_path),
-  ]);
-
-  const warnings: EnvelopeWarning[] = [];
-  for (const relPath of STANDARD_ASSET_FILES) {
-    if (!(await pathExists(path.join(projectRoot, relPath)))) {
-      warnings.push({
-        code: "OA_PROJECT_ASSET_MISSING",
-        message: `Standard project asset is missing: ${relPath}`,
-        severity: "medium",
-      });
-    }
-  }
-
-  const indexedChapterIds = new Set(manuscriptIndex.chapters.map((chapter) => chapter.id));
-  for (const chapter of chapters.chapters) {
-    if (chapter.status !== "planned" && chapter.manuscript_path && !indexedChapterIds.has(chapter.id)) {
-      warnings.push({
-        code: "OA_MANUSCRIPT_INDEX_STALE",
-        message: `Manuscript index is missing outlined chapter ${chapter.id}.`,
-        severity: "medium",
-      });
-    }
-  }
-
-  if (options.includeIndexWarning && (await isIndexStale(projectRoot, config, sources))) {
-    warnings.push({
-      code: "OA_INDEX_STALE",
-      message: "The derived SQLite index is missing or older than source files.",
-      severity: "medium",
-    });
-  }
-
-  return {
-    config,
-    chapters,
-    manuscriptIndex,
-    sources,
-    warnings,
-    checks: {
-      openathor_yaml: true,
-      protocol_version: true,
-      required_directories: true,
-      outline_chapters: true,
-      manuscript_index: true,
-      chapter_ids_unique: true,
-      display_order_unique: true,
-      source_paths_exist: true,
-      standard_assets_present: !warnings.some(
-        (warning) => warning.code === "OA_PROJECT_ASSET_MISSING",
-      ),
-      manuscript_index_matches_outline: !warnings.some(
-        (warning) => warning.code === "OA_MANUSCRIPT_INDEX_STALE",
-      ),
-      derived_index_current: warnings.length === 0,
-    },
-  };
-}
-
-async function rebuildManuscriptIndexFromOutline(
-  projectRoot: string,
-  chapters: ChapterOutline,
-  currentIndex: ManuscriptIndex,
-): Promise<ManuscriptIndex> {
-  const currentById = new Map(currentIndex.chapters.map((chapter) => [chapter.id, chapter]));
-  const rebuilt: IndexedChapter[] = [];
-
-  for (const chapter of [...chapters.chapters].sort((a, b) => a.display_order - b.display_order)) {
-    if (chapter.status === "planned" || !chapter.manuscript_path) {
-      continue;
-    }
-
-    ensureSafeRelativePath(chapter.manuscript_path, "chapters.manuscript_path");
-    const fullPath = path.join(projectRoot, chapter.manuscript_path);
-    if (!(await pathExists(fullPath))) {
-      throw new OpenAthorError(
-        "OA_MANUSCRIPT_MISSING_SOURCE",
-        `Missing manuscript source file: ${chapter.manuscript_path}`,
-        { exitCode: 3 },
-      );
-    }
-
-    const existing = currentById.get(chapter.id);
-    rebuilt.push({
-      id: chapter.id,
-      display_order: chapter.display_order,
-      title: chapter.title,
-      source_path: chapter.manuscript_path,
-      status: outlineStatusToIndexStatus(chapter.status),
-      origin: existing?.origin ?? currentIndex.source_mode,
-      content_hash: await sha256File(fullPath),
-      detected_title: existing?.detected_title ?? chapter.title,
-      confidence: existing?.confidence ?? "high",
-    });
-  }
-
-  return {
-    ...currentIndex,
-    generated_at: new Date().toISOString(),
-    chapters: rebuilt,
-  };
-}
-
-async function inspectionWithManuscriptIndex(
-  projectRoot: string,
-  inspection: Awaited<ReturnType<typeof inspectProject>>,
-  manuscriptIndex: ManuscriptIndex,
-): Promise<Awaited<ReturnType<typeof inspectProject>>> {
-  const sources = await hashSources(projectRoot, [
-    "openathor.yaml",
-    path.join(inspection.config.paths.outline, "chapters.yaml"),
-    path.join(inspection.config.paths.outline, "volumes.yaml"),
-    path.join(inspection.config.paths.outline, "scenes.yaml"),
-    inspection.config.paths.manuscript_index,
-    ...STANDARD_ASSET_FILES,
-    ...manuscriptIndex.chapters.map((chapter) => chapter.source_path),
-  ]);
-
-  const assetMissing = [];
-  for (const relPath of STANDARD_ASSET_FILES) {
-    if (!(await pathExists(path.join(projectRoot, relPath)))) {
-      assetMissing.push(relPath);
-    }
-  }
-
-  const warnings: EnvelopeWarning[] = assetMissing.map((relPath) => ({
-    code: "OA_PROJECT_ASSET_MISSING",
-    message: `Standard project asset is missing: ${relPath}`,
-    severity: "medium",
-  }));
-
-  return {
-    ...inspection,
-    manuscriptIndex,
-    sources,
-    warnings,
-    checks: {
-      ...inspection.checks,
-      manuscript_index: true,
-      source_paths_exist: true,
-      standard_assets_present: assetMissing.length === 0,
-      manuscript_index_matches_outline: true,
-      derived_index_current: warnings.length === 0,
-    },
-  };
-}
-
-function outlineStatusToIndexStatus(status: ChapterOutlineEntry["status"]): IndexedChapter["status"] {
-  if (status === "archived") {
-    return "archived";
-  }
-
-  if (status === "revised") {
-    return "revised";
-  }
-
-  return "drafted";
-}
-
-async function writeSqliteIndex(
-  sqlitePath: string,
-  inspection: Awaited<ReturnType<typeof inspectProject>>,
-): Promise<void> {
-  const emitWarning = process.emitWarning;
-  process.emitWarning = (() => undefined) as typeof process.emitWarning;
-  const sqlite = await import("node:sqlite");
-  process.emitWarning = emitWarning;
-  const db = new sqlite.DatabaseSync(sqlitePath);
-
-  try {
-    db.exec(`
-      CREATE TABLE project (
-        id TEXT PRIMARY KEY,
-        title TEXT NOT NULL,
-        protocol_version TEXT NOT NULL,
-        source_policy TEXT NOT NULL
-      );
-      CREATE TABLE chapters (
-        id TEXT PRIMARY KEY,
-        display_order INTEGER NOT NULL,
-        source_path TEXT NOT NULL,
-        content_hash TEXT NOT NULL,
-        status TEXT NOT NULL,
-        origin TEXT NOT NULL,
-        confidence TEXT NOT NULL
-      );
-    `);
-
-    db.prepare(
-      "INSERT INTO project (id, title, protocol_version, source_policy) VALUES (?, ?, ?, ?)",
-    ).run(
-      inspection.config.project.id,
-      inspection.config.project.title,
-      inspection.config.protocol_version,
-      inspection.config.project.source_policy,
-    );
-
-    const insertChapter = db.prepare(
-      `INSERT INTO chapters
-       (id, display_order, source_path, content_hash, status, origin, confidence)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    );
-
-    for (const chapter of inspection.manuscriptIndex.chapters) {
-      insertChapter.run(
-        chapter.id,
-        chapter.display_order,
-        chapter.source_path,
-        chapter.content_hash,
-        chapter.status,
-        chapter.origin,
-        chapter.confidence,
-      );
-    }
-  } finally {
-    db.close();
-  }
-}
-
-async function readProjectId(projectRoot: string): Promise<string | null> {
-  const rawConfig = await readYamlFile(path.join(projectRoot, "openathor.yaml"));
-  await validateSchema("openathor", rawConfig, "openathor.yaml");
-  return (rawConfig as ProjectConfig).project.id;
-}
-
 async function readContextSource(
   projectRoot: string,
   relPath: string,
@@ -4645,113 +4315,6 @@ function resolveContextChapter(
   }
 
   return indexedChapter;
-}
-
-async function findProjectRoot(start: string): Promise<string> {
-  let current = start;
-
-  while (true) {
-    if (await pathExists(path.join(current, "openathor.yaml"))) {
-      return current;
-    }
-
-    const parent = path.dirname(current);
-    if (parent === current) {
-      throw new OpenAthorError(
-        "OA_PROJECT_NOT_FOUND",
-        "No openathor.yaml found in the current directory or its parents.",
-        { exitCode: 2 },
-      );
-    }
-
-    current = parent;
-  }
-}
-
-async function hashSources(root: string, relPaths: string[]): Promise<EnvelopeSource[]> {
-  const unique = [...new Set(relPaths.map((relPath) => toPosix(relPath)))];
-  const sources: EnvelopeSource[] = [];
-
-  for (const relPath of unique) {
-    if (!isSafeRelativePath(relPath)) {
-      continue;
-    }
-
-    const fullPath = path.join(root, relPath);
-    if (await pathExists(fullPath)) {
-      sources.push({
-        path: relPath,
-        hash: await sha256File(fullPath),
-      });
-    }
-  }
-
-  return sources;
-}
-
-async function isIndexStale(
-  root: string,
-  config: ProjectConfig,
-  sources: EnvelopeSource[],
-): Promise<boolean> {
-  const sqlitePath = path.join(root, config.paths.sqlite_index);
-
-  if (!(await pathExists(sqlitePath))) {
-    return true;
-  }
-
-  const sqliteStat = await stat(sqlitePath);
-
-  for (const source of sources) {
-    const sourceStat = await stat(path.join(root, source.path));
-    if (sourceStat.mtimeMs > sqliteStat.mtimeMs + 1) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-async function pathExists(filePath: string): Promise<boolean> {
-  try {
-    await stat(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function isDirectory(filePath: string): Promise<boolean> {
-  try {
-    return (await stat(filePath)).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-async function hasEntries(dirPath: string): Promise<boolean> {
-  try {
-    const entries = await readdir(dirPath);
-    return entries.length > 0;
-  } catch {
-    return false;
-  }
-}
-
-async function writeYaml(root: string, relPath: string, data: unknown): Promise<void> {
-  await writeText(root, relPath, stringifyYaml(data));
-}
-
-async function writeText(root: string, relPath: string, text: string): Promise<void> {
-  await mkdir(path.dirname(path.join(root, relPath)), { recursive: true });
-  await writeFile(path.join(root, relPath), text, "utf8");
-}
-
-async function appendText(root: string, relPath: string, text: string): Promise<void> {
-  await mkdir(path.dirname(path.join(root, relPath)), { recursive: true });
-  const filePath = path.join(root, relPath);
-  const existing = (await pathExists(filePath)) ? await readFile(filePath, "utf8") : "";
-  await writeFile(filePath, `${existing}${existing.endsWith("\n") ? "" : "\n"}${text}`, "utf8");
 }
 
 function runStamp(): string {
