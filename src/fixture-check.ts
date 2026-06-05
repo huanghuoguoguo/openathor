@@ -681,13 +681,13 @@ function parseCommand(command: string): {
 
     if (token === "--title") {
       index += 1;
-      options.title = tokens[index];
+      options.title = unescapeFixtureArgument(tokens[index]);
       continue;
     }
 
     if (token === "--language") {
       index += 1;
-      options.language = tokens[index];
+      options.language = unescapeFixtureArgument(tokens[index]);
       continue;
     }
 
@@ -705,13 +705,13 @@ function parseCommand(command: string): {
 
     if (token === "--task") {
       index += 1;
-      options.task = tokens[index];
+      options.task = unescapeFixtureArgument(tokens[index]);
       continue;
     }
 
     if (token === "--text") {
       index += 1;
-      options.text = tokens[index];
+      options.text = unescapeFixtureArgument(tokens[index]);
       continue;
     }
 
@@ -728,13 +728,13 @@ function parseCommand(command: string): {
 
     if (token === "--after") {
       index += 1;
-      options.after = tokens[index];
+      options.after = unescapeFixtureArgument(tokens[index]);
       continue;
     }
 
     if (token === "--from") {
       index += 1;
-      options.from = tokens[index];
+      options.from = unescapeFixtureArgument(tokens[index]);
       continue;
     }
 
@@ -746,17 +746,17 @@ function parseCommand(command: string): {
 
     if (token === "--title-before") {
       index += 1;
-      options.titleBefore = tokens[index];
+      options.titleBefore = unescapeFixtureArgument(tokens[index]);
       continue;
     }
 
     if (token === "--title-after") {
       index += 1;
-      options.titleAfter = tokens[index];
+      options.titleAfter = unescapeFixtureArgument(tokens[index]);
       continue;
     }
 
-    positional.push(token);
+    positional.push(unescapeFixtureArgument(token));
   }
 
   if (positional[0] === "index" && positional[1] === "rebuild") {
@@ -941,6 +941,15 @@ function parseCommand(command: string): {
     `Unsupported fixture command: ${command}`,
     { exitCode: 4 },
   );
+}
+
+function unescapeFixtureArgument(value: string): string {
+  return value
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, "\\");
 }
 
 async function resolveFixtureHash(cwd: string, value: string): Promise<string> {
