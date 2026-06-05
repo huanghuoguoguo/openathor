@@ -5445,8 +5445,8 @@ export async function runWritingProposal(
 
   const context = await runContext({
     cwd: projectRoot,
-    scope: proposalNeedsChapter(options.kind) ? "chapter" : "project",
-    target: proposalNeedsChapter(options.kind) ? options.target : undefined,
+    scope: proposalNeedsChapter(options) ? "chapter" : "project",
+    target: proposalNeedsChapter(options) ? options.target : undefined,
   });
   const contextData = context.data as {
     context_pack: {
@@ -5454,6 +5454,10 @@ export async function runWritingProposal(
       target: { id: string; display_order: number; title: string; source_path: string } | null;
     };
   };
+  const proposalTarget =
+    options.kind === "draft" && options.target === "next"
+      ? await nextDraftTargetPreview(projectRoot, task)
+      : contextData.context_pack.target;
   const conflicts = detectCanonConflicts(context.data, task);
 
   if (conflicts.length > 0) {
@@ -5471,7 +5475,7 @@ export async function runWritingProposal(
 
   const stamp = runStamp();
   const runRelPath = `runs/run_${stamp}_${options.kind}.json`;
-  const proposalRelPath = proposalPath(options.kind, stamp, contextData.context_pack.target);
+  const proposalRelPath = proposalPath(options.kind, stamp, proposalTarget);
   const writes: EnvelopeWrite[] = [
     {
       path: runRelPath,
@@ -5493,7 +5497,7 @@ export async function runWritingProposal(
       command: proposalCommandName(options.kind),
       created_at: new Date().toISOString(),
       task,
-      target: contextData.context_pack.target,
+      target: proposalTarget,
       sources: context.sources ?? [],
       writes,
       mode: "proposal",
@@ -5503,17 +5507,17 @@ export async function runWritingProposal(
 
     if (options.kind === "canon_sync") {
       await appendText(
-        projectRoot,
-        proposalRelPath,
-        canonPendingProposalText(task, stamp, contextData.context_pack.target),
-      );
-    } else {
-      await writeText(
-        projectRoot,
-        proposalRelPath,
-        proposalMarkdown(options.kind, task, stamp, contextData.context_pack.target),
-      );
-    }
+          projectRoot,
+          proposalRelPath,
+          canonPendingProposalText(task, stamp, proposalTarget),
+        );
+      } else {
+        await writeText(
+          projectRoot,
+          proposalRelPath,
+          proposalMarkdown(options.kind, task, stamp, proposalTarget),
+        );
+      }
   }
 
   return {
@@ -5527,7 +5531,7 @@ export async function runWritingProposal(
       mode: "proposal",
       command: proposalCommandName(options.kind),
       task,
-      target: contextData.context_pack.target,
+      target: proposalTarget,
       context_pack: contextData.context_pack,
       planned_writes: dryRun ? writes : [],
       proposal_path: proposalRelPath,
@@ -9489,8 +9493,12 @@ async function appendText(root: string, relPath: string, text: string): Promise<
   await writeFile(filePath, `${existing}${existing.endsWith("\n") ? "" : "\n"}${text}`, "utf8");
 }
 
-function proposalNeedsChapter(kind: WritingProposalKind): boolean {
-  return kind === "draft" || kind === "review" || kind === "revise";
+function proposalNeedsChapter(options: Pick<WritingProposalOptions, "kind" | "target">): boolean {
+  if (options.kind === "draft" && options.target === "next") {
+    return false;
+  }
+
+  return options.kind === "draft" || options.kind === "review" || options.kind === "revise";
 }
 
 function proposalCommandName(kind: WritingProposalKind): string {
@@ -9499,6 +9507,29 @@ function proposalCommandName(kind: WritingProposalKind): string {
   }
 
   return `openathor ${kind}`;
+}
+
+async function nextDraftTargetPreview(
+  projectRoot: string,
+  task: string,
+): Promise<{ id: string; display_order: number; title: string; source_path: string }> {
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
+  const plannedChapter = nextDraftablePlannedChapter(inspection);
+  const nextOrder = plannedChapter?.display_order ?? nextDisplayOrder(inspection.manuscriptIndex);
+  const chapterId =
+    plannedChapter?.id ?? uniqueNewChapterId(nextOrder, inspection.manuscriptIndex);
+  const title =
+    titleFromTask(task) ??
+    plannedChapter?.title ??
+    inspection.config.project.title ??
+    `Chapter ${nextOrder}`;
+
+  return {
+    id: chapterId,
+    display_order: nextOrder,
+    title,
+    source_path: `manuscript/chapter-${String(nextOrder).padStart(3, "0")}.md`,
+  };
 }
 
 function proposalPath(
