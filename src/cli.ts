@@ -5,6 +5,7 @@ import { OpenAthorError } from "./protocol/errors.js";
 import {
   runAdopt,
   runAssetsAudit,
+  runAssetsSync,
   runContext,
   runDoctor,
   runExport,
@@ -243,7 +244,7 @@ searchCommand
 
 const assetsCommand = program
   .command("assets")
-  .description("Audit longform story assets and outline links.");
+  .description("Audit and sync longform story assets and outline links.");
 
 assetsCommand
   .command("audit")
@@ -259,6 +260,43 @@ assetsCommand
       }),
     );
   });
+
+assetsCommand
+  .command("sync")
+  .description("Sync an agent-provided structured asset package into pending or confirmed assets.")
+  .argument("<scope>", "asset sync scope; currently chapter")
+  .argument("<target>", "chapter id or display order")
+  .requiredOption("--from <path>", "structured asset package JSON/YAML path")
+  .option("--json", "emit JSON")
+  .option("--confirm", "write confirmed assets if the source hash matches")
+  .option("--dry-run", "show planned writes without changing files")
+  .option("--base-hash <hash>", "expected current manuscript source hash")
+  .action(
+    async (
+      scope: string,
+      target: string,
+      options: {
+        from: string;
+        json?: boolean;
+        confirm?: boolean;
+        dryRun?: boolean;
+        baseHash?: string;
+      },
+    ) => {
+      await emitResult(
+        "openathor assets sync",
+        options.json,
+        runAssetsSync({
+          scope: scope === "chapter" ? "chapter" : undefined,
+          target,
+          from: options.from,
+          confirm: options.confirm,
+          dryRun: options.dryRun,
+          baseHash: options.baseHash,
+        }),
+      );
+    },
+  );
 
 const styleCommand = program
   .command("style")

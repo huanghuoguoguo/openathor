@@ -169,6 +169,16 @@ type AssetsAuditOptions = {
   maxChars?: number;
 };
 
+type AssetsSyncOptions = {
+  cwd?: string;
+  scope?: "chapter";
+  target?: string;
+  from?: string;
+  confirm?: boolean;
+  dryRun?: boolean;
+  baseHash?: string;
+};
+
 type ContextOptions = {
   cwd?: string;
   scope?: "project" | "chapter";
@@ -316,6 +326,58 @@ type AssetEntity = {
   source_path: string;
   line: number;
   kind: "character" | "timeline_event" | "hook" | "world";
+};
+
+type AssetSyncCharacter = {
+  id: string;
+  name: string;
+  role: string | null;
+  traits: string[];
+  current_state: string | null;
+  notes: string[];
+};
+
+type AssetSyncTimelineEvent = {
+  id: string;
+  title: string;
+  summary: string | null;
+  notes: string[];
+};
+
+type AssetSyncHook = {
+  id: string;
+  title: string;
+  status: string | null;
+  summary: string | null;
+  notes: string[];
+};
+
+type AssetSyncChapterUpdate = {
+  summary: string | null;
+  links: {
+    characters: string[];
+    timeline_events: string[];
+    hooks: string[];
+  };
+};
+
+type AssetSyncPackage = {
+  characters: AssetSyncCharacter[];
+  timeline_events: AssetSyncTimelineEvent[];
+  hooks: AssetSyncHook[];
+  chapter: AssetSyncChapterUpdate;
+};
+
+type AssetSyncPlan = {
+  package: AssetSyncPackage;
+  new_characters: AssetSyncCharacter[];
+  existing_characters: AssetSyncCharacter[];
+  new_timeline_events: AssetSyncTimelineEvent[];
+  existing_timeline_events: AssetSyncTimelineEvent[];
+  new_hooks: AssetSyncHook[];
+  existing_hooks: AssetSyncHook[];
+  outline_links: AssetSyncChapterUpdate["links"];
+  outline_modified: boolean;
 };
 
 type StyleMetrics = {
@@ -1269,6 +1331,160 @@ export async function runAssetsAudit(
         "When chapter text introduces recurring people, add them to bible/characters.md and outline links.",
         "Treat summary drift as a review prompt, not an automatic edit.",
       ],
+    },
+  };
+}
+
+export async function runAssetsSync(
+  options: AssetsSyncOptions = {},
+): Promise<CommandResult> {
+  if ((options.scope ?? "chapter") !== "chapter") {
+    throw new OpenAthorError(
+      "OA_ASSETS_SYNC_UNSUPPORTED_SCOPE",
+      "openathor assets sync currently supports only chapter scope.",
+      { exitCode: 2 },
+    );
+  }
+
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
+  const targetChapter = resolveContextChapter(
+    options.target,
+    inspection.chapters,
+    inspection.manuscriptIndex,
+  );
+  const sourcePath = targetChapter.source_path;
+  const sourceHash = await sha256File(path.join(projectRoot, sourcePath));
+  const sourceMap = new Map<string, EnvelopeSource>();
+
+  for (const source of inspection.sources) {
+    sourceMap.set(source.path, source);
+  }
+  sourceMap.set(sourcePath, { path: sourcePath, hash: sourceHash });
+
+  const assetPackagePath = normalizeAssetSyncPackagePath(options.from);
+  const assetFiles = await readAssetAuditSources(projectRoot, sourceMap);
+  const syncPackage = await readAssetSyncPackage(projectRoot, assetPackagePath);
+  const targetOutline =
+    inspection.chapters.chapters.find((chapter) => chapter.id === targetChapter.id) ?? null;
+  const plan = buildAssetSyncPlan(syncPackage, assetFiles, targetOutline);
+  const confirm = options.confirm ?? false;
+  const dryRun = options.dryRun ?? false;
+  const stamp = runStamp();
+  const runRelPath = `runs/run_${stamp}_assets_sync.json`;
+  const proposalRelPath = "bible/canon.pending.md";
+  sourceMap.set(assetPackagePath, {
+    path: assetPackagePath,
+    hash: await sha256File(path.join(projectRoot, assetPackagePath)),
+  });
+  const sources = [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path));
+
+  if (confirm) {
+    if (!options.baseHash) {
+      throw new OpenAthorError(
+        "OA_BASE_HASH_REQUIRED",
+        "Confirmed asset sync writes require --base-hash <sha256:...>.",
+        { exitCode: 2 },
+      );
+    }
+
+    if (options.baseHash !== sourceHash) {
+      throw new OpenAthorError(
+        "OA_MANUSCRIPT_CHANGED",
+        `Refusing to sync assets for ${targetChapter.id} because the source hash changed.`,
+        {
+          exitCode: 3,
+          hints: [
+            `Expected ${options.baseHash}.`,
+            `Current ${sourceHash}.`,
+            "Regenerate the asset package from the latest chapter text before confirming.",
+          ],
+        },
+      );
+    }
+  }
+
+  const writes = assetSyncWrites(confirm, plan, runRelPath, proposalRelPath);
+
+  if (!dryRun) {
+    if (confirm) {
+      await writeAssetSyncConfirmed(projectRoot, inspection, targetChapter, plan);
+    } else {
+      await appendText(
+        projectRoot,
+        proposalRelPath,
+        assetSyncPendingText(stamp, targetChapter, sourceHash, plan),
+      );
+    }
+
+    await writeYaml(projectRoot, runRelPath, {
+      agent_role: "openathor-cli",
+      command: "openathor assets sync",
+      created_at: new Date().toISOString(),
+      mode: confirm ? "confirmed_write" : "proposal",
+      target: {
+        id: targetChapter.id,
+        display_order: targetChapter.display_order,
+        title: targetChapter.title,
+        source_path: sourcePath,
+      },
+      source_hash: sourceHash,
+      base_hash: options.baseHash ?? null,
+      asset_package_path: assetPackagePath,
+      summary: assetSyncSummary(plan),
+      writes,
+      sources,
+      user_confirmation_required: !confirm,
+    });
+  }
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources,
+    writes: dryRun ? [] : writes,
+    warnings: inspection.warnings,
+    data: {
+      dry_run: dryRun,
+      mode: confirm ? "confirmed_write" : "proposal",
+      command: "openathor assets sync",
+      target: {
+        id: targetChapter.id,
+        display_order: targetChapter.display_order,
+        title: targetChapter.title,
+        source_path: sourcePath,
+      },
+      source_hash: sourceHash,
+      base_hash: options.baseHash ?? null,
+      asset_package_path: assetPackagePath,
+      planned_writes: dryRun ? writes : [],
+      run_path: runRelPath,
+      proposal_path: confirm ? null : proposalRelPath,
+      user_confirmation_required: !confirm,
+      result: {
+        characters_added: plan.new_characters.length,
+        timeline_events_added: plan.new_timeline_events.length,
+        hooks_added: plan.new_hooks.length,
+        outline_modified: plan.outline_modified,
+        confirmed_outline_written: confirm && plan.outline_modified,
+        confirmed_assets_written: confirm,
+      },
+      sync: {
+        method: "agent_structured_asset_package",
+        package: plan.package,
+        summary: assetSyncSummary(plan),
+        outline_links: plan.outline_links,
+        existing: {
+          characters: plan.existing_characters.map((item) => item.id),
+          timeline_events: plan.existing_timeline_events.map((item) => item.id),
+          hooks: plan.existing_hooks.map((item) => item.id),
+        },
+        pending_note:
+          "The CLI validates and merges structured asset packages; it does not infer complex story facts from prose.",
+      },
+      next_agent_action: confirm
+        ? "Run openathor assets audit --json and refresh context before continuing the longform draft."
+        : "Show this pending asset sync to the user, then rerun with --confirm --base-hash only after explicit approval.",
     },
   };
 }
@@ -5450,6 +5666,568 @@ function extractAssetAuditCoverageTerms(text: string): string[] {
 
 function normalizeAssetAuditText(text: string): string {
   return text.toLowerCase().replace(/\s+/g, "");
+}
+
+async function readAssetSyncPackage(
+  projectRoot: string,
+  safeRelPath: string,
+): Promise<AssetSyncPackage> {
+  const fullPath = path.join(projectRoot, safeRelPath);
+
+  if (!(await pathExists(fullPath))) {
+    throw new OpenAthorError(
+      "OA_ASSETS_SYNC_PACKAGE_NOT_FOUND",
+      `Asset sync package not found: ${safeRelPath}`,
+      { exitCode: 2 },
+    );
+  }
+
+  const text = await readFile(fullPath, "utf8");
+  let parsed: unknown;
+
+  try {
+    parsed =
+      safeRelPath.endsWith(".json") || safeRelPath.endsWith(".jsonc")
+        ? JSON.parse(text)
+        : parseYaml(text);
+  } catch (error) {
+    throw new OpenAthorError(
+      "OA_ASSETS_SYNC_PACKAGE_INVALID",
+      `Cannot parse asset sync package ${safeRelPath}: ${String(error)}`,
+      { exitCode: 3 },
+    );
+  }
+
+  return normalizeAssetSyncPackage(parsed);
+}
+
+function normalizeAssetSyncPackagePath(relPath: string | undefined): string {
+  if (!relPath?.trim()) {
+    throw new OpenAthorError(
+      "OA_ASSETS_SYNC_PACKAGE_REQUIRED",
+      "openathor assets sync requires --from <asset-package.json|yaml>.",
+      { exitCode: 2 },
+    );
+  }
+
+  const safeRelPath = toPosix(relPath.trim());
+  ensureSafeRelativePath(safeRelPath, "--from");
+
+  return safeRelPath;
+}
+
+function normalizeAssetSyncPackage(value: unknown): AssetSyncPackage {
+  if (!isPlainRecord(value)) {
+    throw new OpenAthorError(
+      "OA_ASSETS_SYNC_PACKAGE_INVALID",
+      "Asset sync package must be a JSON/YAML object.",
+      { exitCode: 3 },
+    );
+  }
+
+  const record = value;
+  const chapterRecord = isPlainRecord(record.chapter) ? record.chapter : {};
+  const linksRecord = isPlainRecord(chapterRecord.links) ? chapterRecord.links : {};
+  const pkg: AssetSyncPackage = {
+    characters: normalizeAssetSyncCharacters(record.characters),
+    timeline_events: normalizeAssetSyncTimelineEvents(record.timeline_events),
+    hooks: normalizeAssetSyncHooks(record.hooks),
+    chapter: {
+      summary: optionalString(chapterRecord.summary),
+      links: {
+        characters: stringArray(linksRecord.characters),
+        timeline_events: stringArray(linksRecord.timeline_events),
+        hooks: stringArray(linksRecord.hooks),
+      },
+    },
+  };
+
+  const linkedCharacterIds = new Set(pkg.chapter.links.characters);
+  const linkedTimelineIds = new Set(pkg.chapter.links.timeline_events);
+  const linkedHookIds = new Set(pkg.chapter.links.hooks);
+
+  for (const character of pkg.characters) {
+    linkedCharacterIds.add(character.id);
+  }
+  for (const event of pkg.timeline_events) {
+    linkedTimelineIds.add(event.id);
+  }
+  for (const hook of pkg.hooks) {
+    linkedHookIds.add(hook.id);
+  }
+
+  pkg.chapter.links = {
+    characters: [...linkedCharacterIds],
+    timeline_events: [...linkedTimelineIds],
+    hooks: [...linkedHookIds],
+  };
+
+  return pkg;
+}
+
+function normalizeAssetSyncCharacters(value: unknown): AssetSyncCharacter[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item, index) => {
+    if (!isPlainRecord(item)) {
+      throw invalidAssetSyncItem("characters", index, "must be an object");
+    }
+
+    const id = requiredAssetSyncId(item.id, "character", "characters", index);
+    const name = requiredAssetSyncString(item.name, "characters", index, "name");
+
+    return {
+      id,
+      name,
+      role: optionalString(item.role),
+      traits: stringArray(item.traits),
+      current_state: optionalString(item.current_state),
+      notes: stringArray(item.notes),
+    };
+  });
+}
+
+function normalizeAssetSyncTimelineEvents(value: unknown): AssetSyncTimelineEvent[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item, index) => {
+    if (!isPlainRecord(item)) {
+      throw invalidAssetSyncItem("timeline_events", index, "must be an object");
+    }
+
+    const id = requiredAssetSyncId(item.id, "timeline_event", "timeline_events", index);
+
+    return {
+      id,
+      title:
+        optionalString(item.title) ??
+        optionalString(item.name) ??
+        requiredAssetSyncString(item.summary, "timeline_events", index, "title"),
+      summary: optionalString(item.summary),
+      notes: stringArray(item.notes),
+    };
+  });
+}
+
+function normalizeAssetSyncHooks(value: unknown): AssetSyncHook[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item, index) => {
+    if (!isPlainRecord(item)) {
+      throw invalidAssetSyncItem("hooks", index, "must be an object");
+    }
+
+    const id = requiredAssetSyncId(item.id, "hook", "hooks", index);
+
+    return {
+      id,
+      title:
+        optionalString(item.title) ??
+        optionalString(item.name) ??
+        requiredAssetSyncString(item.summary, "hooks", index, "title"),
+      status: optionalString(item.status),
+      summary: optionalString(item.summary),
+      notes: stringArray(item.notes),
+    };
+  });
+}
+
+function requiredAssetSyncId(
+  value: unknown,
+  kind: AssetEntity["kind"],
+  section: string,
+  index: number,
+): string {
+  const id = requiredAssetSyncString(value, section, index, "id");
+  if (!isAssetIdForKind(id, kind)) {
+    throw invalidAssetSyncItem(section, index, `id ${id} is not valid for ${kind}`);
+  }
+
+  return id;
+}
+
+function requiredAssetSyncString(
+  value: unknown,
+  section: string,
+  index: number,
+  field: string,
+): string {
+  const text = optionalString(value);
+  if (!text) {
+    throw invalidAssetSyncItem(section, index, `requires ${field}`);
+  }
+
+  return text;
+}
+
+function invalidAssetSyncItem(section: string, index: number, reason: string): OpenAthorError {
+  return new OpenAthorError(
+    "OA_ASSETS_SYNC_PACKAGE_INVALID",
+    `Invalid asset sync package item ${section}.${index}: ${reason}.`,
+    { exitCode: 3 },
+  );
+}
+
+function optionalString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const text = value.trim();
+  return text.length > 0 ? text : null;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringArray(value: unknown): string[] {
+  const values = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+  return uniqueLimited(
+    values
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter((item) => item.length > 0),
+    100,
+  );
+}
+
+function buildAssetSyncPlan(
+  syncPackage: AssetSyncPackage,
+  assetFiles: Awaited<ReturnType<typeof readAssetAuditSources>>,
+  targetOutline: ChapterOutlineEntry | null,
+): AssetSyncPlan {
+  const existingCharacters = assetLookup(
+    extractMarkdownEntities(assetFiles.characters.text, "bible/characters.md", "character"),
+  );
+  const existingTimelineEvents = assetLookup(
+    extractMarkdownEntities(
+      assetFiles.timeline.text,
+      "bible/timeline.md",
+      "timeline_event",
+    ),
+  );
+  const existingHooks = assetLookup(
+    extractMarkdownEntities(assetFiles.hooks.text, "notes/hooks.md", "hook"),
+  );
+  const targetLinks = targetOutline?.links ?? {};
+  const currentLinks = {
+    characters: stringLinks(targetLinks.characters),
+    timeline_events: stringLinks(targetLinks.timeline_events),
+    hooks: stringLinks(targetLinks.hooks),
+  };
+  const outlineLinks = {
+    characters: uniqueLimited(
+      [...currentLinks.characters, ...syncPackage.chapter.links.characters],
+      100,
+    ),
+    timeline_events: uniqueLimited(
+      [...currentLinks.timeline_events, ...syncPackage.chapter.links.timeline_events],
+      100,
+    ),
+    hooks: uniqueLimited([...currentLinks.hooks, ...syncPackage.chapter.links.hooks], 100),
+  };
+
+  const summaryModified =
+    Boolean(syncPackage.chapter.summary) &&
+    syncPackage.chapter.summary !== (targetOutline?.summary ?? null);
+  const linksModified =
+    outlineLinks.characters.join("\u0000") !== currentLinks.characters.join("\u0000") ||
+    outlineLinks.timeline_events.join("\u0000") !==
+      currentLinks.timeline_events.join("\u0000") ||
+    outlineLinks.hooks.join("\u0000") !== currentLinks.hooks.join("\u0000");
+
+  return {
+    package: syncPackage,
+    new_characters: syncPackage.characters.filter(
+      (item) => !existingCharacters.has(item.id) && !existingCharacters.has(item.name),
+    ),
+    existing_characters: syncPackage.characters.filter(
+      (item) => existingCharacters.has(item.id) || existingCharacters.has(item.name),
+    ),
+    new_timeline_events: syncPackage.timeline_events.filter(
+      (item) => !existingTimelineEvents.has(item.id) && !existingTimelineEvents.has(item.title),
+    ),
+    existing_timeline_events: syncPackage.timeline_events.filter(
+      (item) => existingTimelineEvents.has(item.id) || existingTimelineEvents.has(item.title),
+    ),
+    new_hooks: syncPackage.hooks.filter(
+      (item) => !existingHooks.has(item.id) && !existingHooks.has(item.title),
+    ),
+    existing_hooks: syncPackage.hooks.filter(
+      (item) => existingHooks.has(item.id) || existingHooks.has(item.title),
+    ),
+    outline_links: outlineLinks,
+    outline_modified: summaryModified || linksModified,
+  };
+}
+
+function assetSyncWrites(
+  confirm: boolean,
+  plan: AssetSyncPlan,
+  runRelPath: string,
+  proposalRelPath: string,
+): EnvelopeWrite[] {
+  const writes: EnvelopeWrite[] = [
+    {
+      path: runRelPath,
+      change_type: "created",
+      reason: "assets_sync_run_record",
+    },
+  ];
+
+  if (!confirm) {
+    writes.push({
+      path: proposalRelPath,
+      change_type: "modified",
+      reason: "assets_sync_pending_proposal",
+    });
+    return writes;
+  }
+
+  if (plan.new_characters.length > 0) {
+    writes.push({
+      path: "bible/characters.md",
+      change_type: "modified",
+      reason: "assets_sync_new_characters",
+    });
+  }
+
+  if (plan.new_timeline_events.length > 0) {
+    writes.push({
+      path: "bible/timeline.md",
+      change_type: "modified",
+      reason: "assets_sync_new_timeline_events",
+    });
+  }
+
+  if (plan.new_hooks.length > 0) {
+    writes.push({
+      path: "notes/hooks.md",
+      change_type: "modified",
+      reason: "assets_sync_new_hooks",
+    });
+  }
+
+  if (plan.outline_modified) {
+    writes.push({
+      path: "outline/chapters.yaml",
+      change_type: "modified",
+      reason: "assets_sync_chapter_outline_links",
+    });
+  }
+
+  if (
+    plan.existing_characters.length > 0 ||
+    plan.existing_timeline_events.length > 0 ||
+    plan.existing_hooks.length > 0
+  ) {
+    writes.push({
+      path: proposalRelPath,
+      change_type: "modified",
+      reason: "assets_sync_existing_asset_update_pending",
+    });
+  }
+
+  return writes;
+}
+
+async function writeAssetSyncConfirmed(
+  projectRoot: string,
+  inspection: Awaited<ReturnType<typeof inspectProject>>,
+  targetChapter: IndexedChapter,
+  plan: AssetSyncPlan,
+): Promise<void> {
+  if (plan.new_characters.length > 0) {
+    await appendText(
+      projectRoot,
+      "bible/characters.md",
+      assetSyncCharactersMarkdown(plan.new_characters),
+    );
+  }
+
+  if (plan.new_timeline_events.length > 0) {
+    await appendText(
+      projectRoot,
+      "bible/timeline.md",
+      assetSyncTimelineMarkdown(plan.new_timeline_events),
+    );
+  }
+
+  if (plan.new_hooks.length > 0) {
+    await appendText(projectRoot, "notes/hooks.md", assetSyncHooksMarkdown(plan.new_hooks));
+  }
+
+  if (
+    plan.existing_characters.length > 0 ||
+    plan.existing_timeline_events.length > 0 ||
+    plan.existing_hooks.length > 0
+  ) {
+    await appendText(
+      projectRoot,
+      "bible/canon.pending.md",
+      assetSyncExistingUpdatePendingText(plan),
+    );
+  }
+
+  if (plan.outline_modified) {
+    const updatedChapters: ChapterOutline = {
+      chapters: inspection.chapters.chapters.map((chapter) =>
+        chapter.id === targetChapter.id
+          ? {
+              ...chapter,
+              status: chapter.status === "planned" ? "drafted" : chapter.status,
+              summary: plan.package.chapter.summary ?? chapter.summary,
+              links: {
+                ...(chapter.links ?? {}),
+                characters: plan.outline_links.characters,
+                timeline_events: plan.outline_links.timeline_events,
+                hooks: plan.outline_links.hooks,
+              },
+            }
+          : chapter,
+      ),
+    };
+    await writeYaml(projectRoot, "outline/chapters.yaml", updatedChapters);
+  }
+}
+
+function assetSyncPendingText(
+  stamp: string,
+  targetChapter: IndexedChapter,
+  sourceHash: string,
+  plan: AssetSyncPlan,
+): string {
+  return [
+    "",
+    `## pending_${stamp}: Asset Sync Proposal`,
+    "",
+    "- status: pending",
+    `- source_ref: ${targetChapter.id}`,
+    `- source: ${targetChapter.source_path}`,
+    `- source_hash: ${sourceHash}`,
+    "- user_confirmation_required: true",
+    "",
+    "Summary:",
+    "",
+    `- new_characters: ${plan.new_characters.map((item) => `${item.name} (${item.id})`).join(", ") || "none"}`,
+    `- new_timeline_events: ${plan.new_timeline_events.map((item) => `${item.title} (${item.id})`).join(", ") || "none"}`,
+    `- new_hooks: ${plan.new_hooks.map((item) => `${item.title} (${item.id})`).join(", ") || "none"}`,
+    `- existing_asset_updates_pending: ${
+      plan.existing_characters.length + plan.existing_timeline_events.length + plan.existing_hooks.length
+    }`,
+    "",
+    "Chapter summary:",
+    "",
+    plan.package.chapter.summary ?? "(unchanged)",
+    "",
+    "Chapter links:",
+    "",
+    `- characters: ${plan.outline_links.characters.join(", ") || "none"}`,
+    `- timeline_events: ${plan.outline_links.timeline_events.join(", ") || "none"}`,
+    `- hooks: ${plan.outline_links.hooks.join(", ") || "none"}`,
+    "",
+  ].join("\n");
+}
+
+function assetSyncExistingUpdatePendingText(plan: AssetSyncPlan): string {
+  return [
+    "",
+    "## Asset Update Candidates",
+    "",
+    "- status: pending",
+    "- reason: asset_sync_existing_asset_update",
+    "- user_confirmation_required: true",
+    "",
+    ...plan.existing_characters.flatMap((item) => [
+      `### Character: ${item.name} (${item.id})`,
+      "",
+      item.current_state ? `- current_state: ${item.current_state}` : "- current_state: (unspecified)",
+      item.traits.length > 0 ? `- traits: ${item.traits.join(", ")}` : "- traits: (unspecified)",
+      "",
+    ]),
+    ...plan.existing_timeline_events.flatMap((item) => [
+      `### Timeline Event: ${item.title} (${item.id})`,
+      "",
+      item.summary ? `- summary: ${item.summary}` : "- summary: (unspecified)",
+      "",
+    ]),
+    ...plan.existing_hooks.flatMap((item) => [
+      `### Hook: ${item.title} (${item.id})`,
+      "",
+      item.status ? `- status: ${item.status}` : "- status: (unspecified)",
+      item.summary ? `- summary: ${item.summary}` : "- summary: (unspecified)",
+      "",
+    ]),
+  ].join("\n");
+}
+
+function assetSyncCharactersMarkdown(characters: AssetSyncCharacter[]): string {
+  return [
+    "",
+    "## Characters",
+    "",
+    ...characters.flatMap((character) => [
+      `- id: ${character.id}`,
+      `  name: ${character.name}`,
+      character.role ? `  role: ${character.role}` : null,
+      character.traits.length > 0 ? `  traits: ${character.traits.join("、")}` : null,
+      character.current_state ? `  current_state: ${character.current_state}` : null,
+      ...character.notes.map((note) => `  note: ${note}`),
+      "",
+    ].filter((line): line is string => line !== null)),
+  ].join("\n");
+}
+
+function assetSyncTimelineMarkdown(events: AssetSyncTimelineEvent[]): string {
+  return [
+    "",
+    "## Timeline",
+    "",
+    ...events.flatMap((event) => [
+      `- id: ${event.id}`,
+      `  event: ${event.title}`,
+      event.summary ? `  summary: ${event.summary}` : null,
+      ...event.notes.map((note) => `  note: ${note}`),
+      "",
+    ].filter((line): line is string => line !== null)),
+  ].join("\n");
+}
+
+function assetSyncHooksMarkdown(hooks: AssetSyncHook[]): string {
+  return [
+    "",
+    "## Hooks",
+    "",
+    ...hooks.flatMap((hook) => [
+      `- id: ${hook.id}`,
+      `  hook: ${hook.title}`,
+      hook.status ? `  status: ${hook.status}` : null,
+      hook.summary ? `  summary: ${hook.summary}` : null,
+      ...hook.notes.map((note) => `  note: ${note}`),
+      "",
+    ].filter((line): line is string => line !== null)),
+  ].join("\n");
+}
+
+function assetSyncSummary(plan: AssetSyncPlan): Record<string, number | boolean> {
+  return {
+    package_characters: plan.package.characters.length,
+    package_timeline_events: plan.package.timeline_events.length,
+    package_hooks: plan.package.hooks.length,
+    new_characters: plan.new_characters.length,
+    new_timeline_events: plan.new_timeline_events.length,
+    new_hooks: plan.new_hooks.length,
+    existing_characters: plan.existing_characters.length,
+    existing_timeline_events: plan.existing_timeline_events.length,
+    existing_hooks: plan.existing_hooks.length,
+    outline_modified: plan.outline_modified,
+  };
 }
 
 function styleMetrics(text: string): StyleMetrics {

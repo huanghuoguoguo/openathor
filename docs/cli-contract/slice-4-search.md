@@ -10,7 +10,9 @@
 
 `openathor assets audit` 提供长篇资产连续性审计。它把 `bible/characters.md`、`bible/timeline.md`、`notes/hooks.md`、`outline/chapters.yaml` 和正文提及放在一起扫描，用来发现资产没有沉淀、outline link 悬空、正文出现人物但大纲未关联等漂移风险。
 
-search 和 assets audit 命令只读，不写用户文件。
+`openathor assets sync` 提供写作后资产沉淀入口。它接收 Pi Agent、Operator 或用户生成的结构化资产包，默认写入 pending proposal；只有用户确认且章节 source hash 匹配时，才把新人物、时间线事件、伏笔和章节 outline links 写入明文事实源。
+
+search 和 assets audit 命令只读，不写用户文件。assets sync 是受确认和 hash gate 保护的写命令。
 
 ## `openathor search text`
 
@@ -231,3 +233,84 @@ openathor assets audit [--json] [--max-chars <count>]
 - `assets audit` 只做 Markdown/YAML 文本扫描，不做完整语义事实推理。
 - 人物、timeline 和 hook 支持 `char_` / `ev_` / `hook_` 前缀、Markdown 标题、`## 名称 (id)` 以及 Pi 常写的 `- id: ...` + `name:` / `title:` 列表块。
 - `summary_drift` 是复核提示，不代表自动判定正文错误。
+
+## `openathor assets sync`
+
+### 参数
+
+```bash
+openathor assets sync chapter <target> --from <asset-package.yaml|json> [--json] [--dry-run]
+openathor assets sync chapter <target> --from <asset-package.yaml|json> --confirm --base-hash <sha256:...> [--json] [--dry-run]
+```
+
+`--from` 必须是项目内安全相对路径。资产包是结构化 JSON/YAML，当前支持：
+
+- `characters[]`：`id`、`name`、`role`、`traits`、`current_state`、`notes`
+- `timeline_events[]`：`id`、`title`、`summary`、`notes`
+- `hooks[]`：`id`、`title`、`status`、`summary`、`notes`
+- `chapter.summary`
+- `chapter.links.characters`
+- `chapter.links.timeline_events`
+- `chapter.links.hooks`
+
+CLI 不从自然语言正文里推断复杂事实；资产包必须由 agent 或用户显式提供。
+
+### Proposal 模式
+
+不带 `--confirm` 时：
+
+- 写 `runs/run_*_assets_sync.json`
+- 追加 `bible/canon.pending.md`
+- 不修改 `bible/characters.md`
+- 不修改 `bible/timeline.md`
+- 不修改 `notes/hooks.md`
+- 不修改 `outline/chapters.yaml`
+
+输出必须包含 `source_hash`、`result`、`sync.package` 和 `user_confirmation_required: true`。
+
+### Confirmed write
+
+带 `--confirm --base-hash` 且 hash 匹配时可以写：
+
+- `bible/characters.md`：只追加新增人物
+- `bible/timeline.md`：只追加新增时间线事件
+- `notes/hooks.md`：只追加新增伏笔
+- `outline/chapters.yaml`：更新目标章节摘要和 links
+- `bible/canon.pending.md`：仅保存已有资产的更新候选，不直接改写已有 confirmed 资产
+- `runs/run_*_assets_sync.json`
+
+hash 不匹配时返回 `OA_MANUSCRIPT_CHANGED` 且不得写入。
+
+### Expected writes
+
+proposal 模式：
+
+- `runs/run_*_assets_sync.json`
+- `bible/canon.pending.md`
+
+confirmed write 模式：
+
+- `runs/run_*_assets_sync.json`
+- `bible/characters.md`
+- `bible/timeline.md`
+- `notes/hooks.md`
+- `outline/chapters.yaml`
+- `bible/canon.pending.md`，仅当资产包包含已有资产的更新候选
+
+### Errors
+
+- `OA_PROJECT_NOT_FOUND`
+- `OA_SCHEMA_INVALID`
+- `OA_CONTEXT_TARGET_REQUIRED`
+- `OA_CONTEXT_TARGET_NOT_FOUND`
+- `OA_ASSETS_SYNC_PACKAGE_REQUIRED`
+- `OA_ASSETS_SYNC_PACKAGE_NOT_FOUND`
+- `OA_ASSETS_SYNC_PACKAGE_INVALID`
+- `OA_BASE_HASH_REQUIRED`
+- `OA_MANUSCRIPT_CHANGED`
+
+### 当前限制
+
+- `assets sync` 不从正文自动抽取复杂事实，只处理结构化资产包。
+- 确认写入只追加新资产；已有资产状态更新进入 pending，不直接覆盖原档案。
+- 资产包 schema 当前只覆盖人物、时间线事件、伏笔和章节 outline links，地点、组织、道具等资产后续扩展。

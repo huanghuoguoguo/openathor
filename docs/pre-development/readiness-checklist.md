@@ -66,6 +66,7 @@
 - [x] 审稿 proposal 入口：`openathor review`
 - [x] 改稿 proposal 入口：`openathor revise`
 - [x] canon 同步 pending 入口：`openathor canon sync`
+- [x] 写作后结构化资产沉淀入口：`openathor assets sync`
 - [x] 用户确认后写入下一章新正文：`openathor draft chapter next --confirm-write`
 - [x] 确认写入新章标题 fallback：优先 Markdown H1，其次任务中的书名号/引号标题、项目标题、章节序号
 - [x] 用户确认后改写已有章节正文：`openathor revise chapter --confirm-write --base-hash`
@@ -128,7 +129,7 @@
 - [ ] 定义 `openathor style analyze`
 - [ ] 定义 `openathor style profile show`
 - [ ] 定义 `openathor style check`
-- [ ] 补充 Slice 2+ 命令级合约
+- [x] 补充 Slice 2+ 命令级合约
 
 参考：[CLI Contract](../cli-contract.md)
 
@@ -211,6 +212,7 @@
 - [x] 确定性文本检索：`openathor search text`
 - [x] 确定性相关检索：`openathor search related`
 - [x] 可选派生向量检索：`openathor index rebuild --vector` + `openathor search semantic`
+- [x] 写作后资产沉淀：`openathor assets sync`
 - [ ] confirmed replan
 - [x] LLM-as-judge 自动化 smoke：证据包结构校验和 deterministic replay 已接入 `npm test`
 - [x] 真实 Pi Agent/Operator Agent transcript 可本地附加到单个 evidence package

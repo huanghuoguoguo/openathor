@@ -184,6 +184,21 @@ canon = 已确认发生了什么
 第 13 章大纲说女主没有见过凶手，但第 9 章正文已写她见过背影。需要确认是修改大纲、修改正文，还是把它作为误导性线索。
 ```
 
+## 写作后资产沉淀
+
+长篇验收不能只看正文是否生成，还要看新增人物、事迹、伏笔和章节摘要是否进入明文事实源。
+
+当前实现提供 `openathor assets sync chapter <target> --from <asset-package> --json`：
+
+- Pi Agent/Operator 负责从写作结果整理结构化资产包
+- CLI 负责校验资产 ID、source hash、写入范围和 run 记录
+- 默认只写 pending proposal
+- `--confirm --base-hash` 匹配时才追加新人物、新时间线事件、新伏笔，并更新目标章节 outline links
+- 已有资产的状态更新仍进入 pending，不直接改写 confirmed 资产
+- 同步后必须运行 `openathor assets audit --json` 检查 link drift 和 summary drift
+
+这让“人物性格、事迹和大纲是否漂移”变成可审计的文件变化，而不是只依赖 agent 最终回复。
+
 ## 成功标准
 
 大纲管理的成功标准是：

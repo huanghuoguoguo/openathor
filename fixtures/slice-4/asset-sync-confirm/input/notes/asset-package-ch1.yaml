@@ -1,0 +1,38 @@
+characters:
+  - id: shen-yan
+    name: 沈砚
+    role: 巡夜调查员
+    traits:
+      - 谨慎
+      - 证据优先
+    current_state: 在旧钟楼取得北港纹章铜钥匙，并决定暂不公开报告。
+  - id: gu-qing-he
+    name: 顾青禾
+    role: 档案记录员
+    traits:
+      - 细致
+      - 主动追查
+    current_state: 向沈砚交出带煤灰的铜钥匙。
+timeline_events:
+  - id: event-bell-tower-key
+    title: 旧钟楼铜钥匙被发现
+    summary: 沈砚和顾青禾在旧钟楼齿轮室确认一枚刻有北港纹章、沾有煤灰的铜钥匙。
+  - id: event-blue-light-anomaly
+    title: 港口蓝灯异常亮起
+    summary: 沈砚发现港口蓝灯在三年前火灾记录中不该亮起的时刻出现。
+hooks:
+  - id: hook-missing-clockmaker
+    title: 失踪钟表匠仍可能活着
+    status: opened
+    summary: 顾青禾认为铜钥匙为真时，失踪钟表匠可能仍在暗处活动。
+chapter:
+  summary: 沈砚和顾青禾在旧钟楼齿轮室发现北港纹章铜钥匙，蓝灯异常出现，失踪钟表匠线索被打开。
+  links:
+    characters:
+      - shen-yan
+      - gu-qing-he
+    timeline_events:
+      - event-bell-tower-key
+      - event-blue-light-anomaly
+    hooks:
+      - hook-missing-clockmaker

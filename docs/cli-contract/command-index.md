@@ -20,6 +20,7 @@ openathor skill install pi
 ```bash
 openathor context
 openathor assets audit
+openathor assets sync
 openathor search text
 openathor search related
 openathor search semantic
@@ -165,6 +166,7 @@ openathor export --format markdown
 - `openathor search related`
 - `openathor search semantic`
 - `openathor assets audit`
+- `openathor assets sync`
 - `openathor export --format markdown`
 
 当前限制：
@@ -173,6 +175,7 @@ openathor export --format markdown
 - `search related` 使用词项重叠，不是向量语义检索。
 - `search semantic` 使用可重建的本地 deterministic hash embedding 向量索引，不调用外部 embedding 服务。
 - `assets audit` 使用 Markdown/YAML 文本扫描检查 story assets、outline links 和章节正文提及，不做完整语义事实推理。
+- `assets sync` 接收 agent/用户提供的结构化资产包，默认 pending；确认写入必须提供目标章节 hash，只追加新资产并更新目标章节 outline links，不直接改写已有 confirmed 资产。
 - export 当前只支持完整 manuscript Markdown 合并导出；EPUB/DOCX/PDF 仍不在当前切片内。
 
 ## 命令不变量

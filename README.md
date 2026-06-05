@@ -53,6 +53,9 @@ node dist/cli.js search text "关键词" --json
 node dist/cli.js search related chapter 1 --json
 node dist/cli.js index rebuild --vector --json
 node dist/cli.js search semantic "旧案钥匙 父亲" --json
+node dist/cli.js assets audit --json
+node dist/cli.js assets sync chapter 1 --from notes/asset-package.yaml --json
+node dist/cli.js assets sync chapter 1 --from notes/asset-package.yaml --confirm --base-hash "sha256:..." --json
 node dist/cli.js review chapter 1 --task "检查人物动机" --json
 node dist/cli.js draft chapter next --task "写下一章" --text "# 第二章\n\n正文。" --confirm-write --json
 node dist/cli.js revise chapter 1 --task "确认改写" --text "# 第一章\n\n新正文。" --base-hash "sha256:..." --confirm-write --json
@@ -96,7 +99,7 @@ AGENTS.md
 
 ## 开发原则
 
-当前实现覆盖 Slice 1 协议内核、Slice 2 的只读 `context` 入口、plan/draft/review/revise/canon sync 的 proposal 入口、确认后的“下一章”安全写入、带 `--base-hash` 冲突保护的已有章节确认改写、确定性 `style check`、结构编辑 show/impact/insert/move/split/merge/replan/archive 最小闭环、文本/相关/semantic 检索、长篇资产 audit，以及 `openathor-judge-smoke` evidence package 自动化。CLI 不调用模型写正文，不做 sub-agent 调度；`search semantic` 使用本地可重建派生向量索引，真实 LLM judge scores 只作为本地/手动评估证据保存，不进入必跑 CI。进入后续产品切片前，仍需保持以下追溯关系：
+当前实现覆盖 Slice 1 协议内核、Slice 2 的只读 `context` 入口、plan/draft/review/revise/canon sync 的 proposal 入口、确认后的“下一章”安全写入、带 `--base-hash` 冲突保护的已有章节确认改写、确定性 `style check`、结构编辑 show/impact/insert/move/split/merge/replan/archive 最小闭环、文本/相关/semantic 检索、长篇资产 audit、写作后结构化资产 sync，以及 `openathor-judge-smoke` evidence package 自动化。CLI 不调用模型写正文，不做 sub-agent 调度；`assets sync` 接收 agent/用户提供的结构化资产包并负责 pending/确认写入、hash gate 和 run 记录；`search semantic` 使用本地可重建派生向量索引，真实 LLM judge scores 只作为本地/手动评估证据保存，不进入必跑 CI。进入后续产品切片前，仍需保持以下追溯关系：
 
 - 产品形态
 - 目标用户故事
