@@ -87,6 +87,8 @@ openathor draft chapter next --task "<task>" --text "<manuscript>" --confirm-wri
 
 For confirmed new-chapter writes, make the first line of \`--text\` a Markdown H1 title, for example \`# 最后一班车\`. OpenAthor uses that heading as the chapter title in outline and index metadata.
 
+If the outline already has an unwritten planned chapter, \`openathor draft chapter next --confirm-write\` fills that planned chapter and returns \`filled_planned_chapter: true\`; otherwise it appends a new chapter. After structural edits such as confirmed replan, run \`openathor outline show --json\` before drafting so you know which planned chapter will be filled.
+
 Confirmed revision is allowed only with a fresh source hash:
 
 \`\`\`bash
@@ -98,7 +100,7 @@ When using proposal commands:
 - do not pretend OpenAthor has generated or revised manuscript text
 - use \`openathor context --json\` or \`openathor context chapter <id-or-order> --json\` before writing advice
 - do not overwrite user manuscript files
-- use confirmed draft writes only for \`chapter next\`; do not overwrite existing chapter files
+- use confirmed draft writes only for \`chapter next\`; fill planned outline chapters when available and do not overwrite existing chapter files
 - use confirmed revision only when the source hash comes from the latest \`openathor context\` or \`openathor doctor\` output
 - for writing advice, read relevant plaintext sources and provide suggestions in the conversation
 - after writing or revising longform assets, run \`openathor assets audit --json\` and report unresolved links, drift, and character profile summary before claiming continuity is stable

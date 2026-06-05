@@ -24,7 +24,7 @@ openathor draft chapter next --task <text> --text <manuscript> --confirm-write [
 openathor revise chapter <target> --task <text> --text <manuscript> --base-hash <sha256:...> --confirm-write [--json] [--dry-run]
 ```
 
-`draft chapter next` 只创建新的下一章文件，不覆盖已有正文。
+`draft chapter next` 优先填充下一个未写入的 planned outline 章节；如果不存在可填充 planned 章节，才创建新的下一章文件。它不得覆盖已有正文。
 
 `revise chapter` 必须提供当前正文 hash。hash 不匹配时返回 `OA_MANUSCRIPT_CHANGED`，不得写入。
 
@@ -101,6 +101,8 @@ proposal 模式不得写入 `manuscript/` 或接管原稿路径。
 5. `Chapter N`
 
 不得覆盖已有 manuscript 文件或接管原稿路径。
+
+如果 outline 中存在最小 `display_order` 的 planned 章节，且该章节没有 `manuscript_path`、未登记到 `.openathor/manuscript.index.yaml`，confirmed draft 会沿用该章节的稳定 `id` 和 `display_order`，把它更新为 `drafted` 并写入对应 `manuscript/chapter-NNN.md`。返回数据中的 `filled_planned_chapter` 为 `true`。
 
 ## `openathor review`
 
@@ -181,7 +183,7 @@ openathor canon sync [target] --task <text> [--json] [--dry-run]
 ## 当前限制
 
 - CLI 不调用模型，不保证生成最终文学文本。
-- `draft chapter next --confirm-write` 只写新的下一章。
+- `draft chapter next --confirm-write` 优先填充下一个 planned outline 章节；没有可填充 planned 章节时才追加新章。
 - `revise chapter --confirm-write` 只能在 `--base-hash` 匹配时改写目标章节。
 - proposal 写入前会拦截确定性 confirmed canon 冲突。
 - `canon sync` 不直接写 `bible/canon.md`。

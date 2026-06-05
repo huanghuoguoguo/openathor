@@ -5132,11 +5132,14 @@ async function runConfirmedWriting(
   }
 
   const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
-  const nextOrder = nextDisplayOrder(inspection.manuscriptIndex);
-  const chapterId = uniqueNewChapterId(nextOrder, inspection.manuscriptIndex);
+  const plannedChapter = nextDraftablePlannedChapter(inspection);
+  const nextOrder = plannedChapter?.display_order ?? nextDisplayOrder(inspection.manuscriptIndex);
+  const chapterId =
+    plannedChapter?.id ?? uniqueNewChapterId(nextOrder, inspection.manuscriptIndex);
   const title =
     firstMarkdownHeading(text) ??
     titleFromTask(task) ??
+    plannedChapter?.title ??
     inspection.config.project.title ??
     `Chapter ${nextOrder}`;
   const sourcePath = `manuscript/chapter-${String(nextOrder).padStart(3, "0")}.md`;
@@ -5178,16 +5181,27 @@ async function runConfirmedWriting(
     await writeText(projectRoot, sourcePath, ensureTrailingNewline(text));
     const contentHash = await sha256File(fullSourcePath);
     const updatedChapters: ChapterOutline = {
-      chapters: [
-        ...inspection.chapters.chapters,
-        {
-          id: chapterId,
-          display_order: nextOrder,
-          title,
-          status: "drafted",
-          manuscript_path: sourcePath,
-        },
-      ],
+      chapters: plannedChapter
+        ? inspection.chapters.chapters.map((chapter) =>
+            chapter.id === plannedChapter.id
+              ? {
+                  ...chapter,
+                  title,
+                  status: "drafted" as const,
+                  manuscript_path: sourcePath,
+                }
+              : chapter,
+          )
+        : [
+            ...inspection.chapters.chapters,
+            {
+              id: chapterId,
+              display_order: nextOrder,
+              title,
+              status: "drafted" as const,
+              manuscript_path: sourcePath,
+            },
+          ],
     };
     const updatedIndex: ManuscriptIndex = {
       ...inspection.manuscriptIndex,
@@ -5215,6 +5229,7 @@ async function runConfirmedWriting(
       created_at: new Date().toISOString(),
       task,
       mode: "confirmed_write",
+      filled_planned_chapter: plannedChapter !== null,
       target: {
         id: chapterId,
         display_order: nextOrder,
@@ -5238,6 +5253,7 @@ async function runConfirmedWriting(
       mode: "confirmed_write",
       command: "openathor draft",
       task,
+      filled_planned_chapter: plannedChapter !== null,
       target: {
         id: chapterId,
         display_order: nextOrder,
@@ -8146,6 +8162,23 @@ function nextDisplayOrder(index: ManuscriptIndex): number {
     0,
   );
   return currentMax + 1;
+}
+
+function nextDraftablePlannedChapter(
+  inspection: Awaited<ReturnType<typeof inspectProject>>,
+): ChapterOutlineEntry | null {
+  const indexedIds = new Set(inspection.manuscriptIndex.chapters.map((chapter) => chapter.id));
+
+  return (
+    [...inspection.chapters.chapters]
+      .sort((a, b) => a.display_order - b.display_order || a.id.localeCompare(b.id))
+      .find(
+        (chapter) =>
+          chapter.status === "planned" &&
+          !chapter.manuscript_path &&
+          !indexedIds.has(chapter.id),
+      ) ?? null
+  );
 }
 
 function uniqueNewChapterId(order: number, index: ManuscriptIndex): string {

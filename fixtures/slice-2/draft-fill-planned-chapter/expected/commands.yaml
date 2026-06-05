@@ -1,0 +1,33 @@
+commands:
+  - run: openathor draft chapter next --task "用户确认写入计划中的第二章《追问》" --text "# 追问\n\n林岚沿着雨夜匿名电话留下的旧站台线索，找到废弃候车室里的值班簿。她没有把父亲的名字写成结论，只把广播回声的时间抄在页边。\n\n第二遍广播响起时，检修门后传来脚步声。林岚确认线索仍指向旧站台，但父亲真相还不能提前揭露。" --confirm-write --json
+    ok: true
+    expect_data:
+      filled_planned_chapter: true
+      target.id: ch_002
+      target.display_order: 2
+      target.title: 追问
+      target.source_path: manuscript/chapter-002.md
+  - run: openathor outline show --json
+    ok: true
+    expect_data:
+      outline.chapter_count: 2
+      outline.chapters.0.id: ch_001
+      outline.chapters.0.status: drafted
+      outline.chapters.1.id: ch_002
+      outline.chapters.1.title: 追问
+      outline.chapters.1.status: drafted
+      outline.chapters.1.manuscript_path: manuscript/chapter-002.md
+  - run: openathor context chapter 2 --json
+    ok: true
+    expect_data:
+      context_pack.target.id: ch_002
+      outline.chapter_count: 2
+  - run: openathor index rebuild --json
+    ok: true
+    expect_data:
+      chapters_indexed: 2
+  - run: openathor doctor --json --strict
+    ok: true
+    expect_data:
+      checks.manuscript_index_matches_outline: true
+      checks.source_paths_exist: true

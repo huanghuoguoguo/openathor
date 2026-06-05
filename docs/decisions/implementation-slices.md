@@ -86,7 +86,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 新增设定默认进入 pending
 - 用户手写冲突能被发现
 
-当前状态：`openathor context` 已作为只读上下文包命令落地，并暴露人物、世界观、时间线和 style profile 资产；`openathor style analyze` 已支持从授权参考文本生成 pending style profile 和 reference 记录；`openathor style profile show` 已作为只读 profile 检查命令落地；`openathor style check` 已作为确定性文风指标检查落地；`plan`、`draft`、`review`、`revise`、`canon sync` 已作为 proposal 入口落地；proposal 写入前会对 confirmed canon 硬约束做确定性冲突拦截，命中 `OA_CANON_CONFLICT` 时不写 run/proposal；确认后的 `draft chapter next` 新章写入、标题 fallback 和 `revise chapter --base-hash` 安全改写已落地，并纳入 fixture 回归。`style revise/profile apply` 当前以结构化 `OA_COMMAND_NOT_IMPLEMENTED` 暴露，避免 agent 收到非 JSON 错误；完整 style 改写和应用仍待实现。CLI 仍不调用模型。
+当前状态：`openathor context` 已作为只读上下文包命令落地，并暴露人物、世界观、时间线和 style profile 资产；`openathor style analyze` 已支持从授权参考文本生成 pending style profile 和 reference 记录；`openathor style profile show` 已作为只读 profile 检查命令落地；`openathor style check` 已作为确定性文风指标检查落地；`plan`、`draft`、`review`、`revise`、`canon sync` 已作为 proposal 入口落地；proposal 写入前会对 confirmed canon 硬约束做确定性冲突拦截，命中 `OA_CANON_CONFLICT` 时不写 run/proposal；确认后的 `draft chapter next` 可填充下一个 planned outline 章或追加新章，标题 fallback 和 `revise chapter --base-hash` 安全改写已落地，并纳入 fixture 回归。`style revise/profile apply` 当前以结构化 `OA_COMMAND_NOT_IMPLEMENTED` 暴露，避免 agent 收到非 JSON 错误；完整 style 改写和应用仍待实现。CLI 仍不调用模型。
 
 ## Slice 3: Structural Editing
 
@@ -113,7 +113,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 影响分析覆盖 canon、伏笔、人物状态和后续章节
 - 结构变更后 context 可刷新
 
-当前状态：`openathor outline show`、`openathor outline impact`、`openathor outline insert`、`openathor outline move`、`openathor outline split`、`openathor outline merge`、`openathor outline replan` 和 `openathor outline archive` 已作为结构编辑最小闭环落地，并纳入 fixture 回归。`split --confirm --base-hash` 支持确认拆章写入；`merge --confirm --base-hash --next-base-hash` 支持确认合章写入，会合并到目标正文并归档下一章，不删除原正文文件；`replan --from-package --confirm --base-hash` 支持用结构化 package 替换 planned future outline 章节，不修改正文文件，不替换 drafted/revised 章节。
+当前状态：`openathor outline show`、`openathor outline impact`、`openathor outline insert`、`openathor outline move`、`openathor outline split`、`openathor outline merge`、`openathor outline replan` 和 `openathor outline archive` 已作为结构编辑最小闭环落地，并纳入 fixture 回归。`split --confirm --base-hash` 支持确认拆章写入；`merge --confirm --base-hash --next-base-hash` 支持确认合章写入，会合并到目标正文并归档下一章，不删除原正文文件；`replan --from-package --confirm --base-hash` 支持用结构化 package 替换 planned future outline 章节，不修改正文文件，不替换 drafted/revised 章节；后续 `draft chapter next --confirm-write` 会填充重规划后的下一个 planned 章节，而不是追加重复章节。
 
 ## Slice 4: Long Project Retrieval
 
