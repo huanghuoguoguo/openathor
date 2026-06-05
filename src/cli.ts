@@ -455,13 +455,16 @@ outlineCommand
 
 outlineCommand
   .command("merge")
-  .description("Propose merging adjacent chapters without changing files.")
+  .description("Propose or confirm merging adjacent chapters.")
   .argument("<target>", "first chapter id or display order")
   .argument("<next>", "next adjacent chapter id or display order")
   .option("--title <title>", "proposed merged chapter title")
   .option("--json", "emit JSON")
   .option("--dry-run", "emit the proposal without changing files")
   .option("--diff", "show structured future diff without changing files")
+  .option("--confirm", "write confirmed merge if both source hashes match")
+  .option("--base-hash <hash>", "expected current target manuscript source hash")
+  .option("--next-base-hash <hash>", "expected current next manuscript source hash")
   .option("--max-chars <count>", "maximum characters for merged preview")
   .action(
     async (
@@ -472,6 +475,9 @@ outlineCommand
         json?: boolean;
         dryRun?: boolean;
         diff?: boolean;
+        confirm?: boolean;
+        baseHash?: string;
+        nextBaseHash?: string;
         maxChars?: string;
       },
     ) => {
@@ -482,8 +488,11 @@ outlineCommand
           target,
           next,
           title: options.title,
+          confirm: options.confirm,
           dryRun: options.dryRun,
           diff: options.diff,
+          baseHash: options.baseHash,
+          nextBaseHash: options.nextBaseHash,
           maxChars: options.maxChars ? Number(options.maxChars) : undefined,
         }),
       );

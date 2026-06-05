@@ -206,11 +206,12 @@
 - [x] 拆章 proposal：`openathor outline split`
 - [x] 确认拆章写入：`openathor outline split --confirm --base-hash`
 - [x] 合章 proposal：`openathor outline merge`
+- [x] 确认合章写入：`openathor outline merge --confirm --base-hash --next-base-hash`
 - [x] 重规划 proposal：`openathor outline replan`
 - [x] 确定性文本检索：`openathor search text`
 - [x] 确定性相关检索：`openathor search related`
 - [x] 可选派生向量检索：`openathor index rebuild --vector` + `openathor search semantic`
-- [ ] confirmed merge 和 confirmed replan
+- [ ] confirmed replan
 - [x] LLM-as-judge 自动化 smoke：证据包结构校验和 deterministic replay 已接入 `npm test`
 - [x] 真实 Pi Agent/Operator Agent transcript 可本地附加到单个 evidence package
 - [x] LLM judge scores 可本地附加到单个 evidence package

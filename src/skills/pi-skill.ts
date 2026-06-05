@@ -119,7 +119,13 @@ Confirmed split is allowed only after explicit user confirmation and a fresh sou
 openathor outline split <id-or-order> --at-line <line> --title-before "<title>" --title-after "<title>" --confirm --base-hash "sha256:..." --json
 \`\`\`
 
-Confirmed merge and confirmed replan are not implemented. Do not edit outline/index manually to simulate them.
+Confirmed merge is allowed only after explicit user confirmation and fresh source hashes for both adjacent chapters. It merges into the target chapter, archives the next chapter, and does not delete manuscript files:
+
+\`\`\`bash
+openathor outline merge <id-or-order> <next-id-or-order> --title "<title>" --confirm --base-hash "sha256:..." --next-base-hash "sha256:..." --json
+\`\`\`
+
+Confirmed replan is not implemented. Do not edit outline/index manually to simulate it.
 
 Before archiving or deleting a chapter:
 
