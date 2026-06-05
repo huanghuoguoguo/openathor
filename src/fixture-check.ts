@@ -34,6 +34,7 @@ import {
   runStyleCheck,
   runStyleProfileApply,
   runStyleProfileShow,
+  runStyleRevise,
   runWritingProposal,
   type CommandResult,
 } from "./protocol/kernel.js";
@@ -659,10 +660,19 @@ async function dispatchCommand(
   }
 
   if (parsed.name === "style revise") {
-    return runNotImplemented({
-      command: `openathor ${parsed.name}`,
-      feature: "Style guidance CLI",
-      hints: ["Style commands are intentionally structured as not implemented until the style slice is built."],
+    return runStyleRevise({
+      cwd,
+      scope: parsed.options.scope === "chapter" ? "chapter" : undefined,
+      target: parsed.pathArg,
+      goal: parsed.options.goal,
+      text: parsed.options.text,
+      confirmWrite: parsed.options.confirmWrite,
+      baseHash: parsed.options.baseHash
+        ? await resolveFixtureHash(cwd, parsed.options.baseHash)
+        : undefined,
+      dryRun: parsed.options.dryRun,
+      diff: parsed.options.diff,
+      maxChars: parsed.options.maxChars,
     });
   }
 
@@ -730,6 +740,7 @@ function parseCommand(command: string): {
     maxChars?: number;
     limit?: number;
     task?: string;
+    goal?: string;
     text?: string;
     profileId?: string;
     name?: string;
@@ -865,6 +876,12 @@ function parseCommand(command: string): {
       continue;
     }
 
+    if (token === "--goal") {
+      index += 1;
+      options.goal = unescapeFixtureArgument(tokens[index]);
+      continue;
+    }
+
     if (token === "--text") {
       index += 1;
       options.text = unescapeFixtureArgument(tokens[index]);
@@ -984,6 +1001,8 @@ function parseCommand(command: string): {
   }
 
   if (positional[0] === "style" && positional[1] === "revise") {
+    options.scope = positional[2] === "chapter" ? "chapter" : undefined;
+
     return {
       display: "openathor style revise",
       name: "style revise",

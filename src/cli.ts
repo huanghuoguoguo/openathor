@@ -28,6 +28,7 @@ import {
   runStyleCheck,
   runStyleProfileApply,
   runStyleProfileShow,
+  runStyleRevise,
   runWritingProposal,
 } from "./protocol/kernel.js";
 
@@ -361,19 +362,44 @@ styleCommand
 
 styleCommand
   .command("revise")
-  .description("Create a style-guided revision proposal.")
+  .description("Create or confirm a style-guided revision.")
   .argument("<scope>", "style revision scope; currently chapter")
   .argument("<target>", "chapter id or display order")
   .option("--goal <text>", "style revision goal")
+  .option("--text <text>", "confirmed replacement manuscript text")
+  .option("--confirm-write", "write a confirmed style revision if --base-hash matches")
+  .option("--base-hash <hash>", "expected current source hash")
+  .option("--diff", "show structured diff without changing files")
   .option("--json", "emit JSON")
-  .action(async (_scope: string, _target: string, _options: { goal?: string; json?: boolean }) => {
+  .option("--dry-run", "show planned writes without changing files")
+  .option("--max-chars <count>", "maximum characters per style finding snippet")
+  .action(async (
+    scope: string,
+    target: string,
+    options: {
+      goal?: string;
+      text?: string;
+      confirmWrite?: boolean;
+      baseHash?: string;
+      diff?: boolean;
+      json?: boolean;
+      dryRun?: boolean;
+      maxChars?: string;
+    },
+  ) => {
     await emitResult(
       "openathor style revise",
-      _options.json,
-      runNotImplemented({
-        command: "openathor style revise",
-        feature: "Style-guided revision",
-        hints: ["Use openathor revise chapter <target> --task ... for proposal-mode revision."],
+      options.json,
+      runStyleRevise({
+        scope: scope === "chapter" ? "chapter" : undefined,
+        target,
+        goal: options.goal,
+        text: options.text,
+        confirmWrite: options.confirmWrite,
+        baseHash: options.baseHash,
+        diff: options.diff,
+        dryRun: options.dryRun,
+        maxChars: options.maxChars ? Number(options.maxChars) : undefined,
       }),
     );
   });

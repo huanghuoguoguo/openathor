@@ -20,8 +20,18 @@ commands:
       method: deterministic_style_metric_scan
     expect_data_path: metrics.target.average_sentence_chars
   - run: openathor style revise chapter 1 --json
-    ok: false
-    error_code: OA_COMMAND_NOT_IMPLEMENTED
+    ok: true
+    expect_data:
+      mode: proposal
+      command: openathor style revise
+      target.display_order: 1
+      active_profile_present: false
+      result.applied: false
+      result.manuscript_modified: false
+      result.reference_text_copied: false
+    expect_data_path: proposal_path
+    expect_warnings:
+      - OA_STYLE_ACTIVE_PROFILE_MISSING
   - run: openathor doctor --json
     ok: true
   - run: openathor index rebuild --json

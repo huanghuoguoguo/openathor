@@ -131,7 +131,7 @@ openathor style revise chapter 5 --goal "更冷静克制" --diff
 - `style check` 可以检查新章节和项目文风是否偏离
 - 重大风格变化需要用户确认后写入 `bible/style.md`
 
-当前实现中，`openathor style analyze <path> --json` 已支持把用户授权参考文本转成 pending style profile 和 reference 记录；`openathor style check chapter <target> --json` 已作为确定性只读检查落地。它比较目标章节与项目其他章节的句长、对话比例、段落长度、动作细节词项和情绪解释词项，并扫描 `bible/style.md` / `style/profiles.yaml` 中的 `avoid` 规则命中。二者都不调用模型，不自动改稿，不把参考文本原文复制到写作上下文。
+当前实现中，`openathor style analyze <path> --json` 已支持把用户授权参考文本转成 pending style profile 和 reference 记录；`openathor style check chapter <target> --json` 已作为确定性只读检查落地。它比较目标章节与项目其他章节的句长、对话比例、段落长度、动作细节词项和情绪解释词项，并扫描 `bible/style.md` / `style/profiles.yaml` 中的 `avoid` 规则命中。`openathor style revise chapter <target> --goal <goal>` 已支持 proposal、diff 和 `--confirm-write --base-hash` 写入流程，但修订正文仍由 Pi/Operator Agent 或用户在 CLI 外部生成。上述命令都不调用模型，不把参考文本原文复制到写作上下文。
 
 ## 首个纵切边界
 
@@ -150,7 +150,7 @@ openathor style revise chapter 5 --goal "更冷静克制" --diff
 暂不做：
 
 - 自动分析参考文本并写入 confirmed profile
-- 自动 style revise
+- 自动生成 style revision 正文
 - 自动判定任意作家风格
 - 大规模风格库
 - 按作家名字一键仿写

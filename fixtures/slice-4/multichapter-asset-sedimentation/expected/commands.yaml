@@ -19,6 +19,7 @@ commands:
     ok: true
     expect_data:
       mode: confirmed_write
+      sync.summary.existing_characters: 2
       result.characters_added: 1
       result.timeline_events_added: 2
       result.hooks_added: 1
@@ -33,6 +34,7 @@ commands:
     ok: true
     expect_data:
       mode: confirmed_write
+      sync.summary.existing_characters: 3
       result.characters_added: 1
       result.timeline_events_added: 2
       result.hooks_added: 1
@@ -48,21 +50,28 @@ commands:
       audit.counts.hooks: 3
       audit.counts.unresolved_outline_links: 0
       audit.counts.character_link_drifts: 0
-      audit.counts.weak_character_profile_coverages: 2
+      audit.counts.weak_character_profile_coverages: 0
       audit.counts.weak_character_profile_summaries: 0
       audit.counts.summary_drift_candidates: 0
       audit.counts.unlinked_characters: 0
       audit.assets.characters.0.id: lin-zhi-yu
-      audit.assets.characters.0.profile.current_state.0: 在旧档案室发现地下联络道地图，并把九点水印列为核心证据。
+      audit.assets.characters.0.profile.current_state.0: 在旧报社核对红线账本，并开始怀疑陈默主动引导调查。
+      audit.assets.characters.0.profile.notes.1: "previous_state: 在旧档案室发现地下联络道地图，并把九点水印列为核心证据。"
+      audit.assets.characters.0.profile.notes.2: "previous_state: 带着地下联络道地图进入废弃调车场，并把陈默的潮湿信纸封存。"
       audit.assets.characters.1.id: zhou-yan
+      audit.assets.characters.1.profile.current_state.0: 保护林知雨进入旧报社铅字间，并记起第三声钟响。
+      audit.assets.characters.1.profile.notes.1: "previous_state: 承认三年前九点听见汽笛但没有报告。"
+      audit.assets.characters.1.profile.notes.2: "previous_state: 确认调车场火灾当夜有人从北门进入，并继续协助林知雨。"
       audit.assets.characters.2.id: chen-mo
+      audit.assets.characters.2.profile.current_state.0: 被许曼证实在火灾前夜去过旧报社。
+      audit.assets.characters.2.profile.notes.1: "previous_state: 留下潮湿信纸，暗示调车场火灾不是事故。"
       audit.assets.characters.3.id: xu-man
       audit.chapter_entity_coverage.2.linked_character_names.3: 许曼
       audit.character_profile_coverage.6.character_id: zhou-yan
       audit.character_profile_coverage.6.matched_fields: 4
       audit.character_profile_coverage.7.character_id: chen-mo
       audit.character_profile_coverage.7.fields.2.field: current_state
-      audit.character_profile_coverage.7.fields.2.coverage_ratio: 0.54
+      audit.character_profile_coverage.7.fields.2.coverage_ratio: 0.33
       audit.character_profile_coverage.8.character_id: xu-man
       audit.character_profile_coverage.8.matched_fields: 3
       audit.character_profile_coverage.8.fields.2.field: current_state
@@ -71,13 +80,13 @@ commands:
       audit.character_profile_summary.0.linked_chapter_count: 3
       audit.character_profile_summary.0.mentioned_chapter_count: 3
       audit.character_profile_summary.0.matched_profile_field_count: 4
-      audit.character_profile_summary.0.coverage_ratio: 0.41
+      audit.character_profile_summary.0.coverage_ratio: 0.5
       audit.character_profile_summary.1.character_id: zhou-yan
       audit.character_profile_summary.1.linked_chapter_count: 3
       audit.character_profile_summary.1.matched_profile_field_count: 4
       audit.character_profile_summary.2.character_id: chen-mo
       audit.character_profile_summary.2.linked_chapter_count: 2
-      audit.character_profile_summary.2.coverage_ratio: 0.22
+      audit.character_profile_summary.2.coverage_ratio: 0.24
       audit.character_profile_summary.3.character_id: xu-man
       audit.character_profile_summary.3.linked_chapter_count: 1
       audit.character_profile_summary.3.coverage_ratio: 0.74

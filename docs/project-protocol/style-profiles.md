@@ -19,7 +19,7 @@ style/
 
 `bible/style.md` 是用户可读的主风格说明。`style/profiles.yaml` 保存结构化风格画像。`style/references.yaml` 记录参考文本来源和授权状态。
 
-当前 CLI 已支持 `openathor style analyze <path> --json` 生成 pending style profile 和 reference 记录，支持 `openathor style profile show --json` 读取这些文件，并在 `openathor context` 中暴露 `style_profiles`。`openathor style profile apply <profile> --confirm --base-hash <hash> --json` 已支持把用户审阅后的 profile 标记为 confirmed/active。`openathor style check chapter <target> --json` 已支持确定性风格指标扫描，用于发现句长、对话比例、动作细节和 avoid 规则命中的漂移候选。`style revise` 仍是目标命令面，当前返回结构化未实现错误。
+当前 CLI 已支持 `openathor style analyze <path> --json` 生成 pending style profile 和 reference 记录，支持 `openathor style profile show --json` 读取这些文件，并在 `openathor context` 中暴露 `style_profiles`。`openathor style profile apply <profile> --confirm --base-hash <hash> --json` 已支持把用户审阅后的 profile 标记为 confirmed/active。`openathor style check chapter <target> --json` 已支持确定性风格指标扫描，用于发现句长、对话比例、动作细节和 avoid 规则命中的漂移候选。`openathor style revise chapter <target> --goal <goal>` 已支持 proposal、diff 和 `--confirm-write --base-hash` 安全写入；修订正文由 Pi/Operator Agent 或用户在 CLI 外部生成，CLI 不调用模型。
 
 ## Profile 示例
 
@@ -90,3 +90,4 @@ archived
 - 用户未确认的风格画像不能覆盖 confirmed style
 - `draft` 和 `revise` 应读取适用的 confirmed style profile
 - `style check` 的确定性 finding 是复核提示，不能自动改写正文或覆盖 confirmed style
+- `style revise` 不能把 pending profile 当 confirmed guidance，不能复制参考文本原文，不能声称 CLI 生成了修订正文

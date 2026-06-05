@@ -1,0 +1,60 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor style analyze style/samples/sample-001.md --profile-id style_sample --name "授权样稿风格" --permission user_owned --source-type user_provided --json
+    ok: true
+    expect_data:
+      mode: pending_profile
+      profile.id: style_sample
+      profile.status: pending
+      result.reference_text_copied: false
+  - run: openathor style profile apply style_sample --confirm --base-hash current:style/profiles.yaml --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      result.applied: true
+      result.active_profile_id: style_sample
+      result.reference_text_copied: false
+  - run: openathor style revise chapter 1 --goal "压低直白说明，增加物理细节和克制对话" --json
+    ok: true
+    expect_data:
+      mode: proposal
+      active_profile_present: true
+      profile.id: style_sample
+      result.applied: false
+      result.manuscript_modified: false
+      result.reference_text_copied: false
+    expect_data_path: proposal_path
+  - run: openathor style revise chapter 1 --goal "压低直白说明，增加物理细节和克制对话" --text "# 样章\n\n雨停以后，站台顶棚还一滴一滴往下落。\n\n林岚把旧车票压进笔记本，指腹在潮软的纸边停了片刻。远处铁轨声散尽，她才抬头。\n\n“这不是第一次。”\n\n灯影在积水里晃了一下，像有人从站台尽头经过。" --diff --json
+    ok: true
+    expect_data:
+      mode: diff
+      active_profile_present: true
+      diff.text_supplied: true
+      result.applied: false
+      result.manuscript_modified: false
+      result.reference_text_copied: false
+    expect_no_writes: true
+  - run: openathor style revise chapter 1 --goal "压低直白说明，增加物理细节和克制对话" --text "# 样章\n\n雨停以后，站台顶棚还一滴一滴往下落。\n\n林岚把旧车票压进笔记本，指腹在潮软的纸边停了片刻。远处铁轨声散尽，她才抬头。\n\n“这不是第一次。”\n\n灯影在积水里晃了一下，像有人从站台尽头经过。" --confirm-write --base-hash sha256:0000000000000000000000000000000000000000000000000000000000000000 --json
+    ok: false
+    error_code: OA_MANUSCRIPT_CHANGED
+  - run: openathor style revise chapter 1 --goal "压低直白说明，增加物理细节和克制对话" --text "# 样章\n\n雨停以后，站台顶棚还一滴一滴往下落。\n\n林岚把旧车票压进笔记本，指腹在潮软的纸边停了片刻。远处铁轨声散尽，她才抬头。\n\n“这不是第一次。”\n\n灯影在积水里晃了一下，像有人从站台尽头经过。" --confirm-write --base-hash current:正文/001-样章.md --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      active_profile_present: true
+      target.display_order: 1
+      result.applied: true
+      result.manuscript_modified: true
+      result.outline_modified: true
+      result.index_modified: true
+      result.reference_text_copied: false
+  - run: openathor style check chapter 1 --json
+    ok: true
+    expect_data:
+      method: deterministic_style_metric_scan
+    expect_data_path: verdict
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

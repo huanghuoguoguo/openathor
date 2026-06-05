@@ -4,7 +4,7 @@
 
 `openathor style` 命令用于让 Pi Agent 检查和维护项目文风稳定性。
 
-当前实现交付确定性只读检查和安全的参考文本分析纵切，不调用模型，不生成作家仿写规则，不把参考文本原文复制到 profile。
+当前实现交付确定性检查、安全的参考文本分析、confirmed style profile 激活，以及 hash 保护的 style revision 写入。CLI 不调用模型，不生成作家仿写规则，不把参考文本原文复制到 profile；修订正文必须由 Pi/Operator Agent 或用户在 CLI 外部生成。
 
 ## `openathor style analyze`
 
@@ -155,12 +155,62 @@ openathor style check chapter <target> [--json] [--max-chars <count>]
 
 - 只做确定性指标和词项扫描，不是 LLM 文风判断。
 - `avoid` 规则命中和句长偏移是复核提示，不代表自动判定作品质量。
-- 解决 drift 时必须通过 `openathor revise` 或用户手动编辑进入确认流程。
+- 解决 drift 时可以通过 `openathor style revise` 进入 proposal/diff/hash-confirm 流程。
 
-## 未实现命令
+## `openathor style revise`
 
-以下命令仍返回结构化 `OA_COMMAND_NOT_IMPLEMENTED`：
+创建或确认一个基于 confirmed style profile 和 `style check` 结果的改稿流程。CLI 只负责 proposal、diff、hash gate 和写入，不生成正文。
 
-- `openathor style revise`
+```bash
+openathor style revise chapter <target> --goal "<goal>" [--json] [--dry-run]
+openathor style revise chapter <target> --goal "<goal>" --text "<revised manuscript>" --diff [--json]
+openathor style revise chapter <target> --goal "<goal>" --text "<revised manuscript>" --confirm-write --base-hash <sha256:...> [--json]
+```
 
-这些能力仍是目标命令面，但不能伪装成已交付。
+### Output data
+
+`data` 包含：
+
+- `mode: proposal | diff | confirmed_write`
+- `goal`
+- `target`
+- `current_hash`
+- `profile`
+- `active_profile_present`
+- `style_check`
+- `diff`
+- `result`
+- `next_agent_action`
+
+`result.reference_text_copied` 必须是 `false`。`diff.manuscript_generated_by_cli` 必须是 `false`。
+
+### Expected writes
+
+默认 proposal 写：
+
+- `reviews/style-revise-<chapter-id>-<stamp>.md`
+- `runs/run_*_style_revise.json`
+
+`--diff` 和 `--dry-run` 不写文件。
+
+confirmed write 写：
+
+- 目标 manuscript source
+- `outline/chapters.yaml`
+- `.openathor/manuscript.index.yaml`
+- `runs/run_*_style_revise.json`
+
+### Safety rules
+
+- confirmed write 必须提供 `--text` 和最新目标章节 `--base-hash`。
+- hash 不匹配返回 `OA_MANUSCRIPT_CHANGED`，不得写文件。
+- 没有 active confirmed style profile 时仍可 proposal，但必须返回 `OA_STYLE_ACTIVE_PROFILE_MISSING` warning。
+- 不得把 pending style profile 当成 confirmed guidance。
+- 不得声称 CLI 生成了修订正文。
+
+### Errors
+
+- `OA_STYLE_UNSUPPORTED_SCOPE`
+- `OA_STYLE_REVISE_TEXT_REQUIRED`
+- `OA_BASE_HASH_REQUIRED`
+- `OA_MANUSCRIPT_CHANGED`
