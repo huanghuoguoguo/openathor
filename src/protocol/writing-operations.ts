@@ -8,7 +8,7 @@ import type {
   WritingProposalKind,
   WritingProposalOptions,
 } from "./model.js";
-import { firstMarkdownHeading, titleFromTask } from "./title.js";
+import { titleFromTask, titleFromText } from "./title.js";
 
 export type WritingTarget = {
   id: string;
@@ -189,7 +189,7 @@ export function buildConfirmedDraftPlan(
   const chapterId =
     plannedChapter?.id ?? uniqueNewChapterId(nextOrder, state.manuscriptIndex);
   const title =
-    firstMarkdownHeading(text) ??
+    titleFromText(text) ??
     titleFromTask(task) ??
     plannedChapter?.title ??
     state.config.project.title ??
@@ -334,7 +334,7 @@ export function buildConfirmedRevisionPlan(input: {
   baseHash: string;
   stamp: string;
 }): ConfirmedRevisionPlan {
-  const title = firstMarkdownHeading(input.text) ?? input.chapter.title;
+  const title = titleFromText(input.text) ?? input.chapter.title;
   const runRelPath = `runs/run_${input.stamp}_revise_confirmed.json`;
 
   return {
