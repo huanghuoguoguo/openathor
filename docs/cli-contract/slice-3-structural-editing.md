@@ -8,10 +8,13 @@
 
 - 查看章节大纲
 - 插入 planned 章节
+- 移动章节展示顺序
 - 归档前影响分析
 - 用户确认后的章节归档
 
 插章只修改结构化元数据，不创建正文文件，不移动、不重命名、不删除已有正文文件。
+
+移章只修改结构化元数据中的 `display_order`，不移动、不重命名、不删除已有正文文件。
 
 归档只修改结构化元数据，不移动、不重命名、不删除正文文件。
 
@@ -206,11 +209,59 @@ openathor outline insert --after <target> --title <title> [--json] [--confirm] [
 - `OA_OUTLINE_TARGET_NOT_FOUND`
 - `OA_OUTLINE_TITLE_REQUIRED`
 
+## `openathor outline move`
+
+### 参数
+
+```bash
+openathor outline move <target> --after <target> [--json] [--confirm] [--dry-run] [--diff]
+```
+
+第一个 `<target>` 是要移动的章节 ID 或 display order。`--after` 是移动后的前置章节 ID 或 display order。
+
+默认行为是不写入，只返回 proposal 和 planned writes。
+
+只有传入 `--confirm` 且没有 `--dry-run` 或 `--diff` 时才写入。
+
+### Output data
+
+`data` 包含：
+
+- `dry_run`
+- `mode`
+- `command`
+- `target`
+- `after`
+- `result`
+- `user_confirmation_required`
+- `planned_writes`
+- `diff`
+- `next_agent_action`
+
+`result` 标明本次是否已应用、目标章节的 display order 变化、所有受影响章节，以及是否移动正文文件。
+
+### Confirmed writes
+
+确认写入时：
+
+- 更新 `outline/chapters.yaml` 中受影响章节的 `display_order`
+- 更新 `.openathor/manuscript.index.yaml` 中受影响已有正文的 `display_order`
+- 写入 `runs/run_*_outline_move.json`
+- 不移动、重命名或删除已有正文文件
+- 不修改 confirmed canon
+
+### Errors
+
+- `OA_PROJECT_NOT_FOUND`
+- `OA_SCHEMA_INVALID`
+- `OA_OUTLINE_TARGET_REQUIRED`
+- `OA_OUTLINE_TARGET_NOT_FOUND`
+- `OA_OUTLINE_MOVE_INVALID`
+
 ## 未实现命令
 
 以下目标命令仍待实现：
 
-- `openathor outline move`
 - `openathor outline split`
 - `openathor outline merge`
 - `openathor outline replan`

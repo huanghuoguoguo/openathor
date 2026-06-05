@@ -108,7 +108,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 影响分析覆盖 canon、伏笔、人物状态和后续章节
 - 结构变更后 context 可刷新
 
-当前状态：`openathor outline show`、`openathor outline impact`、`openathor outline insert` 和 `openathor outline archive` 已作为结构编辑最小闭环落地，并纳入 fixture 回归。`move`、`split`、`merge` 和 `replan` 仍待实现。
+当前状态：`openathor outline show`、`openathor outline impact`、`openathor outline insert`、`openathor outline move` 和 `openathor outline archive` 已作为结构编辑最小闭环落地，并纳入 fixture 回归。`split`、`merge` 和 `replan` 仍待实现。
 
 ## Slice 4: Long Project Retrieval
 

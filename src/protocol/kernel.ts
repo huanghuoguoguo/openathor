@@ -164,6 +164,15 @@ type OutlineInsertOptions = {
   diff?: boolean;
 };
 
+type OutlineMoveOptions = {
+  cwd?: string;
+  target?: string;
+  after?: string;
+  confirm?: boolean;
+  dryRun?: boolean;
+  diff?: boolean;
+};
+
 type OutlineArchiveOptions = {
   cwd?: string;
   target?: string;
@@ -1013,6 +1022,119 @@ export async function runOutlineInsert(
   };
 }
 
+export async function runOutlineMove(
+  options: OutlineMoveOptions = {},
+): Promise<CommandResult> {
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
+  const target = resolveOutlineTarget(
+    options.target,
+    inspection.chapters,
+    inspection.manuscriptIndex,
+  );
+  const after = resolveOutlineTarget(
+    options.after,
+    inspection.chapters,
+    inspection.manuscriptIndex,
+  );
+
+  if (target.id === after.id) {
+    throw new OpenAthorError(
+      "OA_OUTLINE_MOVE_INVALID",
+      "Cannot move a chapter after itself.",
+      { exitCode: 2 },
+    );
+  }
+
+  const dryRun = options.dryRun ?? false;
+  const confirm = options.confirm ?? false;
+  const diff = options.diff ?? false;
+  const previewOnly = dryRun || diff || !confirm;
+  const movedChapters = moveDisplayOrderChanges(inspection.chapters, target.id, after.id);
+  const noOp = movedChapters.length === 0;
+  const stamp = runStamp();
+  const runRelPath = `runs/run_${stamp}_outline_move.json`;
+  const plannedWrites = moveWrites(runRelPath, movedChapters);
+  const data = {
+    dry_run: dryRun,
+    mode: noOp ? "no_op" : previewOnly ? (diff ? "diff" : "proposal") : "confirmed_write",
+    command: "openathor outline move",
+    target: outlineTargetData(target, null),
+    after: outlineTargetData(after, null),
+    result: moveResult(target, after, movedChapters, false),
+    user_confirmation_required: noOp ? false : !confirm,
+    planned_writes: previewOnly ? plannedWrites : [],
+    diff: moveDiff(target, after, movedChapters),
+    next_agent_action: noOp
+      ? "No order change is needed."
+      : previewOnly
+        ? "Show the planned order change to the user and rerun with --confirm only after explicit approval."
+        : "Run openathor outline show --json and refresh context before follow-up writing.",
+  };
+
+  if (noOp || previewOnly) {
+    return {
+      projectRoot,
+      projectId: inspection.config.project.id,
+      sources: moveSources(inspection.sources),
+      writes: [],
+      warnings: inspection.warnings,
+      data,
+    };
+  }
+
+  const displayOrderById = new Map(
+    movedChapters.map((chapter) => [chapter.id, chapter.to_display_order]),
+  );
+  const updatedChapters: ChapterOutline = {
+    chapters: inspection.chapters.chapters
+      .map((chapter) => ({
+        ...chapter,
+        display_order: displayOrderById.get(chapter.id) ?? chapter.display_order,
+      }))
+      .sort((a, b) => a.display_order - b.display_order || a.id.localeCompare(b.id)),
+  };
+  const updatedIndex: ManuscriptIndex = {
+    ...inspection.manuscriptIndex,
+    generated_at: new Date().toISOString(),
+    chapters: inspection.manuscriptIndex.chapters
+      .map((chapter) => ({
+        ...chapter,
+        display_order: displayOrderById.get(chapter.id) ?? chapter.display_order,
+      }))
+      .sort((a, b) => a.display_order - b.display_order || a.id.localeCompare(b.id)),
+  };
+
+  await writeYaml(projectRoot, "outline/chapters.yaml", updatedChapters);
+  await writeYaml(projectRoot, ".openathor/manuscript.index.yaml", updatedIndex);
+  await writeYaml(projectRoot, runRelPath, {
+    agent_role: "openathor-cli",
+    command: "openathor outline move",
+    created_at: new Date().toISOString(),
+    mode: "confirmed_write",
+    target: outlineTargetData(target, null),
+    after: outlineTargetData(after, null),
+    moved_chapters: movedChapters,
+    manuscript_files_moved: false,
+    writes: plannedWrites,
+    sources: moveSources(inspection.sources),
+    user_confirmation_required: false,
+  });
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources: moveSources(inspection.sources),
+    writes: plannedWrites,
+    warnings: inspection.warnings,
+    data: {
+      ...data,
+      planned_writes: [],
+      result: moveResult(target, after, movedChapters, true),
+    },
+  };
+}
+
 export async function runOutlineArchive(
   options: OutlineArchiveOptions = {},
 ): Promise<CommandResult> {
@@ -1533,6 +1655,182 @@ function insertDiff(
 }
 
 function insertSources(sources: EnvelopeSource[]): EnvelopeSource[] {
+  const relevant = new Set(["outline/chapters.yaml", ".openathor/manuscript.index.yaml"]);
+
+  return sources
+    .filter((source) => relevant.has(source.path))
+    .sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function moveDisplayOrderChanges(
+  chapters: ChapterOutline,
+  targetId: string,
+  afterId: string,
+): Array<{
+  id: string;
+  title: string;
+  from_display_order: number;
+  to_display_order: number;
+  status: ChapterOutlineEntry["status"];
+  source_path: string | null;
+}> {
+  const ordered = [...chapters.chapters].sort(
+    (a, b) => a.display_order - b.display_order || a.id.localeCompare(b.id),
+  );
+  const targetIndex = ordered.findIndex((chapter) => chapter.id === targetId);
+  const targetChapter = ordered[targetIndex];
+
+  if (!targetChapter) {
+    throw new OpenAthorError(
+      "OA_OUTLINE_TARGET_NOT_FOUND",
+      `Cannot find outline chapter target ${targetId}.`,
+      { exitCode: 2 },
+    );
+  }
+
+  ordered.splice(targetIndex, 1);
+  const afterIndex = ordered.findIndex((chapter) => chapter.id === afterId);
+
+  if (afterIndex < 0) {
+    throw new OpenAthorError(
+      "OA_OUTLINE_TARGET_NOT_FOUND",
+      `Cannot find outline chapter target ${afterId}.`,
+      { exitCode: 2 },
+    );
+  }
+
+  ordered.splice(afterIndex + 1, 0, targetChapter);
+
+  return ordered
+    .map((chapter, index) => ({
+      id: chapter.id,
+      title: chapter.title,
+      from_display_order: chapter.display_order,
+      to_display_order: index + 1,
+      status: chapter.status,
+      source_path: chapter.manuscript_path ?? null,
+    }))
+    .filter((chapter) => chapter.from_display_order !== chapter.to_display_order);
+}
+
+function moveResult(
+  target: ResolvedOutlineChapter,
+  after: ResolvedOutlineChapter,
+  movedChapters: Array<{
+    id: string;
+    title: string;
+    from_display_order: number;
+    to_display_order: number;
+    status: ChapterOutlineEntry["status"];
+    source_path: string | null;
+  }>,
+  applied: boolean,
+): {
+  applied: boolean;
+  target: { id: string; from_display_order: number; to_display_order: number | null };
+  after: { id: string; display_order: number };
+  moved_chapters: typeof movedChapters;
+  manuscript_files_moved: false;
+} {
+  const movedTarget = movedChapters.find((chapter) => chapter.id === target.id);
+
+  return {
+    applied,
+    target: {
+      id: target.id,
+      from_display_order: target.display_order,
+      to_display_order: movedTarget?.to_display_order ?? target.display_order,
+    },
+    after: {
+      id: after.id,
+      display_order: after.display_order,
+    },
+    moved_chapters: movedChapters,
+    manuscript_files_moved: false,
+  };
+}
+
+function moveWrites(
+  runRelPath: string,
+  movedChapters: Array<{ source_path: string | null }>,
+): EnvelopeWrite[] {
+  if (movedChapters.length === 0) {
+    return [];
+  }
+
+  const writes: EnvelopeWrite[] = [
+    {
+      path: "outline/chapters.yaml",
+      change_type: "modified",
+      reason: "outline_move_display_order",
+    },
+  ];
+
+  if (movedChapters.some((chapter) => chapter.source_path)) {
+    writes.push({
+      path: ".openathor/manuscript.index.yaml",
+      change_type: "modified",
+      reason: "outline_move_index_display_order",
+    });
+  }
+
+  writes.push({
+    path: runRelPath,
+    change_type: "created",
+    reason: "outline_move_run_record",
+  });
+
+  return writes;
+}
+
+function moveDiff(
+  target: ResolvedOutlineChapter,
+  after: ResolvedOutlineChapter,
+  movedChapters: Array<{
+    id: string;
+    title: string;
+    from_display_order: number;
+    to_display_order: number;
+    source_path: string | null;
+  }>,
+): {
+  summary: string;
+  changes: Array<{
+    path: string;
+    field: string;
+    from: string | number | null;
+    to: string | number | null;
+  }>;
+} {
+  return {
+    summary:
+      "Move chapter display order in outline metadata; keep chapter ids and manuscript files in place.",
+    changes: [
+      {
+        path: "outline/chapters.yaml",
+        field: `move[${target.id}].after`,
+        from: target.display_order,
+        to: after.id,
+      },
+      ...movedChapters.map((chapter) => ({
+        path: "outline/chapters.yaml",
+        field: `chapters[${chapter.id}].display_order`,
+        from: chapter.from_display_order,
+        to: chapter.to_display_order,
+      })),
+      ...movedChapters
+        .filter((chapter) => chapter.source_path)
+        .map((chapter) => ({
+          path: ".openathor/manuscript.index.yaml",
+          field: `chapters[${chapter.id}].display_order`,
+          from: chapter.from_display_order,
+          to: chapter.to_display_order,
+        })),
+    ],
+  };
+}
+
+function moveSources(sources: EnvelopeSource[]): EnvelopeSource[] {
   const relevant = new Set(["outline/chapters.yaml", ".openathor/manuscript.index.yaml"]);
 
   return sources

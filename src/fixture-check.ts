@@ -17,6 +17,7 @@ import {
   runOutlineArchive,
   runOutlineImpact,
   runOutlineInsert,
+  runOutlineMove,
   runOutlineShow,
   runSearchRelated,
   runSearchText,
@@ -442,6 +443,17 @@ async function dispatchCommand(
     });
   }
 
+  if (parsed.name === "outline move") {
+    return runOutlineMove({
+      cwd,
+      target: parsed.pathArg,
+      after: parsed.options.after,
+      confirm: parsed.options.confirm,
+      dryRun: parsed.options.dryRun,
+      diff: parsed.options.diff,
+    });
+  }
+
   if (parsed.name === "outline archive") {
     return runOutlineArchive({
       cwd,
@@ -508,6 +520,7 @@ function parseCommand(command: string): {
     | "outline show"
     | "outline impact"
     | "outline insert"
+    | "outline move"
     | "outline archive"
     | "plan"
     | "draft"
@@ -738,6 +751,15 @@ function parseCommand(command: string): {
     return {
       display: "openathor outline insert",
       name: "outline insert",
+      options,
+    };
+  }
+
+  if (positional[0] === "outline" && positional[1] === "move") {
+    return {
+      display: "openathor outline move",
+      name: "outline move",
+      pathArg: positional[2],
       options,
     };
   }

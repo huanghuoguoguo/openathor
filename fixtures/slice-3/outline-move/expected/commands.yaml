@@ -1,0 +1,37 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor outline move 1 --after 2 --json
+    ok: true
+    expect_data:
+      mode: proposal
+      result.applied: false
+      result.target.from_display_order: 1
+      result.target.to_display_order: 2
+      result.manuscript_files_moved: false
+  - run: openathor outline move 1 --after 2 --confirm --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      result.applied: true
+      result.target.from_display_order: 1
+      result.target.to_display_order: 2
+      result.manuscript_files_moved: false
+  - run: openathor outline show --json
+    ok: true
+    expect_data:
+      outline.chapter_count: 3
+  - run: openathor context chapter 2 --json
+    ok: true
+    expect_data:
+      context_pack.target.display_order: 2
+      context_pack.target.source_path: 正文/001-雨夜.md
+  - run: openathor context chapter 1 --json
+    ok: true
+    expect_data:
+      context_pack.target.display_order: 1
+      context_pack.target.source_path: 正文/002-追问.md
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true
