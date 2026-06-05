@@ -35,3 +35,22 @@ jobs:
           test -d docs/decisions
           test -d docs/llm-as-judge
           test -d docs/development-workflow
+
+  tooling:
+    name: tooling
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test tooling
+        run: npm test

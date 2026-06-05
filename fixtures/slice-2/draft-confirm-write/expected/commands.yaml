@@ -1,0 +1,10 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor draft chapter next --task "用户确认写入第二章" --text "# 第二章\n\n这是用户确认后的新章草稿。" --confirm-write --json
+    ok: true
+    expect_data_path: target.source_path
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["volumes"],
+  "additionalProperties": false,
+  "properties": {
+    "volumes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "display_order", "title", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^vol_[a-z0-9_]+$" },
+          "display_order": { "type": "integer", "minimum": 1 },
+          "title": { "type": "string" },
+          "status": { "enum": ["planned", "drafted", "reviewed", "revised", "archived"] },
+          "summary": { "type": "string" },
+          "chapters": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^ch_[a-z0-9_]+$" }
+          }
+        }
+      }
+    }
+  }
+}

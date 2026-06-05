@@ -1,0 +1,9 @@
+required:
+  - openathor.yaml
+  - 正文/001-开端.md
+  - manuscript/chapter-002.md
+  - outline/chapters.yaml
+  - .openathor/manuscript.index.yaml
+  - .openathor/index.sqlite
+absent:
+  - manuscript/chapter-001.md

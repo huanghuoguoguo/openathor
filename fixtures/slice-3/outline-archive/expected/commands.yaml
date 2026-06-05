@@ -1,0 +1,22 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor outline show --json
+    ok: true
+    expect_data_path: outline.chapters
+  - run: openathor outline impact 1 --json
+    ok: true
+    expect_data_path: impact.direct_references
+  - run: openathor outline archive 1 --json
+    ok: true
+    expect_data_path: planned_writes
+  - run: openathor outline archive 1 --keep-facts --confirm --base-hash current:正文/001-雨夜.md --json
+    ok: true
+    expect_data_path: target.outline_status
+  - run: openathor outline show --json
+    ok: true
+    expect_data_path: outline.archived_chapter_count
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

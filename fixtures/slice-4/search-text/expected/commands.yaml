@@ -1,0 +1,16 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor search text "雨夜电话" --json
+    ok: true
+    expect_data_path: matches
+  - run: openathor search text "不存在的关键词" --json
+    ok: true
+    expect_data_path: matches
+  - run: openathor search related chapter 1 --json
+    ok: true
+    expect_data_path: matches
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

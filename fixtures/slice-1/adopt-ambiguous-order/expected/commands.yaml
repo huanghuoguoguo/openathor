@@ -1,0 +1,10 @@
+commands:
+  - run: openathor adopt --dry-run --json
+    ok: true
+  - run: openathor adopt --json
+    ok: false
+    error_code: OA_ADOPT_AMBIGUOUS_CHAPTER_ORDER
+  - run: openathor adopt --confirm-ambiguous --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

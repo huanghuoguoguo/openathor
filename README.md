@@ -2,7 +2,7 @@
 
 OpenAthor 是一个面向 Pi Agent 的小说创作工具链，目标是让用户在自己熟悉的文本编辑器中写作，并通过 Pi Agent 完成小说项目的规划、续写、审稿、改稿和设定维护。
 
-当前项目处于前期产品和协议准备阶段，暂不编写产品代码。
+当前项目已进入 Slice 1 协议内核阶段。TypeScript/Node.js CLI 可以创建、接管、检查 OpenAthor 项目，并从明文事实源重建派生 SQLite 索引。
 
 ## 产品方向
 
@@ -29,7 +29,31 @@ OpenAthor 当前产品轨道不做自研 TUI，也不做网页编辑器。核心
 
 ## 当前状态
 
-当前仓库主要包含产品和开发前准备文档：
+当前可用命令：
+
+```bash
+npm test
+npm run build
+node dist/cli.js init <path> --title "小说名" --json
+node dist/cli.js adopt <path> --dry-run --json
+node dist/cli.js adopt <path> --json
+node dist/cli.js doctor --json
+node dist/cli.js index rebuild --json
+node dist/cli.js context chapter 1 --json
+node dist/cli.js outline show --json
+node dist/cli.js outline impact 1 --json
+node dist/cli.js outline archive 1 --confirm --base-hash "sha256:..." --json
+node dist/cli.js search text "关键词" --json
+node dist/cli.js search related chapter 1 --json
+node dist/cli.js review chapter 1 --task "检查人物动机" --json
+node dist/cli.js draft chapter next --task "写下一章" --text "# 第二章\n\n正文。" --confirm-write --json
+node dist/cli.js revise chapter 1 --task "确认改写" --text "# 第一章\n\n新正文。" --base-hash "sha256:..." --confirm-write --json
+node dist/cli.js canon sync 1 --task "提取新增设定到 pending" --json
+node dist/cli.js skill install pi --json
+node dist/fixture-check.js fixtures/slice-1/adopt-3-chapters --json
+```
+
+当前仓库包含产品文档、协议 schema、Slice 1 CLI 实现和 fixture 回归样例：
 
 ```text
 docs/
@@ -46,6 +70,9 @@ docs/
   decisions/
 .codex/
   skills/
+schemas/
+src/
+fixtures/
 AGENTS.md
 ```
 
@@ -60,7 +87,7 @@ AGENTS.md
 
 ## 开发原则
 
-在以下内容完成前，不进入产品代码实现：
+当前实现覆盖 Slice 1 协议内核、Slice 2 的只读 `context` 入口、plan/draft/review/revise/canon sync 的 proposal 入口、确认后的“下一章”安全写入、带 `--base-hash` 冲突保护的已有章节确认改写、结构编辑 show/impact/archive 最小闭环，以及只读文本/相关检索。CLI 不调用模型，不做向量语义检索或 sub-agent 调度。进入后续产品切片前，仍需保持以下追溯关系：
 
 - 产品形态
 - 目标用户故事

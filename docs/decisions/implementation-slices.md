@@ -28,7 +28,7 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - Slice 1 command contracts 已定义
 - Slice 1 schema 和 fixture plan 已定义
 
-当前状态：Pi Agent + GLM-5 runtime 已验证可用。Slice 0 剩余工作是把 Slice 1 schema、fixtures 和 deterministic check 入口落地到仓库。
+当前状态：已完成。Pi Agent + GLM-5 runtime 已验证可用，CLI 实现语言锁定为 TypeScript/Node.js，Slice 1 schema、fixtures 和 deterministic check 入口已落地。
 
 ## Slice 1: Protocol Kernel
 
@@ -41,10 +41,12 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - `openathor adopt`
 - `openathor doctor`
 - `openathor index rebuild`
+- `openathor skill install pi`
 - `openathor.yaml`
 - `.openathor/manuscript.index.yaml`
 - 初始 SQLite 派生索引
 - JSON envelope 和错误码
+- OpenAthor Pi Skill
 - Slice 1 fixtures
 - deterministic fixture check 入口
 
@@ -69,7 +71,6 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 
 包含：
 
-- `openathor skill install pi`
 - `openathor context`
 - `openathor plan`
 - `openathor draft`
@@ -84,6 +85,8 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 改稿默认输出 diff
 - 新增设定默认进入 pending
 - 用户手写冲突能被发现
+
+当前状态：`openathor context` 已作为只读上下文包命令落地；`plan`、`draft`、`review`、`revise`、`canon sync` 已作为 proposal 入口落地；确认后的 `draft chapter next` 新章写入和 `revise chapter --base-hash` 安全改写已落地，并纳入 fixture 回归。CLI 仍不调用模型。
 
 ## Slice 3: Structural Editing
 
@@ -105,6 +108,8 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 影响分析覆盖 canon、伏笔、人物状态和后续章节
 - 结构变更后 context 可刷新
 
+当前状态：`openathor outline show`、`openathor outline impact` 和 `openathor outline archive` 已作为结构编辑最小闭环落地，并纳入 fixture 回归。`insert`、`move`、`split`、`merge` 和 `replan` 仍待实现。
+
 ## Slice 4: Long Project Retrieval
 
 目标：证明几十章以上小说能获得相关上下文，不靠 agent 全文硬读。
@@ -123,6 +128,8 @@ OpenAthor 先定义完整目标形态，再按完整闭环切片实现。
 - 语义检索可插拔
 - 向量索引仍是派生数据
 - context 包含来源证据
+
+当前状态：`openathor search text` 和 `openathor search related` 已作为只读确定性检索落地，并纳入 fixture 回归。向量语义检索仍待实现。
 
 ## Slice 5: Delivery And Expansion
 

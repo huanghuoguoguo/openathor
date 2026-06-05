@@ -3,9 +3,9 @@
 OpenAthor 需要两类 skill：
 
 - 项目开发用的 Codex skills，放在当前仓库 `.codex/skills/`
-- 产品交付用的 Pi Skill，后续由 `openathor skill install pi` 安装到 Pi Agent 可读取的位置
+- 产品交付用的 Pi Skill，由 `openathor skill install pi` 安装到 Pi Agent 可读取的位置
 
-当前阶段先创建项目开发用 Codex skills。
+当前阶段已有项目开发用 Codex skills，并已落地 Slice 1 的 OpenAthor Pi Skill。
 
 ## openathor-iteration-pm
 
@@ -65,13 +65,43 @@ OpenAthor 需要两类 skill：
 - 安全性、canon 一致性和变更控制优先于文笔
 - 证据不足时标记 `needs_review`，不要编造评分
 
+## OpenAthor Pi Skill
+
+用途：让 Pi Agent 在 OpenAthor 项目中遵守协议内核、非侵入式接管和写入安全规则。
+
+安装命令：
+
+```bash
+openathor skill install pi --json
+```
+
+默认项目级安装：
+
+```text
+.pi/skills/openathor/SKILL.md
+```
+
+可选全局安装：
+
+```bash
+openathor skill install pi --global --json
+```
+
+核心行为：
+
+- 写入前先用 `openathor doctor --json` 判断项目状态
+- 接管已有稿件先运行 `openathor adopt --dry-run --json`
+- 不移动、重命名或重写用户原稿
+- ambiguous order、废稿和未知文件进入 questions
+- 不把模型推断写成 confirmed canon
+- 明确说明 Slice 1 不包含正文生成、审稿、改稿或语义检索
+
 ## 暂不创建的 skill
 
-以下 skill 属于产品交付资产，不在当前准备阶段贸然实现：
+以下细分 skill 暂不创建，先由 OpenAthor Pi Skill 作为单一入口约束：
 
-- OpenAthor Pi Skill
 - OpenAthor 小说接管 skill
 - OpenAthor 审稿 skill
 - OpenAthor canon sync skill
 
-这些应在项目协议和 CLI 合约稳定后再写。
+这些应在后续写作闭环稳定后再拆分。

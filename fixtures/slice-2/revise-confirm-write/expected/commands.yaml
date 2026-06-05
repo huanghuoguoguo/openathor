@@ -1,0 +1,10 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor revise chapter 1 --task "用户确认改写第一章" --text "# 开端\n\n第一章确认后的修订稿。" --base-hash current:正文/001-开端.md --confirm-write --json
+    ok: true
+    expect_data_path: target.source_path
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

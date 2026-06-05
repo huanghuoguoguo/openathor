@@ -1,0 +1,7 @@
+commands:
+  - run: openathor adopt --dry-run --json
+    ok: true
+  - run: openathor adopt --confirm-ambiguous --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

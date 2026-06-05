@@ -1,0 +1,9 @@
+commands:
+  - run: openathor init --json --title "雨城档案"
+    ok: true
+  - run: openathor skill install pi --json
+    ok: true
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

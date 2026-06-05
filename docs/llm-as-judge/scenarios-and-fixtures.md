@@ -124,4 +124,14 @@ fixtures/
   style-revise/
 ```
 
-当前阶段可以先在文档中设计 fixture，等进入实现后再落地到测试目录。
+当前已落地 Slice 1 deterministic fixtures：
+
+```text
+fixtures/slice-1/
+  new-project/
+  adopt-3-chapters/
+  scattered-drafts/
+  adopt-ambiguous-order/
+```
+
+后续写作、结构变更、检索和风格相关场景仍需要在 Slice 2+ 落地，并接入 LLM-as-judge 证据包。

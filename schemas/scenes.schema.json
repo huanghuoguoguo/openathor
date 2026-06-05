@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["scenes"],
+  "additionalProperties": false,
+  "properties": {
+    "scenes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "chapter_id", "status", "purpose"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^sc_[a-z0-9_]+$" },
+          "chapter_id": { "type": "string", "pattern": "^ch_[a-z0-9_]+$" },
+          "status": { "enum": ["planned", "drafted", "reviewed", "revised", "archived"] },
+          "purpose": { "type": "string" },
+          "links": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "characters": { "$ref": "#/$defs/idListChar" },
+              "locations": { "$ref": "#/$defs/idListLoc" },
+              "items": { "$ref": "#/$defs/idListItem" },
+              "hooks": { "$ref": "#/$defs/idListHook" },
+              "timeline_events": { "$ref": "#/$defs/idListEvent" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "idListChar": { "type": "array", "items": { "type": "string", "pattern": "^char_[a-z0-9_]+$" } },
+    "idListLoc": { "type": "array", "items": { "type": "string", "pattern": "^loc_[a-z0-9_]+$" } },
+    "idListItem": { "type": "array", "items": { "type": "string", "pattern": "^item_[a-z0-9_]+$" } },
+    "idListHook": { "type": "array", "items": { "type": "string", "pattern": "^hook_[a-z0-9_]+$" } },
+    "idListEvent": { "type": "array", "items": { "type": "string", "pattern": "^ev_[a-z0-9_]+$" } }
+  }
+}

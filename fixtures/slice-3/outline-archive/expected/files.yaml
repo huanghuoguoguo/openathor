@@ -1,0 +1,10 @@
+required:
+  - openathor.yaml
+  - 正文/001-雨夜.md
+  - 正文/002-追问.md
+  - 设定/线索.md
+  - outline/chapters.yaml
+  - .openathor/manuscript.index.yaml
+  - .openathor/index.sqlite
+absent:
+  - manuscript/chapter-001.md
