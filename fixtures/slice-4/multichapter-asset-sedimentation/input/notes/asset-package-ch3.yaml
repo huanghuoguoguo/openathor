@@ -1,0 +1,59 @@
+characters:
+  - id: lin-zhi-yu
+    name: 林知雨
+    role: 档案修复员
+    traits:
+      - 谨慎
+      - 证据优先
+      - 不轻易表态
+    current_state: 在旧报社核对红线账本，并开始怀疑陈默主动引导调查。
+  - id: zhou-yan
+    name: 周砚
+    role: 铁路检修员
+    traits:
+      - 内疚
+      - 回避旧案
+      - 熟悉调车场路线
+    current_state: 保护林知雨进入旧报社铅字间，并记起第三声钟响。
+  - id: chen-mo
+    name: 陈默
+    role: 失踪守钟人
+    traits:
+      - 冷静
+      - 留线索但不露面
+      - 熟悉旧铁路暗号
+    current_state: 被许曼证实在火灾前夜去过旧报社。
+  - id: xu-man
+    name: 许曼
+    role: 旧报社排字员
+    traits:
+      - 记日期准确
+      - 说话克制
+      - 对旧案保持警惕
+    current_state: 指认陈默火灾前夜来过旧报社，并交出藏在铅字柜后的红线账本。
+timeline_events:
+  - id: event-xu-man-witness
+    title: 许曼指认陈默火灾前夜出现
+    summary: 许曼在旧报社告诉林知雨和周砚，陈默曾在火灾前夜来到旧报社。
+  - id: event-ledger-hidden-in-press
+    title: 红线账本在旧报社铅字柜后被找到
+    summary: 许曼交出藏在铅字柜后的红线账本，账本记录第三声钟响。
+hooks:
+  - id: hook-third-bell-signal
+    title: 第三声钟响代表什么
+    status: opened
+    summary: 红线账本记录第三声钟响，但它是警告、交易暗号还是伪造证据仍未确认。
+chapter:
+  summary: 林知雨和周砚在旧报社见到许曼，许曼指认陈默火灾前夜出现，并交出藏在铅字柜后的红线账本，第三声钟响成为新疑点。
+  links:
+    characters:
+      - lin-zhi-yu
+      - zhou-yan
+      - chen-mo
+      - xu-man
+    timeline_events:
+      - event-xu-man-witness
+      - event-ledger-hidden-in-press
+    hooks:
+      - hook-red-string-ledger
+      - hook-third-bell-signal

@@ -196,6 +196,7 @@ canon = 已确认发生了什么
 - `--confirm --base-hash` 匹配时才追加新人物、新时间线事件、新伏笔，并更新目标章节 outline links
 - 已有资产的状态更新仍进入 pending，不直接改写 confirmed 资产
 - 同步后必须运行 `openathor assets audit --json` 检查 link drift 和 summary drift
+- 多章写作验收必须覆盖“正文确认写入 -> 每章 asset package -> `assets sync --confirm` -> `assets audit`”的完整链路，不能只验最终小说文本是否存在
 
 这让“人物性格、事迹和大纲是否漂移”变成可审计的文件变化，而不是只依赖 agent 最终回复。
 

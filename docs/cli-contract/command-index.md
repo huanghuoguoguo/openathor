@@ -178,6 +178,7 @@ openathor export --format markdown
 - `search semantic` 使用可重建的本地 deterministic hash embedding 向量索引，不调用外部 embedding 服务。
 - `assets audit` 使用 Markdown/YAML 文本扫描检查 story assets、outline links 和章节正文提及，不做完整语义事实推理。
 - `assets sync` 接收 agent/用户提供的结构化资产包，默认 pending；确认写入必须提供目标章节 hash，只追加新资产并更新目标章节 outline links，不直接改写已有 confirmed 资产。
+- 多章资产沉淀回归覆盖连续章节写入后的 `assets sync --confirm`、confirmed story assets、outline links、检索/context 和 `assets audit` 无漂移结果。
 - export 当前只支持完整 manuscript Markdown 合并导出；EPUB/DOCX/PDF 仍不在当前切片内。
 
 ## 命令不变量

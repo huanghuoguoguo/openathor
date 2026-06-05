@@ -102,7 +102,7 @@ AGENTS.md
 
 ## 开发原则
 
-当前实现覆盖 Slice 1 协议内核、Slice 2 的只读 `context` 入口、plan/draft/review/revise/canon sync 的 proposal 入口、确认后的“下一章”安全写入、带 `--base-hash` 冲突保护的已有章节确认改写、确定性 `style analyze/profile show/check`、结构编辑 show/impact/insert/move/split/merge/replan/archive 最小闭环、文本/相关/semantic 检索、长篇资产 audit、写作后结构化资产 sync，以及 `openathor-judge-smoke` evidence package 自动化。CLI 不调用模型写正文，不做 sub-agent 调度；`assets sync` 接收 agent/用户提供的结构化资产包并负责 pending/确认写入、hash gate 和 run 记录；`style analyze` 只生成 pending 抽象画像，不复制参考文本原文；`search semantic` 使用本地可重建派生向量索引，真实 LLM judge scores 只作为本地/手动评估证据保存，不进入必跑 CI。进入后续产品切片前，仍需保持以下追溯关系：
+当前实现覆盖 Slice 1 协议内核、Slice 2 的只读 `context` 入口、plan/draft/review/revise/canon sync 的 proposal 入口、确认后的“下一章”安全写入、带 `--base-hash` 冲突保护的已有章节确认改写、确定性 `style analyze/profile show/check`、结构编辑 show/impact/insert/move/split/merge/replan/archive 最小闭环、文本/相关/semantic 检索、长篇资产 audit、写作后结构化资产 sync，以及 `openathor-judge-smoke` evidence package 自动化。CLI 不调用模型写正文，不做 sub-agent 调度；`assets sync` 接收 agent/用户提供的结构化资产包并负责 pending/确认写入、hash gate 和 run 记录；多章写作回归要求每章正文确认写入后同步人物、事件、伏笔和 outline links，再用 `assets audit` 验证无 unresolved link、character link drift 和 summary drift；`style analyze` 只生成 pending 抽象画像，不复制参考文本原文；`search semantic` 使用本地可重建派生向量索引，真实 LLM judge scores 只作为本地/手动评估证据保存，不进入必跑 CI。进入后续产品切片前，仍需保持以下追溯关系：
 
 - 产品形态
 - 目标用户故事
