@@ -242,7 +242,7 @@ export async function buildAssetAuditResult(input: {
   }
 
   const weakProfileCoverageCount = characterProfileCoverage.filter(
-    (coverage) => coverage.coverage_ratio < 0.12,
+    isWeakChapterProfileCoverage,
   ).length;
   const characterProfileSummary = summarizeCharacterProfileCoverage(
     characters,
@@ -319,4 +319,10 @@ export async function buildAssetAuditResult(input: {
       ],
     },
   };
+}
+
+function isWeakChapterProfileCoverage(coverage: ChapterCharacterProfileCoverage): boolean {
+  const requiredMatchedFields = Math.min(2, coverage.checked_fields);
+
+  return coverage.coverage_ratio < 0.12 && coverage.matched_fields < requiredMatchedFields;
 }

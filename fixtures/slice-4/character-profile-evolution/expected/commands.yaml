@@ -1,0 +1,52 @@
+commands:
+  - run: openathor doctor --json
+    ok: true
+    expect_data:
+      checks.standard_assets_present: true
+  - run: openathor assets audit --json
+    ok: true
+    expect_data:
+      audit.counts.chapters: 3
+      audit.counts.characters: 4
+      audit.counts.timeline_events: 6
+      audit.counts.hooks: 3
+      audit.counts.unresolved_outline_links: 0
+      audit.counts.character_link_drifts: 0
+      audit.counts.weak_character_profile_coverages: 0
+      audit.counts.weak_character_profile_summaries: 0
+      audit.counts.summary_drift_candidates: 0
+      audit.assets.characters.0.id: lin-che
+      audit.assets.characters.0.profile.current_state.0: 在星桥仓库取得许岚证词和封蜡账册，并把第三次雾笛列为关键暗号而非结论。
+      audit.assets.characters.2.id: lin-yan
+      audit.assets.characters.2.profile.notes.1: "previous_state: 作为林澈父亲被蓝钥匙和失踪时间指向，但是否回到星桥一号仍未确认。"
+      audit.assets.characters.2.profile.notes.3: "previous_state: 检修牌和潮湿船票在舱门后出现，但本人是否回到星桥一号仍未确认。"
+      audit.character_profile_summary.2.character_id: lin-yan
+      audit.character_profile_summary.2.linked_chapter_count: 3
+  - run: openathor context chapter 3 --json
+    ok: true
+    expect_data:
+      context_pack.target.id: ch_003
+      outline.chapters.2.links.characters.3: xu-lan
+      outline.chapters.2.links.hooks.1: hook-third-fog-horn
+    expect_data_path: assets.characters.text
+  - run: openathor search text "林砚" --json
+    ok: true
+    expect_data_path: matches
+  - run: openathor index rebuild --vector --json
+    ok: true
+    expect_data:
+      vector_index: .openathor/vector/index.json
+  - run: openathor search semantic "蓝钥匙 林砚 第三次雾笛" --json
+    ok: true
+    expect_data:
+      method: deterministic_hash_embedding_v1
+    expect_data_path: matches
+  - run: openathor export --format markdown --out exports/character-profile-evolution.md --json
+    ok: true
+    expect_data:
+      chapter_count: 3
+  - run: openathor doctor --json --strict
+    ok: true
+    expect_data:
+      checks.manuscript_index_matches_outline: true
+      checks.derived_index_current: true
