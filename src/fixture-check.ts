@@ -42,6 +42,7 @@ type ExpectedCommand = {
   error_code?: string;
   expect_data_path?: string;
   expect_data?: Record<string, unknown>;
+  expect_no_writes?: boolean;
 };
 
 type ExpectedCommands = {
@@ -237,6 +238,14 @@ export async function runFixtureCheck(
             { exitCode: 4 },
           );
         }
+      }
+
+      if (expectedCommand.expect_no_writes && result.envelope.writes.length > 0) {
+        throw new OpenAthorError(
+          "OA_FIXTURE_COMMAND_FAILED",
+          `Command ${expectedCommand.run} reported writes, expected none.`,
+          { exitCode: 4 },
+        );
       }
 
       commandResults.push({

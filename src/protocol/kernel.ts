@@ -287,6 +287,14 @@ type VectorIndex = {
   documents: VectorIndexDocument[];
 };
 
+type CanonConflict = {
+  canon_id: string | null;
+  source: string;
+  statement: string;
+  user_request: string;
+  matched_terms: string[];
+};
+
 type ResolvedOutlineChapter = {
   input: string;
   outlineChapter: ChapterOutlineEntry | null;
@@ -3424,6 +3432,21 @@ export async function runWritingProposal(
       target: { id: string; display_order: number; title: string; source_path: string } | null;
     };
   };
+  const conflicts = detectCanonConflicts(context.data, task);
+
+  if (conflicts.length > 0) {
+    throw new OpenAthorError(
+      "OA_CANON_CONFLICT",
+      `User task conflicts with ${conflicts.length} confirmed canon rule(s).`,
+      {
+        exitCode: 4,
+        hints: conflicts.map((conflict) =>
+          `${conflict.source}: ${conflict.statement}`,
+        ),
+      },
+    );
+  }
+
   const stamp = runStamp();
   const runRelPath = `runs/run_${stamp}_${options.kind}.json`;
   const proposalRelPath = proposalPath(options.kind, stamp, contextData.context_pack.target);
@@ -5364,6 +5387,118 @@ function proposalNextAction(kind: WritingProposalKind): string {
   }
 
   return "Extract candidate facts into pending canon only; do not modify confirmed canon without user confirmation.";
+}
+
+function detectCanonConflicts(contextData: unknown, task: string): CanonConflict[] {
+  const confirmed = readNestedRecord(contextData, ["canon", "confirmed"]);
+  const text = typeof confirmed?.text === "string" ? confirmed.text : "";
+  const source = typeof confirmed?.path === "string" ? confirmed.path : "bible/canon.md";
+  const rules = confirmedCanonRules(text);
+  const conflicts: CanonConflict[] = [];
+
+  for (const rule of rules) {
+    const matchedTerms = rule.terms.filter((term) => task.includes(term));
+    if (matchedTerms.length === 0) {
+      continue;
+    }
+
+    conflicts.push({
+      canon_id: rule.id,
+      source,
+      statement: rule.statement,
+      user_request: task,
+      matched_terms: matchedTerms,
+    });
+  }
+
+  return conflicts;
+}
+
+function confirmedCanonRules(text: string): Array<{
+  id: string | null;
+  statement: string;
+  terms: string[];
+}> {
+  const rules = [];
+  let currentId: string | null = null;
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) {
+      continue;
+    }
+
+    const headingId = line.match(/^#+\s+([a-z0-9_]+)\b/i)?.[1] ?? null;
+    if (headingId) {
+      currentId = headingId;
+    }
+
+    if (!isConstraintLine(line)) {
+      continue;
+    }
+
+    const terms = conflictTerms(line);
+    if (terms.length === 0) {
+      continue;
+    }
+
+    rules.push({
+      id: currentId,
+      statement: line.replace(/^[-*0-9.\s]+/, "").trim(),
+      terms,
+    });
+  }
+
+  return rules;
+}
+
+function isConstraintLine(line: string): boolean {
+  return /禁忌|禁止|不能|不可|绝不可|不得|规则|avoid|must not|forbid/i.test(line);
+}
+
+function conflictTerms(line: string): string[] {
+  const terms = new Set<string>();
+  const normalized = line.toLowerCase();
+  const domainTerms = [
+    "通灵",
+    "预知",
+    "超自然",
+    "鬼魂",
+    "灵异",
+    "客轮",
+    "电子密钥",
+    "电子钥匙",
+    "尖叫",
+    "无助",
+    "机械一窍不通",
+  ];
+
+  for (const term of domainTerms) {
+    if (normalized.includes(term.toLowerCase())) {
+      terms.add(term);
+    }
+  }
+
+  return [...terms];
+}
+
+function readNestedRecord(
+  value: unknown,
+  pathParts: string[],
+): Record<string, unknown> | null {
+  let current = value;
+
+  for (const part of pathParts) {
+    if (typeof current !== "object" || current === null || !(part in current)) {
+      return null;
+    }
+
+    current = (current as Record<string, unknown>)[part];
+  }
+
+  return typeof current === "object" && current !== null
+    ? (current as Record<string, unknown>)
+    : null;
 }
 
 function isTextCandidate(relPath: string): boolean {

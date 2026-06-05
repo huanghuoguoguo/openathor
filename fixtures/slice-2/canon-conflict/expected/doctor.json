@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "checks": {
+    "openathor_yaml": true,
+    "required_directories": true,
+    "outline_chapters": true,
+    "manuscript_index": true,
+    "source_paths_exist": true,
+    "standard_assets_present": true,
+    "manuscript_index_matches_outline": true
+  }
+}
