@@ -69,7 +69,7 @@
 - [x] 写作后结构化资产沉淀入口：`openathor assets sync`
 - [x] 授权参考文本风格画像 pending 入口：`openathor style analyze`
 - [x] 用户确认后写入下一章新正文：`openathor draft chapter next --confirm-write`
-- [x] 确认写入新章标题 fallback：优先 Markdown H1，其次任务中的书名号/引号标题、项目标题、章节序号
+- [x] 确认写入新章标题 fallback：优先 Markdown H1，其次正文首行章节标题、任务中的书名号/引号标题、项目标题、章节序号
 - [x] 用户确认后改写已有章节正文：`openathor revise chapter --confirm-write --base-hash`
 - [x] 结构编辑最小闭环：`openathor outline show/impact/insert/move/split/archive`
 - [x] 用户确认后插入 planned 章节元数据：`openathor outline insert --confirm`

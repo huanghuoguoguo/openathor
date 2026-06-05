@@ -95,10 +95,11 @@ proposal 模式不得写入 `manuscript/` 或接管原稿路径。
 确认写入新章标题来源顺序：
 
 1. `--text` 第一行 Markdown H1，例如 `# 第二章`
-2. `--task` 中的书名号标题，例如 `《最后一班车》`
-3. `--task` 中的引号标题
-4. `openathor.yaml` 中的项目标题
-5. `Chapter N`
+2. `--text` 第一条非空行中的章节标题，例如 `第二章 雨夜`、`Chapter 2: Rain`
+3. `--task` 中的书名号标题，例如 `《最后一班车》`
+4. `--task` 中的引号标题
+5. `openathor.yaml` 中的项目标题
+6. `Chapter N`
 
 不得覆盖已有 manuscript 文件或接管原稿路径。
 

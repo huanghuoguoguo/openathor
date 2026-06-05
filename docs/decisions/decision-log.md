@@ -239,7 +239,7 @@ Slice 1 已实现为 TypeScript/Node.js CLI，并纳入 `npm test`。
 - 写入 `runs/run_*.json`
 - 不覆盖接管原稿路径
 - 不覆盖已有 manuscript 文件
-- 章节标题优先取 `--text` 第一行 Markdown H1；没有 H1 时依次尝试任务中的书名号标题、引号标题、项目标题和 `Chapter N` fallback。
+- 章节标题优先取 `--text` 第一行 Markdown H1；没有 H1 时尝试第一条非空行中的章节标题，例如 `第一章 蓝灯档案` 或 `Chapter 1: Last Bus`；再依次尝试任务中的书名号标题、引号标题、项目标题和 `Chapter N` fallback。
 
 限制：
 
