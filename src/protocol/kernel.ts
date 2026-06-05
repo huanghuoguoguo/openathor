@@ -157,6 +157,16 @@ type StyleProfileShowOptions = {
   maxChars?: number;
 };
 
+type StyleAnalyzeOptions = {
+  cwd?: string;
+  referencePath?: string;
+  profileId?: string;
+  name?: string;
+  permission?: string;
+  sourceType?: string;
+  dryRun?: boolean;
+};
+
 type StyleCheckOptions = {
   cwd?: string;
   scope?: "chapter";
@@ -964,6 +974,123 @@ export async function runStyleProfileShow(
       manual_style: manualStyle,
       profiles,
       references,
+    },
+  };
+}
+
+export async function runStyleAnalyze(
+  options: StyleAnalyzeOptions = {},
+): Promise<CommandResult> {
+  const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
+  const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
+  const referencePath = normalizeStyleReferencePath(options.referencePath);
+  const referenceFullPath = path.join(projectRoot, referencePath);
+
+  if (!(await pathExists(referenceFullPath))) {
+    throw new OpenAthorError(
+      "OA_STYLE_REFERENCE_NOT_FOUND",
+      `Style reference not found: ${referencePath}`,
+      { exitCode: 2 },
+    );
+  }
+
+  if (!isTextCandidate(referencePath)) {
+    throw new OpenAthorError(
+      "OA_STYLE_REFERENCE_UNSUPPORTED",
+      "Style analysis currently supports Markdown and plain text references.",
+      { exitCode: 2 },
+    );
+  }
+
+  const referenceText = await readFile(referenceFullPath, "utf8");
+  const referenceHash = await sha256File(referenceFullPath);
+  const referenceId = `ref_${shortHash(`${referencePath}:${referenceHash}`)}`;
+  const profileId = normalizeStyleProfileId(
+    options.profileId,
+    `style_${shortHash(`${referencePath}:${referenceHash}`)}`,
+  );
+  const profileName = options.name?.trim() || `Style profile from ${path.posix.basename(referencePath)}`;
+  const permission = normalizeStylePermission(options.permission);
+  const sourceType = normalizeStyleSourceType(options.sourceType);
+  const metrics = styleMetrics(referenceText);
+  const profile = buildStyleProfile(profileId, profileName, referenceId, metrics);
+  const reference = {
+    id: referenceId,
+    path: referencePath,
+    source_type: sourceType,
+    permission,
+    allowed_use: "style_analysis",
+    content_hash: referenceHash,
+    profile_id: profileId,
+    status: "pending",
+  };
+  const dryRun = options.dryRun ?? false;
+  const stamp = runStamp();
+  const runRelPath = `runs/run_${stamp}_style_analyze.json`;
+  const sourceMap = new Map(inspection.sources.map((source) => [source.path, source]));
+  sourceMap.set(referencePath, { path: referencePath, hash: referenceHash });
+  const sources = [...sourceMap.values()].sort((a, b) => a.path.localeCompare(b.path));
+  const writes: EnvelopeWrite[] = [
+    {
+      path: "style/profiles.yaml",
+      change_type: "modified",
+      reason: "style_analyze_pending_profile",
+    },
+    {
+      path: "style/references.yaml",
+      change_type: "modified",
+      reason: "style_analyze_reference_record",
+    },
+    {
+      path: runRelPath,
+      change_type: "created",
+      reason: "style_analyze_run_record",
+    },
+  ];
+
+  if (!dryRun) {
+    await writeStyleAnalyzeFiles(projectRoot, profile, reference);
+    await writeYaml(projectRoot, runRelPath, {
+      agent_role: "openathor-cli",
+      command: "openathor style analyze",
+      created_at: new Date().toISOString(),
+      mode: "pending_profile",
+      reference,
+      profile,
+      metrics,
+      writes,
+      sources,
+      user_confirmation_required: true,
+    });
+  }
+
+  return {
+    projectRoot,
+    projectId: inspection.config.project.id,
+    sources,
+    writes: dryRun ? [] : writes,
+    warnings: inspection.warnings,
+    data: {
+      dry_run: dryRun,
+      mode: "pending_profile",
+      command: "openathor style analyze",
+      reference,
+      profile,
+      metrics,
+      planned_writes: dryRun ? writes : [],
+      run_path: runRelPath,
+      user_confirmation_required: true,
+      result: {
+        profile_written: !dryRun,
+        profile_status: "pending",
+        manuscript_modified: false,
+        reference_text_copied: false,
+      },
+      recommendations: [
+        "Review the pending style profile before using it as project guidance.",
+        "Do not ask the agent to copy phrasing from the reference text.",
+        "Use openathor style check chapter <target> --json after drafting or revising prose.",
+      ],
     },
   };
 }
@@ -6228,6 +6355,214 @@ function assetSyncSummary(plan: AssetSyncPlan): Record<string, number | boolean>
     existing_hooks: plan.existing_hooks.length,
     outline_modified: plan.outline_modified,
   };
+}
+
+function normalizeStyleReferencePath(relPath: string | undefined): string {
+  if (!relPath?.trim()) {
+    throw new OpenAthorError(
+      "OA_STYLE_REFERENCE_REQUIRED",
+      "openathor style analyze requires a reference path.",
+      { exitCode: 2 },
+    );
+  }
+
+  const safeRelPath = toPosix(relPath.trim());
+  ensureSafeRelativePath(safeRelPath, "reference path");
+
+  return safeRelPath;
+}
+
+function normalizeStyleProfileId(value: string | undefined, fallback: string): string {
+  const candidate = value?.trim() || fallback;
+  if (!/^[a-z][a-z0-9_-]{2,}$/i.test(candidate)) {
+    throw new OpenAthorError(
+      "OA_STYLE_PROFILE_INVALID",
+      "Style profile id must start with a letter and contain only letters, numbers, underscores or dashes.",
+      { exitCode: 2 },
+    );
+  }
+
+  return candidate;
+}
+
+function normalizeStylePermission(value: string | undefined): string {
+  const permission = value?.trim() || "user_owned_or_authorized";
+  const allowed = new Set([
+    "user_owned_or_authorized",
+    "user_owned",
+    "licensed",
+    "public_domain",
+    "unknown",
+  ]);
+
+  if (!allowed.has(permission)) {
+    throw new OpenAthorError(
+      "OA_STYLE_REFERENCE_PERMISSION_INVALID",
+      `Unsupported style reference permission ${permission}.`,
+      {
+        exitCode: 2,
+        hints: ["Use user_owned_or_authorized, user_owned, licensed, public_domain, or unknown."],
+      },
+    );
+  }
+
+  return permission;
+}
+
+function normalizeStyleSourceType(value: string | undefined): string {
+  const sourceType = value?.trim() || "user_provided";
+  const allowed = new Set(["user_provided", "project_manuscript", "licensed_reference", "public_domain"]);
+
+  if (!allowed.has(sourceType)) {
+    throw new OpenAthorError(
+      "OA_STYLE_REFERENCE_SOURCE_INVALID",
+      `Unsupported style reference source type ${sourceType}.`,
+      {
+        exitCode: 2,
+        hints: ["Use user_provided, project_manuscript, licensed_reference, or public_domain."],
+      },
+    );
+  }
+
+  return sourceType;
+}
+
+function buildStyleProfile(
+  id: string,
+  name: string,
+  referenceId: string,
+  metrics: StyleMetrics,
+): Record<string, unknown> {
+  const traits = {
+    sentence_length: metricBand(metrics.average_sentence_chars, 28, 55),
+    paragraph_length: metricBand(metrics.average_paragraph_chars, 80, 180),
+    dialogue_ratio: ratioBand(metrics.dialogue_ratio, 0.12, 0.32),
+    pacing:
+      metrics.average_sentence_chars <= 28 && metrics.average_paragraph_chars <= 120
+        ? "brisk"
+        : metrics.average_sentence_chars >= 55 || metrics.average_paragraph_chars >= 220
+          ? "expansive"
+          : "measured",
+    imagery_density: metricBand(
+      metrics.char_count > 0 ? (metrics.action_detail_hits * 1000) / metrics.char_count : 0,
+      4,
+      11,
+    ),
+    exposition_style:
+      metrics.emotion_exposition_hits > metrics.action_detail_hits
+        ? "explicit_emotion"
+        : metrics.action_detail_hits > metrics.emotion_exposition_hits * 2
+          ? "concrete_detail"
+          : "balanced",
+  };
+
+  return {
+    id,
+    name,
+    status: "pending",
+    source: "user_reference",
+    references: [referenceId],
+    generated_by: "openathor_style_analyze",
+    method: "deterministic_style_metric_scan",
+    traits,
+    metrics,
+    do: styleAnalyzeDoRules(metrics),
+    avoid: [
+      "不要复制参考文本原句或专有表达",
+      "不要把参考文本作者姓名当作可执行风格规则",
+      "不要把 pending profile 当作 confirmed project style",
+    ],
+  };
+}
+
+function metricBand(value: number, lowMax: number, highMin: number): "low" | "medium" | "high" {
+  if (value <= lowMax) {
+    return "low";
+  }
+  if (value >= highMin) {
+    return "high";
+  }
+  return "medium";
+}
+
+function ratioBand(value: number, lowMax: number, highMin: number): "low" | "medium" | "high" {
+  if (value <= lowMax) {
+    return "low";
+  }
+  if (value >= highMin) {
+    return "high";
+  }
+  return "medium";
+}
+
+function styleAnalyzeDoRules(metrics: StyleMetrics): string[] {
+  const rules = [];
+
+  if (metrics.average_sentence_chars <= 28) {
+    rules.push("保持短句和直接动作推进");
+  } else if (metrics.average_sentence_chars >= 55) {
+    rules.push("允许较长句承载观察和转折");
+  } else {
+    rules.push("保持中等句长和清晰节奏");
+  }
+
+  if (metrics.dialogue_ratio >= 0.32) {
+    rules.push("保留对话推动信息变化");
+  } else if (metrics.dialogue_ratio <= 0.12) {
+    rules.push("优先使用叙述和场景动作推进");
+  } else {
+    rules.push("保持叙述与对话的均衡");
+  }
+
+  if (metrics.action_detail_hits >= metrics.emotion_exposition_hits) {
+    rules.push("用动作、物件和场景细节承载情绪");
+  } else {
+    rules.push("控制直接情绪解释，保留必要心理说明");
+  }
+
+  return rules;
+}
+
+async function writeStyleAnalyzeFiles(
+  projectRoot: string,
+  profile: Record<string, unknown>,
+  reference: Record<string, unknown>,
+): Promise<void> {
+  const profilesPath = path.join(projectRoot, "style/profiles.yaml");
+  const referencesPath = path.join(projectRoot, "style/references.yaml");
+  const profilesData = await readYamlObjectFile(profilesPath, { profiles: [] });
+  const referencesData = await readYamlObjectFile(referencesPath, { references: [] });
+
+  profilesData.profiles = replaceRecordById(asRecordArray(profilesData.profiles), profile);
+  referencesData.references = replaceRecordById(asRecordArray(referencesData.references), reference);
+
+  await writeYaml(projectRoot, "style/profiles.yaml", profilesData);
+  await writeYaml(projectRoot, "style/references.yaml", referencesData);
+}
+
+async function readYamlObjectFile(
+  filePath: string,
+  fallback: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  if (!(await pathExists(filePath))) {
+    return fallback;
+  }
+
+  const parsed = parseYaml(await readFile(filePath, "utf8"));
+  return isPlainRecord(parsed) ? parsed : fallback;
+}
+
+function asRecordArray(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value.filter(isPlainRecord) : [];
+}
+
+function replaceRecordById(
+  records: Array<Record<string, unknown>>,
+  next: Record<string, unknown>,
+): Array<Record<string, unknown>> {
+  const id = typeof next.id === "string" ? next.id : null;
+  const filtered = id ? records.filter((record) => record.id !== id) : records;
+  return [...filtered, next];
 }
 
 function styleMetrics(text: string): StyleMetrics {

@@ -1,0 +1,9 @@
+required:
+  - openathor.yaml
+  - 正文/001-样章.md
+  - style/samples/sample-001.md
+  - style/profiles.yaml
+  - style/references.yaml
+  - .openathor/manuscript.index.yaml
+  - .openathor/index.sqlite
+absent: []

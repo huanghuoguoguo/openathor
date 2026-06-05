@@ -30,6 +30,7 @@ import {
   runSearchSemantic,
   runSearchText,
   runSkillInstallPi,
+  runStyleAnalyze,
   runStyleCheck,
   runStyleProfileShow,
   runWritingProposal,
@@ -606,6 +607,18 @@ async function dispatchCommand(
     return runStyleProfileShow({ cwd });
   }
 
+  if (parsed.name === "style analyze") {
+    return runStyleAnalyze({
+      cwd,
+      referencePath: parsed.pathArg,
+      profileId: parsed.options.profileId,
+      name: parsed.options.name,
+      permission: parsed.options.permission,
+      sourceType: parsed.options.sourceType,
+      dryRun: parsed.options.dryRun,
+    });
+  }
+
   if (parsed.name === "style check") {
     return runStyleCheck({
       cwd,
@@ -616,7 +629,6 @@ async function dispatchCommand(
   }
 
   if (
-    parsed.name === "style analyze" ||
     parsed.name === "style revise" ||
     parsed.name === "style profile apply"
   ) {
@@ -692,6 +704,10 @@ function parseCommand(command: string): {
     limit?: number;
     task?: string;
     text?: string;
+    profileId?: string;
+    name?: string;
+    permission?: string;
+    sourceType?: string;
     confirmWrite?: boolean;
     baseHash?: string;
     nextBaseHash?: string;
@@ -818,6 +834,30 @@ function parseCommand(command: string): {
     if (token === "--text") {
       index += 1;
       options.text = unescapeFixtureArgument(tokens[index]);
+      continue;
+    }
+
+    if (token === "--profile-id") {
+      index += 1;
+      options.profileId = unescapeFixtureArgument(tokens[index]);
+      continue;
+    }
+
+    if (token === "--name") {
+      index += 1;
+      options.name = unescapeFixtureArgument(tokens[index]);
+      continue;
+    }
+
+    if (token === "--permission") {
+      index += 1;
+      options.permission = unescapeFixtureArgument(tokens[index]);
+      continue;
+    }
+
+    if (token === "--source-type") {
+      index += 1;
+      options.sourceType = unescapeFixtureArgument(tokens[index]);
       continue;
     }
 

@@ -1,9 +1,16 @@
 commands:
   - run: openathor adopt --json
     ok: true
-  - run: openathor style analyze "设定/线索.md" --json
-    ok: false
-    error_code: OA_COMMAND_NOT_IMPLEMENTED
+  - run: openathor style analyze "设定/线索.md" --profile-id style_clues --name "线索笔记风格" --json
+    ok: true
+    expect_data:
+      mode: pending_profile
+      profile.id: style_clues
+      profile.status: pending
+      reference.path: 设定/线索.md
+      result.profile_status: pending
+      result.manuscript_modified: false
+      result.reference_text_copied: false
   - run: openathor style profile show --json
     ok: true
     expect_data_path: profiles.text

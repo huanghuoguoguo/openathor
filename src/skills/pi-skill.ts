@@ -26,6 +26,7 @@ openathor assets sync chapter <id-or-order> --from <asset-package.yaml|json> --j
 openathor search text "<query>" --json
 openathor search related chapter <id-or-order> --json
 openathor search semantic "<query>" --json
+openathor style analyze <authorized-reference-path> --json
 openathor outline show --json
 openathor outline impact <id-or-order> --json
 openathor style check chapter <id-or-order> --json
@@ -52,6 +53,7 @@ Before writing or advising on project state:
 8. Use \`openathor assets sync chapter <id-or-order> --from <asset-package> --json\` after drafting a chapter when new characters, events, hooks, or chapter summary links should be reviewed for persistence.
 9. Use \`openathor style check chapter <id-or-order> --json\` after drafting or revising a chapter when style consistency matters.
 10. Use \`openathor outline impact <id-or-order> --json\` before proposing any chapter archive/delete action.
+11. Use \`openathor style analyze <path> --json\` only for user-owned, licensed, public-domain, or otherwise authorized reference text.
 
 ## Adopting Existing Manuscripts
 
@@ -151,6 +153,7 @@ Never physically delete, move, or rename manuscript files for an archive request
 - Unverified inference belongs in \`bible/canon.pending.md\` or questions.
 - New or changed longform assets should be persisted through \`openathor assets sync\`: proposal first, confirmed write only with user approval and a matching chapter hash.
 - Style references require user authorization before analysis.
+- \`openathor style analyze\` creates a pending abstract style profile and reference record; do not treat it as confirmed project style until the user approves it.
 - Never copy reference text phrasing as a style rule.
 
 ## Required User Confirmation
@@ -162,6 +165,7 @@ Ask before:
 - confirming an asset sync that writes character, timeline, hook, or outline files
 - resolving ambiguous chapter order
 - writing style rules from reference texts
+- applying or confirming a pending style profile
 - making broad structural changes
 
 ## Final Response Shape

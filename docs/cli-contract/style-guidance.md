@@ -4,7 +4,47 @@
 
 `openathor style` 命令用于让 Pi Agent 检查和维护项目文风稳定性。
 
-当前实现只交付确定性只读检查，不调用模型，不分析外部参考文本，不生成作家仿写规则。
+当前实现交付确定性只读检查和安全的参考文本分析纵切，不调用模型，不生成作家仿写规则，不把参考文本原文复制到 profile。
+
+## `openathor style analyze`
+
+把用户授权参考文本分析为抽象 pending style profile，并记录 reference 来源。
+
+```bash
+openathor style analyze <path> [--profile-id <id>] [--name <name>] [--permission <permission>] [--source-type <type>] [--json] [--dry-run]
+```
+
+### Output data
+
+`data` 包含：
+
+- `mode: pending_profile`
+- `reference`
+- `profile`
+- `metrics`
+- `result`
+- `recommendations`
+
+`profile.status` 必须是 `pending`。`result.reference_text_copied` 必须是 `false`。
+
+### Expected writes
+
+非 dry-run 时写：
+
+- `style/profiles.yaml`
+- `style/references.yaml`
+- `runs/run_*_style_analyze.json`
+
+`style analyze` 不修改正文、不修改 `bible/style.md`，也不生成 confirmed profile。
+
+### Errors
+
+- `OA_STYLE_REFERENCE_REQUIRED`
+- `OA_STYLE_REFERENCE_NOT_FOUND`
+- `OA_STYLE_REFERENCE_UNSUPPORTED`
+- `OA_STYLE_PROFILE_INVALID`
+- `OA_STYLE_REFERENCE_PERMISSION_INVALID`
+- `OA_STYLE_REFERENCE_SOURCE_INVALID`
 
 ## `openathor style profile show`
 
@@ -81,7 +121,6 @@ openathor style check chapter <target> [--json] [--max-chars <count>]
 
 以下命令仍返回结构化 `OA_COMMAND_NOT_IMPLEMENTED`：
 
-- `openathor style analyze`
 - `openathor style revise`
 - `openathor style profile apply`
 
