@@ -57,6 +57,39 @@ export async function hashSources(root: string, relPaths: string[]): Promise<Env
   return sources;
 }
 
+export async function readSourceText(
+  root: string,
+  relPath: string,
+  sources?: Map<string, EnvelopeSource>,
+): Promise<{
+  path: string;
+  hash: string;
+  text: string;
+}> {
+  const fullPath = path.join(root, relPath);
+  const hash = await sha256File(fullPath);
+  const text = await readFile(fullPath, "utf8");
+  sources?.set(relPath, { path: relPath, hash });
+
+  return {
+    path: relPath,
+    hash,
+    text,
+  };
+}
+
+export function addKnownSource(
+  sourceMap: Map<string, EnvelopeSource>,
+  sources: EnvelopeSource[],
+  relPath: string,
+): void {
+  const source = sources.find((candidate) => candidate.path === relPath);
+
+  if (source) {
+    sourceMap.set(relPath, source);
+  }
+}
+
 export async function pathExists(filePath: string): Promise<boolean> {
   try {
     await stat(filePath);
