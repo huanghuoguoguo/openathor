@@ -201,6 +201,7 @@ openathor assets audit [--json] [--max-chars <count>]
 - `outline_link_issues`
 - `chapter_entity_coverage`
 - `character_profile_coverage`
+- `character_profile_summary`
 - `summary_drift`
 - `unlinked_characters`
 
@@ -214,12 +215,14 @@ openathor assets audit [--json] [--max-chars <count>]
 - `unresolved_outline_links`
 - `character_link_drifts`
 - `weak_character_profile_coverages`
+- `weak_character_profile_summaries`
 - `summary_drift_candidates`
 
 ### Warnings
 
 - `OA_ASSET_LINK_UNRESOLVED`：outline link 指向不存在的 story asset。
 - `OA_ASSET_CHARACTER_LINK_DRIFT`：正文或章节摘要提到已登记人物，但该章节 outline links 未关联。
+- `OA_ASSET_CHARACTER_PROFILE_WEAK`：人物档案在相关章节中的项目级文本覆盖偏弱，需要人工复核人物性格、事迹或当前状态是否已经被承接。
 - `OA_ASSET_SUMMARY_DRIFT`：章节摘要词项和正文弱匹配，需要人工复核。
 
 这些 warning 是确定性审计结果，不会自动修改正文、outline 或 confirmed canon。
@@ -234,7 +237,8 @@ openathor assets audit [--json] [--max-chars <count>]
 
 - `assets audit` 只做 Markdown/YAML 文本扫描，不做完整语义事实推理。
 - 人物、timeline 和 hook 支持 `char_` / `ev_` / `hook_` 前缀、Markdown 标题、`## 名称 (id)` 以及 Pi 常写的 `- id: ...` + `name:` / `title:` 列表块。
-- 对人物资产，`assets audit` 会解析 `role`、`traits`、`current_state`、`note`、`背景`、`性格`、`秘密` 等档案字段，并为已链接章节输出 `character_profile_coverage`。这个数据用于判断人物设定、事迹和当前状态是否被后续章节承接，但只作为确定性文本覆盖证据，不替代人工或 LLM judge 的语义判断。
+- 对人物资产，`assets audit` 会解析 `role`、`traits`、`current_state`、`note`、`背景`、`性格`、`秘密` 等档案字段，并为已链接章节输出 `character_profile_coverage`，为每个人物输出项目级 `character_profile_summary`。这些数据用于判断人物设定、事迹和当前状态是否被后续章节承接；它们只作为确定性文本覆盖证据，不替代人工或 LLM judge 的语义判断。
+- `character_profile_summary` 按人物资产顺序输出，包含 `linked_chapter_count`、`mentioned_chapter_count`、`matched_profile_field_count`、`coverage_ratio` 和相关章节明细，用于复核一个人物在多章写作后是否仍有稳定可追踪的档案承接。
 - `summary_drift` 是复核提示，不代表自动判定正文错误。
 
 ## `openathor assets sync`

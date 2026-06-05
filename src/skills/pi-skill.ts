@@ -49,7 +49,7 @@ Before writing or advising on project state:
 4. Use \`openathor search text "<query>" --json\` to find keyword evidence across plaintext project files.
 5. Use \`openathor search related chapter <id-or-order> --json\` to find deterministic related context by term overlap.
 6. Use \`openathor index rebuild --vector --json\` and \`openathor search semantic "<query>" --json\` when the user asks for looser thematic or similarity retrieval.
-7. Use \`openathor assets audit --json\` after longform asset, outline, or manuscript changes to check unresolved links and drift.
+7. Use \`openathor assets audit --json\` after longform asset, outline, or manuscript changes to check unresolved links, drift, and project-level character profile summary.
 8. Use \`openathor assets sync chapter <id-or-order> --from <asset-package> --json\` after drafting a chapter when new characters, events, hooks, or chapter summary links should be reviewed for persistence.
 9. Use \`openathor style check chapter <id-or-order> --json\` after drafting or revising a chapter when style consistency matters.
 10. Use \`openathor outline impact <id-or-order> --json\` before proposing any chapter archive/delete action.
@@ -101,11 +101,11 @@ When using proposal commands:
 - use confirmed draft writes only for \`chapter next\`; do not overwrite existing chapter files
 - use confirmed revision only when the source hash comes from the latest \`openathor context\` or \`openathor doctor\` output
 - for writing advice, read relevant plaintext sources and provide suggestions in the conversation
-- after writing or revising longform assets, run \`openathor assets audit --json\` and report unresolved links or drift before claiming continuity is stable
+- after writing or revising longform assets, run \`openathor assets audit --json\` and report unresolved links, drift, and character profile summary before claiming continuity is stable
 - after writing a chapter that introduces or changes story assets, create a structured asset package in a project note and run \`openathor assets sync chapter <id-or-order> --from <asset-package> --json\`; do not edit \`bible/characters.md\`, \`bible/timeline.md\`, \`notes/hooks.md\`, or \`outline/chapters.yaml\` by hand to bypass the sync flow
 - after a confirmed multi-chapter draft, do not stop at manuscript files; for each drafted chapter, sync the chapter summary, character states, timeline events, hooks, and outline links before claiming the longform assets have been persisted
 - only after explicit user confirmation, rerun asset sync with \`--confirm --base-hash "sha256:..."\`; use the latest source hash from context, sync proposal, or doctor output
-- run \`openathor assets audit --json\` after confirmed asset sync and report unresolved outline links, character link drift, or summary drift
+- run \`openathor assets audit --json\` after confirmed asset sync and report unresolved outline links, character link drift, summary drift, and weak character profile summaries
 - after writing or revising chapter prose, run \`openathor style check chapter <id-or-order> --json\` when style stability is part of the task; treat findings as review prompts, not automatic edits
 - ask before any file write that affects manuscript, outline, or confirmed canon
 
