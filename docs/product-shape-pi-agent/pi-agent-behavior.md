@@ -6,6 +6,7 @@ OpenAthor Pi Skill 应该要求 Pi Agent 遵守以下行为。
 
 - `openathor skill install pi` 默认安装项目级 skill 到 `.pi/skills/openathor/SKILL.md`
 - 可选全局安装到 `~/.pi/agent/skills/openathor/SKILL.md`
+- Slice 1 已实现该安装命令；项目级安装已纳入 fixture 回归
 - Pi runtime spike 显示显式 `--skill <path>` 加载可靠，不能依赖模型只凭 skill 名称猜测临时 skill
 - 在 OpenAthor 项目中启动 Pi 时，应优先使用项目级 skill
 - 如果 skill 未被发现，Pi Agent 应提示用户运行 `openathor skill install pi` 或用 `pi --skill .pi/skills/openathor/SKILL.md`

@@ -1,0 +1,14 @@
+required:
+  - openathor.yaml
+  - bible/premise.md
+  - bible/style.md
+  - bible/canon.md
+  - bible/canon.pending.md
+  - outline/volumes.yaml
+  - outline/chapters.yaml
+  - outline/scenes.yaml
+  - .pi/skills/openathor/SKILL.md
+  - .openathor/manuscript.index.yaml
+  - .openathor/index.sqlite
+absent:
+  - manuscript/chapter-001.md

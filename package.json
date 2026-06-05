@@ -1,0 +1,39 @@
+{
+  "name": "openathor",
+  "version": "0.1.0",
+  "description": "OpenAthor TypeScript CLI and protocol kernel.",
+  "type": "module",
+  "bin": {
+    "openathor": "./dist/cli.js",
+    "openathor-fixture-check": "./dist/fixture-check.js"
+  },
+  "files": [
+    "dist",
+    "schemas",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run check && npm run validate:schemas && npm run build && npm run test:fixtures",
+    "validate:schemas": "node scripts/validate-schemas.mjs",
+    "test:fixtures": "npm run test:fixtures:slice1 && npm run test:fixtures:slice2 && npm run test:fixtures:slice3 && npm run test:fixtures:slice4",
+    "test:fixtures:slice1": "npm run fixture -- fixtures/slice-1/new-project && npm run fixture -- fixtures/slice-1/adopt-3-chapters && npm run fixture -- fixtures/slice-1/scattered-drafts && npm run fixture -- fixtures/slice-1/adopt-ambiguous-order",
+    "test:fixtures:slice2": "npm run fixture -- fixtures/slice-2/draft-confirm-write && npm run fixture -- fixtures/slice-2/revise-confirm-write && npm run fixture -- fixtures/slice-2/revise-hash-conflict",
+    "test:fixtures:slice3": "npm run fixture -- fixtures/slice-3/outline-archive",
+    "test:fixtures:slice4": "npm run fixture -- fixtures/slice-4/search-text",
+    "fixture": "node dist/fixture-check.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "commander": "^14.0.2",
+    "yaml": "^2.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,10 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor revise chapter 1 --task "尝试用过期上下文改写" --text "# 开端\n\n错误覆盖。" --base-hash sha256:0000000000000000000000000000000000000000000000000000000000000000 --confirm-write --json
+    ok: false
+    error_code: OA_MANUSCRIPT_CHANGED
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

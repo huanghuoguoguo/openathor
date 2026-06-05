@@ -1,0 +1,8 @@
+required:
+  - openathor.yaml
+  - 正文/第一章.md
+  - 正文/雨中会面.md
+  - .openathor/manuscript.index.yaml
+  - notes/import-questions.md
+  - .openathor/index.sqlite
+absent: []

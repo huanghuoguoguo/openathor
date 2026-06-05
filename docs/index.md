@@ -4,7 +4,9 @@
 
 ## 当前阶段
 
-当前阶段是前期产品和协议准备，不进入产品代码实现。
+当前阶段是 Slice 1 协议内核。项目已具备 TypeScript/Node.js CLI、协议 schema、fixture 回归和 deterministic check 入口。
+
+当前可用范围是创建项目、非侵入式接管已有小说、检查项目协议、重建派生索引。正文生成、写作闭环、Pi Skill 安装和 LLM-as-judge 自动评测仍属于后续切片。
 
 ## 主要文档
 

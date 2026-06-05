@@ -1,0 +1,24 @@
+commands:
+  - run: openathor adopt --dry-run --json
+    ok: true
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true
+  - run: openathor context chapter 2 --json
+    ok: true
+    expect_data_path: context_pack.target.id
+  - run: openathor context --json
+    ok: true
+    expect_data_path: canon.confirmed
+  - run: openathor draft chapter 2 --task "继续第二章，不要覆盖原稿" --dry-run --json
+    ok: true
+    expect_data_path: planned_writes
+  - run: openathor review chapter 2 --task "检查人物动机问题" --json
+    ok: true
+    expect_data_path: proposal_path
+  - run: openathor canon sync 2 --task "提取第二章新增设定到 pending" --json
+    ok: true
+    expect_data_path: proposal_path

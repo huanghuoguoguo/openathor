@@ -21,7 +21,9 @@
 
 ## 当前开发闸门
 
-当前阶段不写产品代码。只有当以下内容完成并被确认后，才进入实现：
+Slice 0 的产品、协议、CLI、验证和决策冻结已完成，项目已进入 Slice 1 协议内核实现阶段。
+
+已落地：
 
 - 产品形态
 - 目标用户故事
@@ -33,7 +35,12 @@
 - LLM-as-judge 评估体系
 - 产品和架构决策记录方式
 - 实现切片和防偏移规则
+- Slice 1 CLI 协议内核
+- Slice 1 fixtures 和 deterministic check 入口
+- OpenAthor Pi Skill 项目级安装
+- Slice 2 context 和 proposal 模式写作闭环入口
+- Slice 3 outline show/impact/archive 结构编辑最小闭环
 
 ## 推荐下一步
 
-先完成 Slice 0 的产品、协议、CLI、验证和决策冻结，再基于这些文档拆出实现任务。
+下一步应继续推进 insert/move 等结构编辑命令、LLM-as-judge smoke 入口、以及向量语义检索的可选派生能力。

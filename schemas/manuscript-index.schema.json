@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["version", "generated_at", "source_mode", "chapters"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "source_mode": { "enum": ["created", "adopted", "standardized"] },
+    "chapters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/chapter" }
+    },
+    "unclassified": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/unclassified" },
+      "default": []
+    },
+    "questions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/question" },
+      "default": []
+    }
+  },
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "not": { "pattern": "^(?:/|[A-Za-z]:|.*\\.\\..*)" }
+    },
+    "chapter": {
+      "type": "object",
+      "required": [
+        "id",
+        "display_order",
+        "title",
+        "source_path",
+        "status",
+        "origin",
+        "content_hash",
+        "confidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^ch_[a-z0-9_]+$" },
+        "display_order": { "type": "integer", "minimum": 1 },
+        "title": { "type": "string" },
+        "source_path": { "$ref": "#/$defs/relativePath" },
+        "status": { "enum": ["existing", "drafted", "revised", "archived"] },
+        "origin": { "enum": ["created", "adopted", "standardized"] },
+        "content_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "detected_title": { "type": "string" },
+        "confidence": { "enum": ["high", "medium", "low"] }
+      }
+    },
+    "unclassified": {
+      "type": "object",
+      "required": ["path", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath" },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "question": {
+      "type": "object",
+      "required": ["id", "path", "question"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "path": { "$ref": "#/$defs/relativePath" },
+        "question": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string" }
+      }
+    }
+  }
+}

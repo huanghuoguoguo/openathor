@@ -59,6 +59,18 @@
 
 参考：[Core Scenarios](../product-shape-pi-agent/core-scenarios.md)
 
+当前实现状态：
+
+- [x] 写作前只读上下文入口：`openathor context`
+- [x] 续写 proposal 入口：`openathor draft`
+- [x] 审稿 proposal 入口：`openathor review`
+- [x] 改稿 proposal 入口：`openathor revise`
+- [x] canon 同步 pending 入口：`openathor canon sync`
+- [x] 用户确认后写入下一章新正文：`openathor draft chapter next --confirm-write`
+- [x] 用户确认后改写已有章节正文：`openathor revise chapter --confirm-write --base-hash`
+- [x] 结构编辑最小闭环：`openathor outline show/impact/archive`
+- [ ] LLM-as-judge 自动化 smoke
+
 ## 项目协议
 
 ### Slice 1 开工门禁
@@ -79,8 +91,8 @@
 - [x] 定义 confirmed、pending、question 三类 canon 状态
 - [x] 定义明文文件是唯一事实源
 - [x] 决策 Slice 1 schema 和 fixture 目录
-- [ ] 落地 Slice 1 schema 文件
-- [ ] 落地 Slice 1 fixtures
+- [x] 落地 Slice 1 schema 文件
+- [x] 落地 Slice 1 fixtures
 
 ### 后续切片准备项
 
@@ -130,7 +142,13 @@
 
 ### 后续切片准备项
 
-- [ ] 落地 OpenAthor Pi Skill 文件
+- [x] 落地 OpenAthor Pi Skill 文件
+
+当前验证证据：
+
+- `openathor skill install pi --json` 默认写入 `.pi/skills/openathor/SKILL.md`
+- `fixtures/slice-1/new-project` 覆盖项目级 skill 安装
+- Pi Skill 明确 Slice 1 边界：不伪装成已支持正文生成、审稿、改稿或语义检索
 
 参考：
 
@@ -149,8 +167,17 @@
 - [x] 定义 deterministic checks
 - [x] 决策 Slice 1 fixture 目录和 expected 输出格式
 - [x] 决策自动化 deterministic check 脚本入口
-- [ ] 落地 Slice 1 fixture 目录和 expected 输出
-- [ ] 实现自动化 deterministic check 脚本入口
+- [x] 落地 Slice 1 fixture 目录和 expected 输出
+- [x] 实现自动化 deterministic check 脚本入口
+
+当前验证证据：
+
+- `npm test` 运行 TypeScript 类型检查、schema 校验、构建和 Slice 1 fixture 回归。
+- `fixtures/slice-1/new-project`
+- `fixtures/slice-1/adopt-3-chapters`
+- `fixtures/slice-1/scattered-drafts`
+- `fixtures/slice-1/adopt-ambiguous-order`
+- `openathor-fixture-check` 会复制 fixture input、执行 expected commands、校验 JSON envelope、expected files、disallowed writes，并在最终项目上运行 `openathor doctor --json --strict`。
 
 ### 后续切片准备项
 
@@ -161,6 +188,15 @@
 - [x] 定义长篇检索样例
 - [x] 定义 LLM judge 输入格式
 - [x] 定义 judge rubric
+
+当前实现状态：
+
+- [x] 结构编辑最小闭环：`openathor outline show/impact/archive`
+- [x] 确定性文本检索：`openathor search text`
+- [x] 确定性相关检索：`openathor search related`
+- [ ] 插章、移章、拆分、合并和重规划
+- [ ] 向量语义检索
+- [ ] LLM-as-judge 自动化 smoke
 
 参考：
 

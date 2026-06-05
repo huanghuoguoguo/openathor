@@ -112,6 +112,22 @@ Slice 1 实现前必须先落地 schema 和 fixtures。
 
 fixture check 先作为测试侧入口实现，后续再整合进完整测试框架。
 
+## 2026-06-04: CLI 使用 TypeScript
+
+OpenAthor CLI 使用 TypeScript 和 Node.js 实现，不使用 Python。
+
+原因：
+
+- CLI 是长期维护的 agent-facing 工具层，需要更严格的类型约束和可维护模块边界。
+- Pi Agent 调用的是命令行二进制，Node.js 打包和跨平台分发路径更适合当前目标。
+- JSON、YAML、schema validation、diff 和 fixture runner 都可以在 TypeScript 生态中稳定实现。
+
+约束：
+
+- 协议 schema 放在语言无关的 `schemas/` 目录，不绑定到具体运行时包目录。
+- TypeScript 代码不得改变既有 Project Protocol、CLI Contract 和写入安全决策。
+- Slice 1 仍先完成 schema、fixtures 和 deterministic check 入口，再实现命令逻辑。
+
 ## 2026-06-04: Sub-agent 可用于并行开发和测试，但不能替代主线验收
 
 进入实现后，可以使用 sub-agent 并行推进：
@@ -125,3 +141,196 @@ fixture check 先作为测试侧入口实现，后续再整合进完整测试框
 主 Operator Agent 对最终代码、文档、测试和合并负责。
 
 sub-agent 输出只能作为 findings、patch suggestions、test reports 或 judge reports。不得让 sub-agent 直接绕过主线检查写入 confirmed canon、用户正文或核心协议决策。
+
+## 2026-06-04: Slice 1 Protocol Kernel 已落地
+
+Slice 1 已实现为 TypeScript/Node.js CLI，并纳入 `npm test`。
+
+已实现命令：
+
+- `openathor init`
+- `openathor adopt --dry-run`
+- `openathor adopt`
+- `openathor doctor`
+- `openathor index rebuild`
+- `openathor skill install pi`
+- `openathor-fixture-check`
+
+已落地验证：
+
+- Slice 1 schema 编译校验
+- `fixtures/slice-1/new-project`
+- `fixtures/slice-1/adopt-3-chapters`
+- `fixtures/slice-1/scattered-drafts`
+- `fixtures/slice-1/adopt-ambiguous-order`
+- 项目级 Pi Skill 安装
+- fixture runner 校验 JSON envelope、expected files、disallowed writes，并运行 `openathor doctor --json --strict`
+
+当前限制：
+
+- 不包含正文生成、写作改稿闭环、语义检索或 sub-agent 调度。
+- LLM-as-judge 仍是评估文档和 rubric，尚未自动化接入测试运行。
+
+## 2026-06-05: Slice 2 Context 命令已落地
+
+`openathor context` 已作为 Slice 2 的只读入口实现。
+
+已实现：
+
+- `openathor context --json`
+- `openathor context project --json`
+- `openathor context chapter <id-or-display-order> --json`
+- `--max-chars <count>`
+
+当前行为：
+
+- 读取 `openathor.yaml`、outline、manuscript index、canon、pending canon、style、notes 和目标章节前后正文。
+- 输出 JSON envelope、sources/hash、warnings 和 context pack。
+- 不写文件，`writes` 为空。
+- 目标章节不存在时返回 `OA_CONTEXT_TARGET_NOT_FOUND`。
+
+当前限制：
+
+- 不调用模型。
+- 不生成正文或 diff。
+- 不做语义检索，只提供确定性上下文包。
+
+## 2026-06-05: Slice 2 Writing Proposal 入口已落地
+
+写作闭环的第一版实现采用 proposal 模式。
+
+已实现：
+
+- `openathor plan --task <text> --json`
+- `openathor draft chapter <target> --task <text> --json`
+- `openathor review chapter <target> --task <text> --json`
+- `openathor revise chapter <target> --task <text> --json`
+- `openathor canon sync [target] --task <text> --json`
+- `--dry-run`
+
+当前行为：
+
+- 命令先读取 context。
+- 写入 `runs/run_*.json`。
+- plan/draft 写入 `notes/` proposal。
+- review/revise 写入 `reviews/` proposal。
+- canon sync 只追加到 `bible/canon.pending.md`。
+- 不修改正文，不修改 `bible/canon.md`。
+
+原因：
+
+- 先让 Pi Agent 有可审计的任务包、上下文来源和 run 记录。
+- 避免 CLI 在没有模型质量评估和用户确认机制前直接改正文。
+
+## 2026-06-05: 确认后的下一章草稿写入已落地
+
+`openathor draft chapter next --confirm-write` 已实现为保守 confirmed write。
+
+已实现：
+
+- `openathor draft chapter next --task <text> --text <manuscript> --confirm-write --json`
+- `--dry-run`
+
+当前行为：
+
+- 只创建新的下一章文件：`manuscript/chapter-NNN.md`
+- 更新 `outline/chapters.yaml`
+- 更新 `.openathor/manuscript.index.yaml`
+- 写入 `runs/run_*.json`
+- 不覆盖接管原稿路径
+- 不覆盖已有 manuscript 文件
+
+限制：
+
+- 不调用模型，`--text` 必须由 Pi Agent 或用户提供。
+- 只支持写入新的下一章，不覆盖已有章节。
+- 写入后派生 SQLite 索引会变 stale，需要 `openathor index rebuild --json`。
+
+## 2026-06-05: 已有章节确认改写和 hash 冲突保护已落地
+
+`openathor revise chapter <target> --confirm-write` 已支持确认后改写已有章节。
+
+已实现：
+
+- `openathor revise chapter <target> --task <text> --text <manuscript> --base-hash <sha256:...> --confirm-write --json`
+- `--dry-run`
+
+当前行为：
+
+- 必须提供 `--base-hash`。
+- 当前正文 hash 与 `--base-hash` 不一致时返回 `OA_MANUSCRIPT_CHANGED`。
+- hash 匹配时改写目标章节 `source_path`。
+- 更新 `outline/chapters.yaml` 状态为 `revised`。
+- 更新 `.openathor/manuscript.index.yaml` 的 `content_hash`。
+- 写入 `runs/run_*.json`。
+
+验证：
+
+- `fixtures/slice-2/revise-confirm-write`
+- `fixtures/slice-2/revise-hash-conflict`
+
+## 2026-06-05: 确定性文本检索已落地
+
+`openathor search text` 已实现为只读文本检索命令。
+
+已实现：
+
+- `openathor search text <query> --json`
+- `--limit <count>`
+- `--max-chars <count>`
+
+当前行为：
+
+- 扫描已索引正文、bible、outline、notes、reviews 和项目内其他明文文本文件。
+- 返回 path、hash、line、column 和 snippet。
+- `writes` 为空。
+- 不调用模型，不做语义排序。
+
+验证：
+
+- `fixtures/slice-4/search-text`
+
+## 2026-06-05: 结构编辑最小闭环已落地
+
+`openathor outline show`、`openathor outline impact` 和 `openathor outline archive` 已实现。
+
+已实现：
+
+- `openathor outline show --json`
+- `openathor outline impact <target> --json`
+- `openathor outline archive <target> --json`
+- `openathor outline archive <target> --confirm --base-hash <hash> --json`
+
+当前行为：
+
+- `outline show` 只读返回章节大纲、状态、source path 和 hash。
+- `outline impact` 只读扫描直接引用、词项相关上下文、候选事实和后续章节。
+- `outline archive` 默认 proposal，不写文件。
+- 用户确认后只更新 `outline/chapters.yaml` 和 `.openathor/manuscript.index.yaml` 的章节状态，并写 run record。
+- 归档不删除、移动或重命名正文文件。
+
+验证：
+
+- `fixtures/slice-3/outline-archive`
+
+## 2026-06-05: 确定性相关检索已落地
+
+`openathor search related chapter <target>` 已实现。
+
+已实现：
+
+- `openathor search related chapter <target> --json`
+- `--limit <count>`
+- `--max-chars <count>`
+
+当前行为：
+
+- 从目标章节提取词项。
+- 按词项重叠给候选文件打分。
+- 返回 path、hash、score、shared_terms 和 snippet。
+- `writes` 为空。
+- 不调用模型，不做向量语义检索。
+
+验证：
+
+- `fixtures/slice-4/search-text`

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["protocol_version", "project", "agent", "paths", "features"],
+  "additionalProperties": false,
+  "properties": {
+    "protocol_version": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
+    "project": {
+      "type": "object",
+      "required": ["id", "title", "language", "created_at", "source_policy"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "title": { "type": "string", "minLength": 1 },
+        "language": { "type": "string", "minLength": 2 },
+        "created_at": { "type": "string", "minLength": 1 },
+        "source_policy": { "const": "plaintext" }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "required": ["primary", "skill", "skill_version"],
+      "additionalProperties": false,
+      "properties": {
+        "primary": { "const": "pi" },
+        "skill": { "type": "string", "minLength": 1 },
+        "skill_version": { "type": "string", "pattern": "^\\d+\\.\\d+$" }
+      }
+    },
+    "paths": {
+      "type": "object",
+      "required": [
+        "bible",
+        "outline",
+        "manuscript",
+        "notes",
+        "reviews",
+        "runs",
+        "manuscript_index",
+        "sqlite_index",
+        "vector_index"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "bible": { "$ref": "#/$defs/relativePath" },
+        "outline": { "$ref": "#/$defs/relativePath" },
+        "manuscript": { "$ref": "#/$defs/relativePath" },
+        "notes": { "$ref": "#/$defs/relativePath" },
+        "reviews": { "$ref": "#/$defs/relativePath" },
+        "runs": { "$ref": "#/$defs/relativePath" },
+        "manuscript_index": { "$ref": "#/$defs/relativePath" },
+        "sqlite_index": { "$ref": "#/$defs/relativePath" },
+        "vector_index": { "$ref": "#/$defs/relativePath" }
+      }
+    },
+    "features": {
+      "type": "object",
+      "required": ["vector_search", "sub_agents"],
+      "additionalProperties": false,
+      "properties": {
+        "vector_search": { "const": "optional" },
+        "sub_agents": { "const": "optional" }
+      }
+    }
+  },
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "not": { "pattern": "^(?:/|[A-Za-z]:|.*\\.\\..*)" }
+    }
+  }
+}

@@ -16,7 +16,7 @@ Slice 1 使用 YAML 事实源和 JSON Schema 风格的校验定义。
 - `outline/volumes.yaml`
 - `outline/scenes.yaml`
 
-schema 文件建议放在：
+schema 文件放在：
 
 ```text
 schemas/
@@ -31,7 +31,7 @@ YAML 文件通过解析成 JSON-compatible object 后按 schema 校验。
 
 ## Fixture 目录
 
-Slice 1 fixtures 建议放在：
+Slice 1 fixtures 放在：
 
 ```text
 fixtures/slice-1/
@@ -117,7 +117,7 @@ fixture-name/
 
 ## Deterministic Check 入口
 
-实现阶段先提供一个测试侧命令：
+测试侧命令：
 
 ```bash
 openathor-fixture-check fixtures/slice-1/adopt-3-chapters
@@ -132,4 +132,8 @@ openathor-fixture-check fixtures/slice-1/adopt-3-chapters
 - 校验 disallowed writes
 - 运行 `openathor doctor --json --strict`
 
-后续可以把它整合到常规 test runner。
+当前已整合到常规 test runner：
+
+```bash
+npm test
+```
