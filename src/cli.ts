@@ -24,6 +24,7 @@ import {
   runSearchSemantic,
   runSearchText,
   runSkillInstallPi,
+  runStyleAnalyze,
   runStyleCheck,
   runStyleProfileShow,
   runWritingProposal,
@@ -308,14 +309,32 @@ styleCommand
   .description("Analyze an authorized style reference into an abstract profile.")
   .argument("<path>", "authorized style reference path")
   .option("--json", "emit JSON")
-  .action(async (_referencePath: string, options: { json?: boolean }) => {
+  .option("--profile-id <id>", "pending style profile id")
+  .option("--name <name>", "pending style profile name")
+  .option("--permission <permission>", "reference permission", "user_owned_or_authorized")
+  .option("--source-type <type>", "reference source type", "user_provided")
+  .option("--dry-run", "show planned writes without changing files")
+  .action(async (
+    referencePath: string,
+    options: {
+      json?: boolean;
+      profileId?: string;
+      name?: string;
+      permission?: string;
+      sourceType?: string;
+      dryRun?: boolean;
+    },
+  ) => {
     await emitResult(
       "openathor style analyze",
       options.json,
-      runNotImplemented({
-        command: "openathor style analyze",
-        feature: "Style profile analysis",
-        hints: ["Use bible/style.md manually for now and avoid copying reference text."],
+      runStyleAnalyze({
+        referencePath,
+        profileId: options.profileId,
+        name: options.name,
+        permission: options.permission,
+        sourceType: options.sourceType,
+        dryRun: options.dryRun,
       }),
     );
   });

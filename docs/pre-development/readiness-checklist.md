@@ -54,7 +54,7 @@
 - [x] 删除或归档章节
 - [x] 移动章节
 - [x] 拆分或合并章节
-- [ ] 基于授权参考文本生成风格画像
+- [x] 基于授权参考文本生成风格画像
 - [ ] 按项目风格画像续写、审稿和改稿
 
 参考：[Core Scenarios](../product-shape-pi-agent/core-scenarios.md)
@@ -67,6 +67,7 @@
 - [x] 改稿 proposal 入口：`openathor revise`
 - [x] canon 同步 pending 入口：`openathor canon sync`
 - [x] 写作后结构化资产沉淀入口：`openathor assets sync`
+- [x] 授权参考文本风格画像 pending 入口：`openathor style analyze`
 - [x] 用户确认后写入下一章新正文：`openathor draft chapter next --confirm-write`
 - [x] 确认写入新章标题 fallback：优先 Markdown H1，其次任务中的书名号/引号标题、项目标题、章节序号
 - [x] 用户确认后改写已有章节正文：`openathor revise chapter --confirm-write --base-hash`
@@ -126,9 +127,9 @@
 
 ### 后续切片准备项
 
-- [ ] 定义 `openathor style analyze`
-- [ ] 定义 `openathor style profile show`
-- [ ] 定义 `openathor style check`
+- [x] 定义 `openathor style analyze`
+- [x] 定义 `openathor style profile show`
+- [x] 定义 `openathor style check`
 - [x] 补充 Slice 2+ 命令级合约
 
 参考：[CLI Contract](../cli-contract.md)
