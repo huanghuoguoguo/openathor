@@ -74,3 +74,20 @@ export function errorEnvelope(
     error: error.toJSON(),
   });
 }
+
+export function uniqueWarnings(warnings: EnvelopeWarning[]): EnvelopeWarning[] {
+  const seen = new Set<string>();
+  const result = [];
+
+  for (const warning of warnings) {
+    const key = `${warning.code}\u0000${warning.severity}\u0000${warning.message}`;
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    result.push(warning);
+  }
+
+  return result;
+}

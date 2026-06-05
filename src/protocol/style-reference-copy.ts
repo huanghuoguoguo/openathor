@@ -1,9 +1,11 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { parse as parseYaml } from "yaml";
 import type { EnvelopeSource } from "./envelope.js";
 import { isSafeRelativePath, sha256File, toPosix } from "./paths.js";
-import { isPlainRecord } from "./value.js";
+import {
+  asRecordArray,
+  readYamlObjectFile,
+} from "./yaml-records.js";
 
 export type StyleReferenceCopyMatch = {
   reference_path: string;
@@ -54,18 +56,6 @@ export async function detectStyleReferenceCopy(
   return null;
 }
 
-async function readYamlObjectFile(
-  filePath: string,
-  fallback: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  if (!(await pathExists(filePath))) {
-    return fallback;
-  }
-
-  const parsed = parseYaml(await readFile(filePath, "utf8"));
-  return isPlainRecord(parsed) ? parsed : fallback;
-}
-
 function copiedStyleReferenceExcerpt(
   referenceText: string,
   normalizedRevision: string,
@@ -110,10 +100,6 @@ function normalizeCopyCheckText(text: string): string {
     .replace(/^#{1,6}\s+.*$/gmu, "")
     .replace(/\s+/g, "")
     .toLowerCase();
-}
-
-function asRecordArray(value: unknown): Array<Record<string, unknown>> {
-  return Array.isArray(value) ? value.filter(isPlainRecord) : [];
 }
 
 async function pathExists(filePath: string): Promise<boolean> {
