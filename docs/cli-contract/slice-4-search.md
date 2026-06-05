@@ -229,5 +229,5 @@ openathor assets audit [--json] [--max-chars <count>]
 ### 当前限制
 
 - `assets audit` 只做 Markdown/YAML 文本扫描，不做完整语义事实推理。
-- 人物、timeline 和 hook 优先通过稳定 ID 前缀和 Markdown 标题识别。
+- 人物、timeline 和 hook 支持 `char_` / `ev_` / `hook_` 前缀、Markdown 标题、`## 名称 (id)` 以及 Pi 常写的 `- id: ...` + `name:` / `title:` 列表块。
 - `summary_drift` 是复核提示，不代表自动判定正文错误。
