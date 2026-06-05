@@ -1,6 +1,19 @@
 commands:
   - run: openathor adopt --json
     ok: true
+  - run: openathor draft chapter next --task "用户确认写入《第二章》" --dry-run --json
+    ok: true
+    expect_no_writes: true
+    expect_data:
+      mode: proposal
+      target.id: ch_002
+      target.display_order: 2
+      target.title: 第二章
+      target.source_path: manuscript/chapter-002.md
+      context_pack.scope: project
+      context_pack.target: null
+      planned_writes.0.reason: draft_run_record
+      planned_writes.1.reason: draft_proposal
   - run: openathor draft chapter next --task "用户确认写入第二章" --text "# 第二章\n\n这是用户确认后的新章草稿。" --confirm-write --json
     ok: true
     expect_data_path: target.source_path
