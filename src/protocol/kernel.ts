@@ -1151,19 +1151,22 @@ export async function runAssetsAudit(
     }
 
     if (chapter.summary && chapterText) {
-      const summaryTerms = extractAssetAuditTerms(chapter.summary).slice(0, 20);
-      const normalizedChapterText = chapterText.toLowerCase();
-      const missingTerms = summaryTerms.filter(
-        (term) => !normalizedChapterText.includes(term),
-      );
+      const summaryCoverage = summarizeAssetCoverage(chapter.summary, chapterText);
 
-      if (summaryTerms.length >= 6 && missingTerms.length / summaryTerms.length >= 0.85) {
+      if (
+        summaryCoverage.total_terms >= 8 &&
+        summaryCoverage.coverage_ratio < 0.22 &&
+        summaryCoverage.segment_coverage_ratio < 0.4
+      ) {
         summaryDrift.push({
           id: chapter.id,
           display_order: chapter.display_order,
           title: chapter.title,
           source_path: sourcePath,
-          summary_missing_terms: missingTerms.slice(0, 12),
+          summary_coverage_ratio: summaryCoverage.coverage_ratio,
+          summary_segment_coverage_ratio: summaryCoverage.segment_coverage_ratio,
+          summary_matched_terms: summaryCoverage.matched_terms.slice(0, 12),
+          summary_missing_terms: summaryCoverage.missing_terms.slice(0, 12),
           summary_excerpt: snippetAround(chapter.summary, 0, 0, maxChars),
         });
       }
@@ -5040,6 +5043,100 @@ function extractAssetAuditTerms(text: string): string[] {
   }
 
   return [...terms].sort((a, b) => a.localeCompare(b, "zh-Hans-CN")).slice(0, 80);
+}
+
+function summarizeAssetCoverage(
+  summary: string,
+  chapterText: string,
+): {
+  total_terms: number;
+  coverage_ratio: number;
+  segment_count: number;
+  segment_coverage_ratio: number;
+  matched_terms: string[];
+  missing_terms: string[];
+} {
+  const summaryTerms = extractAssetAuditCoverageTerms(summary).slice(0, 80);
+  const normalizedChapterText = normalizeAssetAuditText(chapterText);
+  const matchedTerms = [];
+  const missingTerms = [];
+
+  for (const term of summaryTerms) {
+    if (normalizedChapterText.includes(term)) {
+      matchedTerms.push(term);
+    } else {
+      missingTerms.push(term);
+    }
+  }
+
+  return {
+    total_terms: summaryTerms.length,
+    coverage_ratio:
+      summaryTerms.length === 0
+        ? 1
+        : roundTwo(matchedTerms.length / summaryTerms.length),
+    ...summarizeAssetSegmentCoverage(summary, normalizedChapterText),
+    matched_terms: matchedTerms,
+    missing_terms: missingTerms,
+  };
+}
+
+function summarizeAssetSegmentCoverage(
+  summary: string,
+  normalizedChapterText: string,
+): {
+  segment_count: number;
+  segment_coverage_ratio: number;
+} {
+  const segments = summary
+    .split(/[。！？!?；;，,、]+/u)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
+  let matchedSegments = 0;
+
+  for (const segment of segments) {
+    const terms = extractAssetAuditCoverageTerms(segment).slice(0, 24);
+    if (terms.length === 0) {
+      continue;
+    }
+
+    const matches = terms.filter((term) => normalizedChapterText.includes(term)).length;
+    const requiredMatches = Math.min(3, Math.ceil(terms.length * 0.22));
+    if (matches >= requiredMatches) {
+      matchedSegments += 1;
+    }
+  }
+
+  return {
+    segment_count: segments.length,
+    segment_coverage_ratio:
+      segments.length === 0 ? 1 : roundTwo(matchedSegments / segments.length),
+  };
+}
+
+function extractAssetAuditCoverageTerms(text: string): string[] {
+  const terms = new Set<string>();
+  const normalized = normalizeAssetAuditText(text);
+
+  for (const token of normalized.match(/[a-z0-9_]{3,}/g) ?? []) {
+    if (!SEARCH_STOP_WORDS.has(token)) {
+      terms.add(token);
+    }
+  }
+
+  for (const phrase of normalized.match(/[\p{Script=Han}]{2,}/gu) ?? []) {
+    for (const token of cjkNgrams(phrase)) {
+      if (!SEARCH_STOP_WORDS.has(token)) {
+        terms.add(token);
+      }
+    }
+  }
+
+  return [...terms].sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+}
+
+function normalizeAssetAuditText(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, "");
 }
 
 function styleMetrics(text: string): StyleMetrics {

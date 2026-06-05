@@ -1,0 +1,32 @@
+commands:
+  - run: openathor index rebuild --json
+    ok: true
+    expect_data:
+      chapters_indexed: 3
+  - run: openathor doctor --json --strict
+    ok: true
+    expect_data:
+      checks.manuscript_index_matches_outline: true
+      checks.derived_index_current: true
+  - run: openathor assets audit --json
+    ok: true
+    expect_data:
+      audit.counts.characters: 4
+      audit.counts.timeline_events: 4
+      audit.counts.hooks: 3
+      audit.counts.unresolved_outline_links: 0
+      audit.counts.character_link_drifts: 0
+      audit.counts.summary_drift_candidates: 1
+      audit.summary_drift.0.id: ch_001
+      audit.summary_drift.0.display_order: 1
+      audit.assets.characters.0.id: lin-wei-yuan
+      audit.assets.characters.0.name: 林维远
+      audit.assets.timeline_events.3.id: event-a-xiu-witness
+      audit.assets.hooks.2.id: hook-midnight-gears
+      audit.chapter_entity_coverage.2.linked_character_names.0: 周明海
+      audit.chapter_entity_coverage.2.mentioned_characters.3: 阿锈
+  - run: openathor context chapter 3 --json
+    ok: true
+    expect_data:
+      context_pack.target.id: ch_003
+      outline.chapter_count: 3

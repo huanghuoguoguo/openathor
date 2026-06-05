@@ -1,0 +1,33 @@
+version: "0.1"
+generated_at: "2026-06-05T00:00:00.000Z"
+source_mode: created
+chapters:
+  - id: ch_001
+    display_order: 1
+    title: 雾港之夜
+    source_path: manuscript/chapter-001.md
+    status: drafted
+    origin: created
+    content_hash: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    detected_title: 雾港之夜
+    confidence: high
+  - id: ch_002
+    display_order: 2
+    title: 码头少年
+    source_path: manuscript/chapter-002.md
+    status: drafted
+    origin: created
+    content_hash: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    detected_title: 码头少年
+    confidence: high
+  - id: ch_003
+    display_order: 3
+    title: 商人
+    source_path: manuscript/chapter-003.md
+    status: drafted
+    origin: created
+    content_hash: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    detected_title: 商人
+    confidence: high
+unclassified: []
+questions: []
