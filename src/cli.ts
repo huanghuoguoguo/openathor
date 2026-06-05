@@ -4,6 +4,7 @@ import { envelope, errorEnvelope } from "./protocol/envelope.js";
 import { OpenAthorError } from "./protocol/errors.js";
 import {
   runAdopt,
+  runAssetsAudit,
   runContext,
   runDoctor,
   runExport,
@@ -238,6 +239,25 @@ searchCommand
       );
     },
   );
+
+const assetsCommand = program
+  .command("assets")
+  .description("Audit longform story assets and outline links.");
+
+assetsCommand
+  .command("audit")
+  .description("Check longform asset continuity without writing files.")
+  .option("--json", "emit JSON")
+  .option("--max-chars <count>", "maximum characters per snippet")
+  .action(async (options: { json?: boolean; maxChars?: string }) => {
+    await emitResult(
+      "openathor assets audit",
+      options.json,
+      runAssetsAudit({
+        maxChars: options.maxChars ? Number(options.maxChars) : undefined,
+      }),
+    );
+  });
 
 const styleCommand = program
   .command("style")

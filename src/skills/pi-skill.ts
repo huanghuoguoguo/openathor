@@ -21,6 +21,7 @@ openathor adopt --dry-run --json
 openathor adopt --json
 openathor index rebuild --json
 openathor index rebuild --vector --json
+openathor assets audit --json
 openathor search text "<query>" --json
 openathor search related chapter <id-or-order> --json
 openathor search semantic "<query>" --json
@@ -45,7 +46,8 @@ Before writing or advising on project state:
 4. Use \`openathor search text "<query>" --json\` to find keyword evidence across plaintext project files.
 5. Use \`openathor search related chapter <id-or-order> --json\` to find deterministic related context by term overlap.
 6. Use \`openathor index rebuild --vector --json\` and \`openathor search semantic "<query>" --json\` when the user asks for looser thematic or similarity retrieval.
-7. Use \`openathor outline impact <id-or-order> --json\` before proposing any chapter archive/delete action.
+7. Use \`openathor assets audit --json\` after longform asset, outline, or manuscript changes to check unresolved links and drift.
+8. Use \`openathor outline impact <id-or-order> --json\` before proposing any chapter archive/delete action.
 
 ## Adopting Existing Manuscripts
 
@@ -93,6 +95,7 @@ When using proposal commands:
 - use confirmed draft writes only for \`chapter next\`; do not overwrite existing chapter files
 - use confirmed revision only when the source hash comes from the latest \`openathor context\` or \`openathor doctor\` output
 - for writing advice, read relevant plaintext sources and provide suggestions in the conversation
+- after writing or revising longform assets, run \`openathor assets audit --json\` and report unresolved links or drift before claiming continuity is stable
 - ask before any file write that affects manuscript, outline, or confirmed canon
 
 ## Outline Safety

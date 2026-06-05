@@ -1,0 +1,18 @@
+commands:
+  - run: openathor doctor --json
+    ok: true
+    expect_data:
+      checks.standard_assets_present: true
+  - run: openathor assets audit --json
+    ok: true
+    expect_data:
+      audit.counts.characters: 3
+      audit.counts.unresolved_outline_links: 1
+      audit.counts.character_link_drifts: 1
+      audit.counts.summary_drift_candidates: 0
+      audit.outline_link_issues.0.link: char_missing
+      audit.chapter_entity_coverage.2.missing_character_links.0: 孟齐
+  - run: openathor index rebuild --json
+    ok: true
+    expect_data:
+      chapters_indexed: 3

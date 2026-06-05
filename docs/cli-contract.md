@@ -34,3 +34,4 @@ OpenAthor CLI 是 agent-facing 工具层：
 - `openathor context` 已作为 Slice 2 的只读入口落地
 - `openathor outline show/impact/insert/move/split/merge/replan/archive` 已作为 Slice 3 结构编辑最小闭环落地
 - `openathor search text/related/semantic` 已作为检索入口落地
+- `openathor assets audit` 已作为长篇资产连续性和漂移审计入口落地

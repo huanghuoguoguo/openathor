@@ -10,6 +10,7 @@ import type { OpenAthorEnvelope } from "./protocol/envelope.js";
 import { OpenAthorError } from "./protocol/errors.js";
 import {
   runAdopt,
+  runAssetsAudit,
   runContext,
   runDoctor,
   runExport,
@@ -445,6 +446,13 @@ async function dispatchCommand(
     });
   }
 
+  if (parsed.name === "assets audit") {
+    return runAssetsAudit({
+      cwd,
+      maxChars: parsed.options.maxChars,
+    });
+  }
+
   if (parsed.name === "outline show") {
     return runOutlineShow({ cwd });
   }
@@ -613,6 +621,7 @@ function parseCommand(command: string): {
     | "search text"
     | "search related"
     | "search semantic"
+    | "assets audit"
     | "outline show"
     | "outline impact"
     | "outline insert"
@@ -941,6 +950,14 @@ function parseCommand(command: string): {
       display: "openathor search semantic",
       name: "search semantic",
       pathArg: positional[2],
+      options,
+    };
+  }
+
+  if (positional[0] === "assets" && positional[1] === "audit") {
+    return {
+      display: "openathor assets audit",
+      name: "assets audit",
       options,
     };
   }
