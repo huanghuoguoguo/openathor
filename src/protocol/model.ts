@@ -188,6 +188,7 @@ export type AssetsSyncOptions = {
   confirm?: boolean;
   dryRun?: boolean;
   baseHash?: string;
+  assetHashes?: string[];
 };
 
 export type AssetsLinkBackfillOptions = {

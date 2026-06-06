@@ -36,6 +36,7 @@ export function registerAssetsCommands(program: Command): void {
     .option("--confirm", "write confirmed assets if the source hash matches")
     .option("--dry-run", "show planned writes without changing files")
     .option("--base-hash <hash>", "expected current manuscript source hash")
+    .option("--assets-hash <path=hash>", "expected current asset source hash", collectValues, [])
     .action(
       async (
         scope: string,
@@ -46,6 +47,7 @@ export function registerAssetsCommands(program: Command): void {
           confirm?: boolean;
           dryRun?: boolean;
           baseHash?: string;
+          assetsHash?: string[];
         },
       ) => {
         await emitResult(
@@ -58,6 +60,7 @@ export function registerAssetsCommands(program: Command): void {
             confirm: options.confirm,
             dryRun: options.dryRun,
             baseHash: options.baseHash,
+            assetHashes: options.assetsHash,
           }),
         );
       },
@@ -93,4 +96,8 @@ export function registerAssetsCommands(program: Command): void {
         );
       },
     );
+}
+
+function collectValues(value: string, previous: string[]): string[] {
+  return [...previous, value];
 }

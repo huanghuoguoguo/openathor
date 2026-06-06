@@ -43,7 +43,7 @@ commands:
       target.display_order: 4
       target.title: 空位名单
       target.source_path: manuscript/chapter-004.md
-  - run: openathor assets sync chapter 4 --from notes/asset-package-ch4.yaml --confirm --base-hash current:manuscript/chapter-004.md --json
+  - run: openathor assets sync chapter 4 --from notes/asset-package-ch4.yaml --confirm --base-hash current:manuscript/chapter-004.md --assets-hash bible/characters.md=current:bible/characters.md --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json
     ok: true
     expect_data:
       mode: confirmed_write

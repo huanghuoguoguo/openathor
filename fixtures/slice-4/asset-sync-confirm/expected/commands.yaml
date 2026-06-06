@@ -15,7 +15,11 @@ commands:
       result.hooks_added: 1
       result.outline_modified: true
       result.confirmed_assets_written: false
-  - run: openathor assets sync chapter 2 --from notes/asset-package-ch1.yaml --confirm --base-hash current:manuscript/chapter-002.md --json
+  - run: openathor assets sync chapter 2 --from notes/asset-package-ch1.yaml --confirm --base-hash current:manuscript/chapter-002.md --assets-hash bible/characters.md=sha256:0000000000000000000000000000000000000000000000000000000000000000 --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json
+    ok: false
+    error_code: OA_ASSETS_SOURCE_CHANGED
+    expect_no_writes: true
+  - run: openathor assets sync chapter 2 --from notes/asset-package-ch1.yaml --confirm --base-hash current:manuscript/chapter-002.md --assets-hash bible/characters.md=current:bible/characters.md --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json
     ok: true
     expect_data:
       mode: confirmed_write

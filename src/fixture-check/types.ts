@@ -117,6 +117,7 @@ export type FixtureCommandOptions = {
   sourceType?: string;
   confirmWrite?: boolean;
   baseHash?: string;
+  assetHashes?: string[];
   nextBaseHash?: string;
   fromPackage?: string;
   from?: string;
