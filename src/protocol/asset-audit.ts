@@ -251,10 +251,7 @@ export async function buildAssetAuditResult(input: {
     characterProfileSummaryTexts,
   );
   const weakCharacterProfileSummaryCount = characterProfileSummary.filter(
-    (summary) =>
-      summary.profile_field_count > 0 &&
-      summary.chapters.length > 0 &&
-      summary.coverage_ratio < 0.22,
+    isWeakCharacterProfileSummary,
   ).length;
 
   if (weakCharacterProfileSummaryCount > 0) {
@@ -322,7 +319,18 @@ export async function buildAssetAuditResult(input: {
 }
 
 function isWeakChapterProfileCoverage(coverage: ChapterCharacterProfileCoverage): boolean {
-  const requiredMatchedFields = Math.min(2, coverage.checked_fields);
+  return coverage.coverage_ratio < 0.12 && coverage.matched_fields === 0;
+}
 
-  return coverage.coverage_ratio < 0.12 && coverage.matched_fields < requiredMatchedFields;
+function isWeakCharacterProfileSummary(
+  summary: ReturnType<typeof summarizeCharacterProfileCoverage>[number],
+): boolean {
+  const requiredMatchedFields = Math.min(2, summary.profile_field_count);
+
+  return (
+    summary.profile_field_count > 0 &&
+    summary.chapters.length > 0 &&
+    summary.coverage_ratio < 0.22 &&
+    summary.matched_profile_field_count < requiredMatchedFields
+  );
 }
