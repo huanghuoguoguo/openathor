@@ -29,6 +29,9 @@ export type ConfirmedDraftPlan = {
   runRelPath: string;
   sourcePath: string;
   target: WritingTarget;
+  detectedTitle: string | null;
+  plannedTitle: string | null;
+  titleSource: "text" | "task" | "planned" | "project" | "fallback";
   filledPlannedChapter: boolean;
   plannedChapterId: string | null;
   writes: EnvelopeWrite[];

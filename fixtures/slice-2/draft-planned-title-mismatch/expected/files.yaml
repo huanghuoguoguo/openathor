@@ -1,0 +1,13 @@
+required:
+  - openathor.yaml
+  - outline/chapters.yaml
+  - .openathor/manuscript.index.yaml
+  - manuscript/chapter-001.md
+  - manuscript/chapter-002.md
+  - .openathor/index.sqlite
+absent:
+  - manuscript/chapter-003.md
+contains:
+  manuscript/chapter-002.md:
+    - "# 偏题标题"
+    - 林岚沿着雨夜匿名电话留下的旧站台线索
