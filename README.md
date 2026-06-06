@@ -73,6 +73,8 @@ export PATH="$HOME/.local/bin:$PATH"
 curl -fsSL https://github.com/huanghuoguoguo/openathor/releases/download/v0.1.0/install.sh | OPENATHOR_VERSION=v0.1.0 sh
 ```
 
+慢网环境可通过 `OPENATHOR_CURL_RETRIES`、`OPENATHOR_CURL_RETRY_DELAY` 和 `OPENATHOR_CURL_OPTS` 调整下载重试、间隔和 curl 超时参数。
+
 源码安装和开发验证：
 
 ```bash

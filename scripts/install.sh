@@ -20,13 +20,43 @@ need_cmd curl
 need_cmd tar
 need_cmd node
 need_cmd mktemp
-curl_opts="${OPENATHOR_CURL_OPTS:---connect-timeout 15 --max-time 300 --retry 3 --retry-delay 2}"
+curl_opts="${OPENATHOR_CURL_OPTS:---connect-timeout 15 --max-time 300}"
+curl_retries="${OPENATHOR_CURL_RETRIES:-3}"
+curl_retry_delay="${OPENATHOR_CURL_RETRY_DELAY:-2}"
+
+case "$curl_retries" in
+  ""|*[!0-9]*) die "OPENATHOR_CURL_RETRIES must be a positive integer" ;;
+esac
+[ "$curl_retries" -ge 1 ] || die "OPENATHOR_CURL_RETRIES must be at least 1"
+
+case "$curl_retry_delay" in
+  ""|*[!0-9]*) die "OPENATHOR_CURL_RETRY_DELAY must be a non-negative integer" ;;
+esac
 
 download() {
+  try_download "$@" || die "failed to download $3 from $1"
+}
+
+try_download() {
   url="$1"
   output="$2"
   label="$3"
-  curl $curl_opts -fsSL "$url" -o "$output" || die "failed to download $label from $url"
+  attempt=1
+
+  while [ "$attempt" -le "$curl_retries" ]; do
+    rm -f "$output"
+    if curl $curl_opts -fsSL "$url" -o "$output"; then
+      return 0
+    fi
+
+    if [ "$attempt" -lt "$curl_retries" ]; then
+      printf '%s\n' "Download failed for $label; retrying ($attempt/$curl_retries)"
+      sleep "$curl_retry_delay"
+    fi
+    attempt=$((attempt + 1))
+  done
+
+  return 1
 }
 
 node_major="$(node -e 'process.stdout.write(process.versions.node.split(".")[0])')"
@@ -52,7 +82,7 @@ trap cleanup EXIT HUP INT TERM
 printf '%s\n' "Downloading OpenAthor from $tarball_url"
 download "$tarball_url" "$tmp_dir/openathor.tar.gz" "release bundle"
 
-if curl $curl_opts -fsSL "$checksum_url" -o "$tmp_dir/openathor.tar.gz.sha256"; then
+if try_download "$checksum_url" "$tmp_dir/openathor.tar.gz.sha256" "checksum"; then
   if command -v sha256sum >/dev/null 2>&1; then
     (cd "$tmp_dir" && sha256sum -c openathor.tar.gz.sha256 >/dev/null)
     printf '%s\n' "Verified SHA256 checksum"
