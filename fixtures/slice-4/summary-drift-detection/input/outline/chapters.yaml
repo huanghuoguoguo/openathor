@@ -29,3 +29,13 @@ chapters:
       characters: [zhou-ming-hai, lin-wei-yuan, chen-ruo-xue, a-xiu]
       timeline_events: [event-steamship-explosion, event-a-xiu-witness]
       hooks: [hook-midnight-gears]
+  - id: ch_004
+    display_order: 4
+    title: 账本页
+    status: drafted
+    manuscript_path: manuscript/chapter-004.md
+    summary: 林维远、陈若雪和阿锈在码头修理铺核对金属箱和午夜齿轮声，但确认齿轮系统只是无关旧账，午夜齿轮声不再重要。
+    links:
+      characters: [lin-wei-yuan, chen-ruo-xue, a-xiu, zhou-ming-hai]
+      timeline_events: [event-a-xiu-witness, event-lighthouse-completed]
+      hooks: [hook-midnight-gears]

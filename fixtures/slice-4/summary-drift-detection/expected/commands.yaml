@@ -2,7 +2,7 @@ commands:
   - run: openathor index rebuild --json
     ok: true
     expect_data:
-      chapters_indexed: 3
+      chapters_indexed: 4
   - run: openathor doctor --json --strict
     ok: true
     expect_data:
@@ -16,9 +16,14 @@ commands:
       audit.counts.hooks: 3
       audit.counts.unresolved_outline_links: 0
       audit.counts.character_link_drifts: 0
-      audit.counts.summary_drift_candidates: 1
+      audit.counts.summary_drift_candidates: 2
       audit.summary_drift.0.id: ch_001
       audit.summary_drift.0.display_order: 1
+      audit.summary_drift.0.summary_drift_reasons.0: weak_term_coverage
+      audit.summary_drift.1.id: ch_004
+      audit.summary_drift.1.display_order: 4
+      audit.summary_drift.1.summary_drift_reasons.0: unsupported_summary_assertion
+      audit.summary_drift.1.summary_assertion_drift_terms.0: 确认齿轮系统只是无关旧账
       audit.assets.characters.0.id: lin-wei-yuan
       audit.assets.characters.0.name: 林维远
       audit.assets.timeline_events.3.id: event-a-xiu-witness
@@ -29,4 +34,4 @@ commands:
     ok: true
     expect_data:
       context_pack.target.id: ch_003
-      outline.chapter_count: 3
+      outline.chapter_count: 4
