@@ -1,7 +1,7 @@
 commands:
   - run: openathor adopt --json
     ok: true
-  - run: openathor assets sync chapter 1 --from notes/asset-package-ch1.yaml --confirm --base-hash current:正文/001-档案室地图.md --json
+  - run: openathor assets sync chapter 1 --from notes/asset-package-ch1.yaml --confirm --base-hash current:正文/001-档案室地图.md --assets-hash bible/characters.md=current:bible/characters.md --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json
     ok: true
     expect_data:
       mode: confirmed_write
@@ -15,7 +15,7 @@ commands:
     expect_data:
       target.id: ch_002
       target.title: 潮湿信纸
-  - run: openathor assets sync chapter 2 --from notes/asset-package-ch2.yaml --confirm --base-hash current:manuscript/chapter-002.md --json
+  - run: openathor assets sync chapter 2 --from notes/asset-package-ch2.yaml --confirm --base-hash current:manuscript/chapter-002.md --assets-hash bible/characters.md=current:bible/characters.md --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json
     ok: true
     expect_data:
       mode: confirmed_write
@@ -30,7 +30,7 @@ commands:
     expect_data:
       target.id: ch_003
       target.title: 铅字柜后
-  - run: openathor assets sync chapter 3 --from notes/asset-package-ch3.yaml --confirm --base-hash current:manuscript/chapter-003.md --json
+  - run: openathor assets sync chapter 3 --from notes/asset-package-ch3.yaml --confirm --base-hash current:manuscript/chapter-003.md --assets-hash bible/characters.md=current:bible/characters.md --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json
     ok: true
     expect_data:
       mode: confirmed_write

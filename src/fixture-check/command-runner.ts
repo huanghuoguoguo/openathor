@@ -184,6 +184,11 @@ async function dispatchCommand(
       baseHash: parsed.options.baseHash
         ? await resolveFixtureHash(cwd, parsed.options.baseHash)
         : undefined,
+      assetHashes: parsed.options.assetHashes
+        ? await Promise.all(
+            parsed.options.assetHashes.map((value) => resolveFixtureHash(cwd, value)),
+          )
+        : undefined,
     });
   }
 
@@ -409,6 +414,12 @@ async function dispatchCommand(
 
 async function resolveFixtureHash(cwd: string, value: string): Promise<string> {
   if (!value.startsWith("current:")) {
+    const separator = value.indexOf("=current:");
+    if (separator > 0) {
+      const relPath = value.slice(separator + "=current:".length);
+      return `${value.slice(0, separator)}=${await sha256File(path.join(cwd, relPath))}`;
+    }
+
     return value;
   }
 

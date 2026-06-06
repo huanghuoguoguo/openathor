@@ -168,6 +168,12 @@ export function parseCommand(command: string): ParsedFixtureCommand {
       continue;
     }
 
+    if (token === "--assets-hash") {
+      index += 1;
+      options.assetHashes = [...(options.assetHashes ?? []), tokens[index]];
+      continue;
+    }
+
     if (token === "--next-base-hash") {
       index += 1;
       options.nextBaseHash = tokens[index];

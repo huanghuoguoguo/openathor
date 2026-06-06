@@ -192,8 +192,8 @@ canon = 已确认发生了什么
 
 - Pi Agent/Operator 负责从写作结果整理结构化资产包
 - CLI 负责校验资产 ID、source hash、写入范围和 run 记录
-- 默认只写 pending proposal
-- `--confirm --base-hash` 匹配时才追加新人物、新时间线事件、新伏笔，合并更新既有资产状态，并更新目标章节 outline links
+- 默认只写 pending proposal，并输出本次确认写入需要保护的 `asset_hashes`
+- `--confirm --base-hash` 和所有必要 `--assets-hash <path=hash>` 匹配时才追加新人物、新时间线事件、新伏笔，合并更新既有资产状态，并更新目标章节 outline links；如果用户在确认前手动更新了人物、时间线、伏笔或 outline，旧 asset package 必须停止写入
 - 既有人物的最新 `current_state` 写回 confirmed 档案，旧状态以 `note: previous_state: ...` 保留，便于追踪人物事迹演进
 - 同步后必须运行 `openathor assets audit --json` 检查 link drift 和 summary drift
 - 接管既有长篇后，如果已确认人物在旧章节正文中出现但 outline links 缺失，可用 `openathor assets link-backfill characters` 走 proposal/confirm/hash-gate 流程，只回填章节人物 links，不新增资产或 canon

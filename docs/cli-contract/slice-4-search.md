@@ -312,7 +312,7 @@ confirmed write 模式：
 
 ```bash
 openathor assets sync chapter <target> --from <asset-package.yaml|json> [--json] [--dry-run]
-openathor assets sync chapter <target> --from <asset-package.yaml|json> --confirm --base-hash <sha256:...> [--json] [--dry-run]
+openathor assets sync chapter <target> --from <asset-package.yaml|json> --confirm --base-hash <sha256:...> --assets-hash <path=sha256:...>... [--json] [--dry-run]
 ```
 
 `--from` 必须是项目内安全相对路径。资产包是结构化 JSON/YAML，当前支持：
@@ -345,11 +345,11 @@ CLI 不从自然语言正文里推断复杂事实；资产包必须由 agent 或
 - 不修改 `notes/hooks.md`
 - 不修改 `outline/chapters.yaml`
 
-输出必须包含 `source_hash`、`result`、`sync.package` 和 `user_confirmation_required: true`。
+输出必须包含 `source_hash`、`asset_hashes`、`result`、`sync.package` 和 `user_confirmation_required: true`。`asset_hashes` 列出本次确认写入会修改的资产源文件当前 hash；Operator/Pi Agent 在用户确认后必须把这些 hash 作为 `--assets-hash <path=hash>` 原样带回确认命令。
 
 ### Confirmed write
 
-带 `--confirm --base-hash` 且 hash 匹配时可以写：
+带 `--confirm --base-hash`、所有必要 `--assets-hash` 且 hash 匹配时可以写：
 
 - `bible/characters.md`：追加新增人物；合并更新既有人物 `role`、`traits`、`current_state` 和 `notes`，旧 `current_state` 以 `note: previous_state: ...` 保留
 - `bible/timeline.md`：追加新增时间线事件；合并更新既有事件摘要并把旧摘要作为 note 保留
@@ -357,7 +357,7 @@ CLI 不从自然语言正文里推断复杂事实；资产包必须由 agent 或
 - `outline/chapters.yaml`：更新目标章节摘要和 links
 - `runs/run_*_assets_sync.json`
 
-hash 不匹配时返回 `OA_MANUSCRIPT_CHANGED` 且不得写入。
+章节 source hash 不匹配时返回 `OA_MANUSCRIPT_CHANGED` 且不得写入。缺少必要资产源 hash 时返回 `OA_ASSETS_HASH_REQUIRED` 且不得写入。资产源 hash 不匹配时返回 `OA_ASSETS_SOURCE_CHANGED` 且不得写入。
 
 ### Expected writes
 
@@ -384,6 +384,9 @@ confirmed write 模式：
 - `OA_ASSETS_SYNC_PACKAGE_NOT_FOUND`
 - `OA_ASSETS_SYNC_PACKAGE_INVALID`
 - `OA_ASSETS_SYNC_PACKAGE_EMPTY`
+- `OA_ASSETS_HASH_INVALID`
+- `OA_ASSETS_HASH_REQUIRED`
+- `OA_ASSETS_SOURCE_CHANGED`
 - `OA_BASE_HASH_REQUIRED`
 - `OA_MANUSCRIPT_CHANGED`
 
