@@ -20,11 +20,12 @@
 
 - `npm run test:judge:smoke`
 - `adopt-3-chapters`
+- `adopt-30-chapters`
 - `outline-insert`
 - `canon-conflict`
 - `revise-local`
 
-`test:judge:smoke` 当前覆盖已落地的确认写入和归档章节证据包；后四个目标场景用于后续补齐接管、结构变更、一致性和改稿风险。
+`test:judge:smoke` 当前覆盖已落地的确认写入和归档章节证据包；`adopt-30-chapters` 覆盖长篇接管后的索引、检索、context 和第 31 章 draft proposal；其余目标场景用于后续补齐结构变更、一致性和改稿风险。
 
 ## 完整目标场景集
 

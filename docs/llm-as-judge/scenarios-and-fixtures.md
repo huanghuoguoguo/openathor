@@ -134,6 +134,15 @@ fixtures/slice-1/
   adopt-ambiguous-order/
 ```
 
+当前已落地跨切片 deterministic fixtures：
+
+```text
+fixtures/slice-4/
+  adopt-30-chapters/
+```
+
+其中 `adopt-30-chapters` 覆盖较长连载稿的非侵入式接管、30 章索引重建、vector 派生索引、文本/semantic 检索、章节 30 context pack，以及继续第 31 章的 dry-run draft proposal。
+
 后续写作、结构变更、检索和风格相关场景仍需要在 Slice 2+ 落地，并接入 LLM-as-judge 证据包。
 
 当前已接入自动化 smoke 的场景：
