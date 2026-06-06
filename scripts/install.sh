@@ -20,6 +20,14 @@ need_cmd curl
 need_cmd tar
 need_cmd node
 need_cmd mktemp
+curl_opts="${OPENATHOR_CURL_OPTS:---connect-timeout 15 --max-time 300 --retry 3 --retry-delay 2}"
+
+download() {
+  url="$1"
+  output="$2"
+  label="$3"
+  curl $curl_opts -fsSL "$url" -o "$output" || die "failed to download $label from $url"
+}
 
 node_major="$(node -e 'process.stdout.write(process.versions.node.split(".")[0])')"
 if [ "$node_major" -lt 22 ]; then
@@ -42,9 +50,9 @@ cleanup() {
 trap cleanup EXIT HUP INT TERM
 
 printf '%s\n' "Downloading OpenAthor from $tarball_url"
-curl -fsSL "$tarball_url" -o "$tmp_dir/openathor.tar.gz"
+download "$tarball_url" "$tmp_dir/openathor.tar.gz" "release bundle"
 
-if curl -fsSL "$checksum_url" -o "$tmp_dir/openathor.tar.gz.sha256"; then
+if curl $curl_opts -fsSL "$checksum_url" -o "$tmp_dir/openathor.tar.gz.sha256"; then
   if command -v sha256sum >/dev/null 2>&1; then
     (cd "$tmp_dir" && sha256sum -c openathor.tar.gz.sha256 >/dev/null)
     printf '%s\n' "Verified SHA256 checksum"
