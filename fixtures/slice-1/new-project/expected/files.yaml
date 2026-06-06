@@ -20,3 +20,8 @@ required:
   - .openathor/index.sqlite
 absent:
   - manuscript/chapter-001.md
+contains:
+  .pi/skills/openathor/SKILL.md:
+    - asset_hashes
+    - --assets-hash
+    - OA_ASSETS_SOURCE_CHANGED

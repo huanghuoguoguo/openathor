@@ -159,6 +159,33 @@ export async function checkAbsentFiles(
   }
 }
 
+export async function checkFileContains(
+  root: string,
+  expectedContents: Record<string, string[]>,
+): Promise<void> {
+  for (const [relPath, snippets] of Object.entries(expectedContents)) {
+    const fullPath = path.join(root, relPath);
+    if (!(await pathExists(fullPath))) {
+      throw new OpenAthorError(
+        "OA_FIXTURE_EXPECTED_FILE_MISSING",
+        `Expected file is missing: ${relPath}`,
+        { exitCode: 4 },
+      );
+    }
+
+    const text = await readFile(fullPath, "utf8");
+    for (const snippet of snippets) {
+      if (!text.includes(snippet)) {
+        throw new OpenAthorError(
+          "OA_FIXTURE_FILE_CONTENT_MISMATCH",
+          `Expected ${relPath} to contain ${JSON.stringify(snippet)}.`,
+          { exitCode: 4 },
+        );
+      }
+    }
+  }
+}
+
 export async function checkUnchangedFiles(
   root: string,
   beforeHashes: Map<string, string>,
