@@ -196,6 +196,8 @@ canon = 已确认发生了什么
 - `--confirm --base-hash` 匹配时才追加新人物、新时间线事件、新伏笔，合并更新既有资产状态，并更新目标章节 outline links
 - 既有人物的最新 `current_state` 写回 confirmed 档案，旧状态以 `note: previous_state: ...` 保留，便于追踪人物事迹演进
 - 同步后必须运行 `openathor assets audit --json` 检查 link drift 和 summary drift
+- 接管既有长篇后，如果已确认人物在旧章节正文中出现但 outline links 缺失，可用 `openathor assets link-backfill characters` 走 proposal/confirm/hash-gate 流程，只回填章节人物 links，不新增资产或 canon
+- 人物档案覆盖审计输出 coverage 证据；只有项目级词项覆盖偏低且匹配到的档案字段数不足时才发 weak warning，避免把“稳定人物身份没有每章重复写出”误报为漂移
 - 多章写作验收必须覆盖“正文确认写入 -> 每章 asset package -> `assets sync --confirm` -> `assets audit`”的完整链路，不能只验最终小说文本是否存在
 
 这让“人物性格、事迹和大纲是否漂移”变成可审计的文件变化，而不是只依赖 agent 最终回复。

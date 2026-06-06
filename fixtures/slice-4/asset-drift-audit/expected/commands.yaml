@@ -9,7 +9,7 @@ commands:
       audit.counts.characters: 3
       audit.counts.unresolved_outline_links: 1
       audit.counts.character_link_drifts: 1
-      audit.counts.weak_character_profile_summaries: 3
+      audit.counts.weak_character_profile_summaries: 2
       audit.counts.summary_drift_candidates: 0
       audit.character_profile_summary.0.character_id: char_lin_ya
       audit.character_profile_summary.0.linked_chapter_count: 3
