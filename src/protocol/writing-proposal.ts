@@ -97,20 +97,28 @@ export function writingProposalText(input: {
 
 export function writingProposalData(input: {
   dryRun: boolean;
+  diff: boolean;
   kind: WritingProposalKind;
   task: string;
   target: WritingTarget | null;
   contextPack: unknown;
   plan: WritingProposalPlan;
+  proposalText: string;
 }): Record<string, unknown> {
   return {
     dry_run: input.dryRun,
-    mode: "proposal",
+    mode: input.diff ? "diff" : "proposal",
     command: input.plan.command,
     task: input.task,
     target: input.target,
     context_pack: input.contextPack,
-    planned_writes: input.dryRun ? input.plan.writes : [],
+    planned_writes: input.dryRun || input.diff ? input.plan.writes : [],
+    diff: input.diff
+      ? {
+          proposal_path: input.plan.proposalRelPath,
+          proposal_text: input.proposalText,
+        }
+      : null,
     proposal_path: input.plan.proposalRelPath,
     run_path: input.plan.runRelPath,
     user_confirmation_required: true,

@@ -1,0 +1,12 @@
+required:
+  - openathor.yaml
+  - manuscript/chapter-001.md
+  - bible/canon.md
+  - bible/canon.pending.md
+  - .openathor/manuscript.index.yaml
+  - .openathor/index.sqlite
+contains:
+  bible/canon.pending.md:
+    - Canon Sync Proposal
+    - 把第一章新增的铜钥匙齿纹线索写入 pending canon
+absent: []

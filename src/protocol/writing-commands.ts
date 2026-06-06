@@ -43,12 +43,21 @@ export async function runWritingProposal(
 ): Promise<CommandResult> {
   const projectRoot = await findProjectRoot(path.resolve(options.cwd ?? process.cwd()));
   const dryRun = options.dryRun ?? false;
+  const diff = options.diff ?? false;
   const task = options.task?.trim();
 
   if (!task) {
     throw new OpenAthorError(
       "OA_TASK_REQUIRED",
       `${proposalCommandName(options.kind)} requires --task <text>.`,
+      { exitCode: 2 },
+    );
+  }
+
+  if (options.confirmWrite && diff) {
+    throw new OpenAthorError(
+      "OA_DIFF_CONFIRM_CONFLICT",
+      "--diff cannot be combined with --confirm-write.",
       { exitCode: 2 },
     );
   }
@@ -99,7 +108,14 @@ export async function runWritingProposal(
     proposalExists: await pathExists(path.join(projectRoot, proposalRelPath)),
   });
 
-  if (!dryRun) {
+  const proposalText = writingProposalText({
+    kind: options.kind,
+    task,
+    stamp,
+    target: proposalTarget,
+  });
+
+  if (!dryRun && !diff) {
     const runRecord = writingProposalRunRecord({
       plan,
       task,
@@ -109,12 +125,6 @@ export async function runWritingProposal(
     });
     await writeYaml(projectRoot, plan.runRelPath, runRecord);
 
-    const proposalText = writingProposalText({
-      kind: options.kind,
-      task,
-      stamp,
-      target: proposalTarget,
-    });
     if (options.kind === "canon_sync") {
       await appendText(projectRoot, plan.proposalRelPath, proposalText);
     } else {
@@ -126,15 +136,17 @@ export async function runWritingProposal(
     projectRoot,
     projectId: context.projectId,
     sources: context.sources,
-    writes: dryRun ? [] : plan.writes,
+    writes: dryRun || diff ? [] : plan.writes,
     warnings: context.warnings,
     data: writingProposalData({
       dryRun,
+      diff,
       kind: options.kind,
       task,
       target: proposalTarget,
       contextPack: contextData.context_pack,
       plan,
+      proposalText,
     }),
   };
 }

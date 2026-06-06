@@ -10,6 +10,7 @@ type ChapterProposalOptions = {
   baseHash?: string;
   json?: boolean;
   dryRun?: boolean;
+  diff?: boolean;
 };
 
 export function registerWritingCommands(program: Command): void {
@@ -20,10 +21,11 @@ export function registerWritingCommands(program: Command): void {
     .requiredOption("--task <text>", "planning task")
     .option("--json", "emit JSON")
     .option("--dry-run", "show planned writes without changing files")
+    .option("--diff", "preview proposal writes without changing files")
     .action(
       async (
         target: string | undefined,
-        options: { task: string; json?: boolean; dryRun?: boolean },
+        options: { task: string; json?: boolean; dryRun?: boolean; diff?: boolean },
       ) => {
         await emitResult(
           "openathor plan",
@@ -33,6 +35,7 @@ export function registerWritingCommands(program: Command): void {
             target,
             task: options.task,
             dryRun: options.dryRun,
+            diff: options.diff,
           }),
         );
       },
@@ -48,6 +51,7 @@ export function registerWritingCommands(program: Command): void {
     .option("--confirm-write", "write a confirmed new draft chapter")
     .option("--json", "emit JSON")
     .option("--dry-run", "show planned writes without changing files")
+    .option("--diff", "preview proposal writes without changing files")
     .action(
       async (
         scope: string,
@@ -66,6 +70,7 @@ export function registerWritingCommands(program: Command): void {
     .requiredOption("--task <text>", "review task")
     .option("--json", "emit JSON")
     .option("--dry-run", "show planned writes without changing files")
+    .option("--diff", "preview proposal writes without changing files")
     .action(
       async (
         scope: string,
@@ -87,6 +92,7 @@ export function registerWritingCommands(program: Command): void {
     .option("--base-hash <hash>", "expected current source hash")
     .option("--json", "emit JSON")
     .option("--dry-run", "show planned writes without changing files")
+    .option("--diff", "preview proposal writes without changing files")
     .action(
       async (
         scope: string,
@@ -106,10 +112,11 @@ export function registerWritingCommands(program: Command): void {
     .requiredOption("--task <text>", "canon sync task")
     .option("--json", "emit JSON")
     .option("--dry-run", "show planned writes without changing files")
+    .option("--diff", "preview pending canon proposal without changing files")
     .action(
       async (
         target: string | undefined,
-        options: { task: string; json?: boolean; dryRun?: boolean },
+        options: { task: string; json?: boolean; dryRun?: boolean; diff?: boolean },
       ) => {
         await emitResult(
           "openathor canon sync",
@@ -119,6 +126,7 @@ export function registerWritingCommands(program: Command): void {
             target,
             task: options.task,
             dryRun: options.dryRun,
+            diff: options.diff,
           }),
         );
       },
@@ -157,6 +165,7 @@ async function emitChapterProposal(
       confirmWrite: options.confirmWrite,
       baseHash: options.baseHash,
       dryRun: options.dryRun,
+      diff: options.diff,
     }),
   );
 }

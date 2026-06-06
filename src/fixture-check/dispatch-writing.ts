@@ -30,5 +30,6 @@ export async function dispatchWritingCommand(
       ? await resolveFixtureHash(cwd, parsed.options.baseHash)
       : undefined,
     dryRun: parsed.options.dryRun,
+    diff: parsed.options.diff,
   });
 }

@@ -215,6 +215,7 @@ export type WritingProposalOptions = {
   target?: string;
   task?: string;
   dryRun?: boolean;
+  diff?: boolean;
   text?: string;
   confirmWrite?: boolean;
   baseHash?: string;

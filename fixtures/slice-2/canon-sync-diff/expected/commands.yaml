@@ -1,0 +1,21 @@
+commands:
+  - run: openathor index rebuild --json
+    ok: true
+  - run: openathor canon sync 1 --task "把第一章新增的铜钥匙齿纹线索写入 pending canon" --diff --json
+    ok: true
+    expect_no_writes: true
+    expect_data:
+      mode: diff
+      planned_writes.1.path: bible/canon.pending.md
+      diff.proposal_path: bible/canon.pending.md
+    expect_data_path: diff.proposal_text
+  - run: openathor canon sync 1 --task "把第一章新增的铜钥匙齿纹线索写入 pending canon" --json
+    ok: true
+    expect_data:
+      mode: proposal
+      proposal_path: bible/canon.pending.md
+    expect_data_path: run_path
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true
