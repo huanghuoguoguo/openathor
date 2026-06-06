@@ -21,6 +21,7 @@ openathor skill install pi
 openathor context
 openathor assets audit
 openathor assets sync
+openathor assets link-backfill
 openathor search text
 openathor search related
 openathor search semantic
@@ -171,6 +172,7 @@ openathor export --format markdown
 - `openathor search semantic`
 - `openathor assets audit`
 - `openathor assets sync`
+- `openathor assets link-backfill`
 - `openathor export --format markdown`
 
 当前限制：
@@ -180,6 +182,7 @@ openathor export --format markdown
 - `search semantic` 使用可重建的本地 deterministic hash embedding 向量索引，不调用外部 embedding 服务。
 - `assets audit` 使用 Markdown/YAML 文本扫描检查 story assets、outline links 和章节正文提及，不做完整语义事实推理。
 - `assets sync` 接收 agent/用户提供的结构化资产包，默认 pending；确认写入必须提供目标章节 hash，会写入新资产、合并更新既有 confirmed 人物/时间线/伏笔资产，并更新目标章节 outline links。既有人物的最新 `current_state` 写回档案，早期状态作为 `note: previous_state` 保留。
+- `assets link-backfill` 只把已确认人物名称在章节文本中的直接出现回填为 outline `links.characters`，确认写入必须提供最新 `outline/chapters.yaml` hash；它不新增资产、不写 canon、不改正文。
 - 多章资产沉淀回归覆盖连续章节写入后的 `assets sync --confirm`、confirmed story assets、outline links、检索/context 和 `assets audit` 无漂移结果，并验证既有人物性格、事迹和当前状态持续承接。
 - export 当前只支持完整 manuscript Markdown 合并导出；EPUB/DOCX/PDF 仍不在当前切片内。
 

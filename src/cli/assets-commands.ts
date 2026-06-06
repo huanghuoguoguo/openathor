@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import {
   runAssetsAudit,
+  runAssetsLinkBackfill,
   runAssetsSync,
 } from "../protocol/kernel.js";
 import { emitResult } from "./emit.js";
@@ -54,6 +55,37 @@ export function registerAssetsCommands(program: Command): void {
             scope: scope === "chapter" ? "chapter" : undefined,
             target,
             from: options.from,
+            confirm: options.confirm,
+            dryRun: options.dryRun,
+            baseHash: options.baseHash,
+          }),
+        );
+      },
+    );
+
+  assetsCommand
+    .command("link-backfill")
+    .description("Backfill outline links from confirmed assets using deterministic text matches.")
+    .argument("<kind>", "link kind; currently characters")
+    .option("--json", "emit JSON")
+    .option("--confirm", "write outline links if the outline hash matches")
+    .option("--dry-run", "show planned writes without changing files")
+    .option("--base-hash <hash>", "expected current outline/chapters.yaml hash")
+    .action(
+      async (
+        kind: string,
+        options: {
+          json?: boolean;
+          confirm?: boolean;
+          dryRun?: boolean;
+          baseHash?: string;
+        },
+      ) => {
+        await emitResult(
+          "openathor assets link-backfill",
+          options.json,
+          runAssetsLinkBackfill({
+            kind,
             confirm: options.confirm,
             dryRun: options.dryRun,
             baseHash: options.baseHash,

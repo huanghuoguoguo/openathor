@@ -190,6 +190,14 @@ export type AssetsSyncOptions = {
   baseHash?: string;
 };
 
+export type AssetsLinkBackfillOptions = {
+  cwd?: string;
+  kind?: string;
+  confirm?: boolean;
+  dryRun?: boolean;
+  baseHash?: string;
+};
+
 export type ContextOptions = {
   cwd?: string;
   scope?: "project" | "chapter";

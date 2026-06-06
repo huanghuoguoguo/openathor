@@ -1,0 +1,52 @@
+commands:
+  - run: openathor index rebuild --json
+    ok: true
+    expect_data:
+      chapters_indexed: 3
+  - run: openathor assets audit --json
+    ok: true
+    expect_data:
+      audit.counts.characters: 3
+      audit.counts.unresolved_outline_links: 0
+      audit.counts.character_link_drifts: 2
+      audit.counts.summary_drift_candidates: 0
+      audit.chapter_entity_coverage.0.missing_character_links.0: 苏禾
+      audit.chapter_entity_coverage.2.missing_character_links.0: 孟齐
+    expect_warnings:
+      - OA_ASSET_CHARACTER_LINK_DRIFT
+  - run: openathor assets link-backfill characters --json
+    ok: true
+    expect_data:
+      mode: proposal
+      result.chapters_scanned: 3
+      result.chapters_modified: 2
+      result.character_links_added: 2
+      result.confirmed_outline_written: false
+      proposed_changes.0.added_character_links.0: char_su_he
+      proposed_changes.1.added_character_links.0: char_meng_qi
+  - run: openathor assets link-backfill characters --confirm --base-hash sha256:0000000000000000000000000000000000000000000000000000000000000000 --json
+    ok: false
+    error_code: OA_OUTLINE_CHANGED
+  - run: openathor assets link-backfill characters --confirm --base-hash current:outline/chapters.yaml --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      result.chapters_modified: 2
+      result.character_links_added: 2
+      result.confirmed_outline_written: true
+  - run: openathor assets audit --json
+    ok: true
+    expect_data:
+      audit.counts.unresolved_outline_links: 0
+      audit.counts.character_link_drifts: 0
+      audit.chapter_entity_coverage.0.linked_characters.1: char_su_he
+      audit.chapter_entity_coverage.2.linked_characters.2: char_meng_qi
+  - run: openathor context chapter 3 --json
+    ok: true
+    expect_data:
+      outline.chapters.2.links.characters.2: char_meng_qi
+    expect_data_path: assets.characters.text
+  - run: openathor index rebuild --json
+    ok: true
+    expect_data:
+      chapters_indexed: 3

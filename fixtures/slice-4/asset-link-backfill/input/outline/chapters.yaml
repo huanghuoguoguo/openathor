@@ -1,0 +1,34 @@
+chapters:
+  - id: ch_00001
+    display_order: 1
+    title: 钥匙
+    status: drafted
+    manuscript_path: manuscript/chapter-001.md
+    summary: 林鸦在雨夜见到苏禾，拿到七号仓钥匙。
+    scenes: [sc_00001_01]
+    links:
+      characters: [char_lin_ya]
+      hooks: [hook_seven_warehouse]
+      timeline_events: [ev_key_handoff]
+  - id: ch_00002
+    display_order: 2
+    title: 借阅记录
+    status: drafted
+    manuscript_path: manuscript/chapter-002.md
+    summary: 林鸦查到父亲名字出现在蓝灯档案借阅记录上。
+    scenes: [sc_00002_01]
+    links:
+      characters: [char_lin_ya]
+      hooks: [hook_blue_lamp]
+      timeline_events: [ev_archive_trace]
+  - id: ch_00003
+    display_order: 3
+    title: 仓门后的脚印
+    status: drafted
+    manuscript_path: manuscript/chapter-003.md
+    summary: 林鸦和苏禾在七号仓门后发现新脚印，孟齐指出脚印来自本周新值班。
+    scenes: [sc_00003_01]
+    links:
+      characters: [char_lin_ya, char_su_he]
+      hooks: [hook_seven_warehouse, hook_blue_lamp]
+      timeline_events: [ev_footprint_shift]

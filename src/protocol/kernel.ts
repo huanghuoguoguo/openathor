@@ -14,6 +14,7 @@ export {
   runAssetsAudit,
   runAssetsSync,
 } from "./assets-commands.js";
+export { runAssetsLinkBackfill } from "./asset-link-backfill-command.js";
 export { runContext } from "./context-commands.js";
 export {
   runStyleAnalyze,
