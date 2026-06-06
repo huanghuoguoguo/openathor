@@ -8,6 +8,7 @@ import type {
   ResolvedOutlineChapter,
 } from "./model.js";
 import { outlineTargetData } from "./outline-target.js";
+import { buildStoryAssetImpact } from "./outline-impact-assets.js";
 import { readSourceText } from "./project-files.js";
 import type { ProjectInspection } from "./project-inspection.js";
 import { searchCandidatePaths } from "./retrieval-files.js";
@@ -92,6 +93,12 @@ export async function buildOutlineImpactData(input: {
     : target.outlineChapter?.summary
       ? [{ line: null, text: snippetAround(target.outlineChapter.summary, 0, 0, maxChars) }]
       : [];
+  const storyAssetImpact = await buildStoryAssetImpact({
+    projectRoot,
+    inspection,
+    targetChapter: target.outlineChapter,
+    sourceMap,
+  });
 
   return {
     scope: "chapter",
@@ -119,6 +126,7 @@ export async function buildOutlineImpactData(input: {
         scenes: target.outlineChapter?.scenes ?? [],
         links: target.outlineChapter?.links ?? {},
       },
+      story_asset_impact: storyAssetImpact,
       fact_candidates: factCandidates,
       direct_references: sortedDirectReferences,
       related_context: sortedRelatedContext,

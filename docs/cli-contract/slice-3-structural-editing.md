@@ -98,10 +98,21 @@ openathor outline impact <target> [--json] [--max-chars <count>]
 - `outline_status_change`
 - `index_status_change`
 - `structural_links`
+- `story_asset_impact`
 - `fact_candidates`
 - `direct_references`
 - `related_context`
 - `following_chapters`
+
+`story_asset_impact` 包含：
+
+- `linked_assets.characters`
+- `linked_assets.timeline_events`
+- `linked_assets.hooks`
+- `unknown_links`
+- `following_asset_references`
+
+`linked_assets` 会把目标章节 outline links 解析到已登记人物、时间线和伏笔资产，包含资产名称、ID、来源文件和档案字段名。`following_asset_references` 会列出后续章节中继续引用目标章节同一人物、时间线或伏笔的章节，帮助用户归档前判断哪些故事资产仍被后文承接。
 
 ### Expected writes
 
@@ -114,6 +125,7 @@ openathor outline impact <target> [--json] [--max-chars <count>]
 - 影响分析是确定性文本扫描。
 - `direct_references` 只匹配章节 ID、标题、display order 和正文路径。
 - `related_context` 使用词项重叠，不是语义向量检索。
+- `story_asset_impact` 只解析 outline links 中已有的人物、timeline 和 hook 引用，不从正文推断新资产。
 - `fact_candidates` 是文本候选，不会自动写入 confirmed canon。
 
 ## `openathor outline archive`

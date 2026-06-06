@@ -3,6 +3,16 @@ commands:
     ok: true
     expect_data:
       chapters_indexed: 3
+  - run: openathor outline impact 1 --json
+    ok: true
+    expect_data:
+      impact.story_asset_impact.linked_assets.characters.0.id: char_lin_ya
+      impact.story_asset_impact.linked_assets.timeline_events.0.id: ev_key_handoff
+      impact.story_asset_impact.linked_assets.hooks.0.id: hook_seven_warehouse
+      impact.story_asset_impact.following_asset_references.0.id: ch_00002
+      impact.story_asset_impact.following_asset_references.0.links.characters.0: char_lin_ya
+      impact.story_asset_impact.following_asset_references.1.id: ch_00003
+      impact.story_asset_impact.following_asset_references.1.links.hooks.0: hook_seven_warehouse
   - run: openathor assets audit --json
     ok: true
     expect_data:
