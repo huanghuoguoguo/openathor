@@ -16,6 +16,8 @@
 
 search 和 assets audit 命令只读，不写用户文件。assets sync 和 assets link-backfill 是受确认和 hash gate 保护的写命令。
 
+`exports/` 是 CLI 导出的派生产物目录，不进入 `search text`、`search related` 或 `index rebuild --vector` 的检索候选，避免导出文件反向污染后续检索结果。
+
 ## `openathor search text`
 
 ### 参数
