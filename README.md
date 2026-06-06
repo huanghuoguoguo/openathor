@@ -1,121 +1,211 @@
 # OpenAthor
 
-OpenAthor 是一个面向 Pi Agent 的小说创作工具链，目标是让用户在自己熟悉的文本编辑器中写作，并通过 Pi Agent 完成小说项目的规划、续写、审稿、改稿和设定维护。
+[![CI](https://github.com/huanghuoguoguo/openathor/actions/workflows/ci.yml/badge.svg)](https://github.com/huanghuoguoguo/openathor/actions/workflows/ci.yml)
 
-当前项目已完成 Slice 1 协议内核，并正在补齐 Slice 2 写作闭环、Slice 3 结构编辑、Slice 4 长篇检索和 LLM-as-judge 回归体系。TypeScript/Node.js CLI 可以创建、接管、检查 OpenAthor 项目，从明文事实源重建派生 SQLite 索引，并为已落地场景生成 judge evidence package。
+OpenAthor 是一个面向 Pi Agent 的小说创作平台 + CLI 工程化工具链。它把小说正文、大纲、人物、设定、时间线、伏笔、风格画像等创作资产组织成 agent 可理解、可验证、可安全修改的明文工程，让 Pi Agent 能辅助规划、续写、审稿、改稿和资产维护。
 
-## 产品方向
+公开仓库：https://github.com/huanghuoguoguo/openathor
 
-OpenAthor 当前产品轨道不做自研 TUI，也不做网页编辑器。核心产品形态是：
+## 这是什么
+
+很多 AI 写作工具能生成一段文字，但很难稳定维护一个持续创作中的小说项目：前文事实会遗忘，人物状态会漂移，插章移章会破坏引用，用户手写内容也可能被覆盖。
+
+OpenAthor 的核心思路是把小说项目变成 agent 可理解、可验证、可恢复的明文工程：
 
 ```text
-用户自选文本编辑器
+用户自己的文本编辑器
   + Pi Agent CLI
   + OpenAthor Pi Skill
-  + OpenAthor Agent-facing CLI
+  + OpenAthor agent-facing CLI
   + OpenAthor Project Protocol
 ```
 
-用户可以使用 VSCode、Obsidian、Typora、Neovim、Zed 等编辑器管理正文和设定文件；Pi Agent 作为智能助手，通过 OpenAthor Skill 调用 OpenAthor CLI。
+用户继续用 VSCode、Obsidian、Typora、Neovim、Zed 等编辑器写正文。Pi Agent 通过 OpenAthor Skill 调用 CLI，CLI 负责确定性项目操作、上下文打包、安全写入、索引重建和回归验证。
 
-## 核心目标
+OpenAthor 不只服务长篇小说。短篇、中篇、连载、已有半成品和散稿整理都可以使用同一套项目协议；长篇是最容易暴露上下文漂移、资产漂移和结构变更风险的压力测试场景，所以当前验证样例重点覆盖了 30 章接管和多章资产连续性。
 
-- 支持从零创建小说项目
-- 支持非侵入式接管已经写了一半的小说
-- 维护长期一致的 canon、人物、时间线和伏笔
-- 让 Pi Agent 基于结构化上下文继续写作
-- 所有重要修改尽量以 diff 呈现
-- 保持本地优先，用户始终拥有自己的文本文件
+## 核心能力
 
-## 当前状态
+- 从零创建小说项目
+- 非侵入式接管已有小说，不移动、不重命名、不改写原稿
+- 从散稿目录识别正文、设定、灵感和废稿
+- 生成章节上下文包，供 Pi Agent 续写、审稿和改稿
+- 用 confirmed canon、人物、时间线和伏笔维护项目一致性
+- 插章、移章、拆章、合章、归档和重规划时保留稳定章节 ID
+- 支持文本检索、相关检索和本地可重建的 deterministic semantic search
+- 支持授权参考文本的抽象 style profile，不复制参考文本原句
+- 写作后通过资产包同步人物状态、事件、伏笔、章节摘要和 outline links
+- 所有高风险写入报告 `writes`，关键写入使用 source hash 防并发覆盖
+- 通过 fixture 和 LLM-as-judge evidence package 做可重复回归验证
 
-当前可用命令：
+## 快速开始
+
+环境要求：
+
+- Node.js >= 22
+- npm
+
+```bash
+git clone https://github.com/huanghuoguoguo/openathor.git
+cd openathor
+npm ci
+npm run build
+npm test
+```
+
+`npm test` 会运行 TypeScript 类型检查、schema 校验、构建、43 个 deterministic fixture 回归，以及不调用外部模型的 judge smoke。
+
+## 5 分钟演示
+
+### 创建一个新小说项目
+
+```bash
+node dist/cli.js init data/demo-novel --title "雾港来信" --json
+cd data/demo-novel
+node ../../dist/cli.js doctor --json
+node ../../dist/cli.js skill install pi --json
+node ../../dist/cli.js context project --json
+```
+
+这会创建标准 OpenAthor 项目结构，并安装项目级 Pi Skill 到：
+
+```text
+.pi/skills/openathor/SKILL.md
+```
+
+### 接管已有小说目录
+
+在已有稿件目录中运行：
+
+```bash
+node /path/to/openathor/dist/cli.js adopt . --dry-run --json
+node /path/to/openathor/dist/cli.js adopt . --json
+node /path/to/openathor/dist/cli.js index rebuild --json
+node /path/to/openathor/dist/cli.js context chapter 1 --json
+```
+
+`adopt` 默认非侵入式接管：只建立 OpenAthor 元数据和派生索引，不改写原始正文文件。
+
+### 运行真实项目回归样例
+
+```bash
+npm run fixture -- fixtures/slice-4/adopt-30-chapters
+npm run fixture -- fixtures/slice-4/style-guided-writing-loop
+npm run fixture -- fixtures/slice-4/replan-draft-asset-continuity
+```
+
+这些样例覆盖 30 章接管、风格画像写作闭环、重规划后继续写作和创作资产连续性。
+
+## 用了什么
+
+- TypeScript / Node.js 22
+- Commander：CLI 命令层
+- YAML / Markdown：项目事实源
+- AJV：协议 schema 校验
+- SQLite 派生索引边界
+- 本地 deterministic hash embedding：可重建语义检索索引
+- Pi Agent Skill：约束 agent 行为和调用顺序
+- LLM-as-judge evidence package：为真实 agent 评估保留证据结构
+
+模型和 API 说明：
+
+- OpenAthor CLI 本身不调用外部模型 API，运行核心功能不需要 `.env` 或 API key。
+- 已验证的 Operator 环境是 Pi Agent + GLM-5；模型 provider 和 API key 由 Pi Agent 侧配置，不写入 OpenAthor 仓库。
+- 当前版本未集成 Unity2.ai API。README 不虚构未实现依赖；如果赛事要求指定模型/API，可在 OpenAthor 的 Pi Agent 执行层接入，再把 provider 配置写入说明。
+
+## 作品亮点
+
+### 1. 面向完整小说项目，而不是只生成片段
+
+OpenAthor 关注的是一个小说项目的完整生命周期：接管、理解、续写、审稿、改稿、重规划、资产沉淀和导出。长篇是当前重点验证场景，因为它最能检验上下文、人物状态、伏笔和章节结构是否稳定。
+
+### 2. 明文文件是唯一事实源
+
+正文、canon、人物、时间线、风格画像、大纲和章节资产都保存在 Markdown/YAML 中。SQLite 和向量索引只是可重建派生数据，用户不会被锁进黑盒。
+
+### 3. 不覆盖用户原稿
+
+接管已有小说时，OpenAthor 不移动、不重命名、不标准化原稿。确认写正文、改稿、拆章、合章、资产同步时都使用 source hash 做冲突保护。
+
+### 4. 结构编辑可回滚、可解释
+
+插章和移章只改变 display order，不改变稳定章节 ID。归档不物理删除正文文件。重规划只能替换 planned future outline，不直接改写已写正文。
+
+### 5. 风格控制不等于仿写
+
+`style analyze` 只生成抽象风格画像，默认 pending。只有用户确认后的 active style profile 才会进入 `context`、`draft`、`review` 和 `revise` proposal。
+
+## 当前可交付范围
+
+已落地的主要命令包括：
+
+```bash
+openathor init
+openathor adopt
+openathor doctor
+openathor index rebuild
+openathor skill install pi
+openathor context
+openathor draft
+openathor review
+openathor revise
+openathor canon sync
+openathor outline show/impact/insert/move/split/merge/replan/archive
+openathor search text/related/semantic
+openathor assets audit/sync/link-backfill
+openathor style analyze/profile show/profile apply/check/revise
+openathor export --format markdown
+openathor-fixture-check
+openathor-judge-smoke
+```
+
+详细命令合约见 [CLI Contract](docs/cli-contract.md)。
+
+## 验证情况
+
+当前回归覆盖：
+
+- Slice 1：协议内核、新建项目、接管 3 章、散稿识别、歧义章节顺序
+- Slice 2：写作上下文、draft/review/revise proposal、确认写章、hash 冲突、canon 冲突
+- Slice 3：插章、移章、拆章、合章、重规划、归档
+- Slice 4：30 章长篇接管、检索、导出、风格画像、资产同步、资产漂移、summary drift、索引重建
+- LLM-as-judge smoke：生成可交给 judge 的 evidence package，不在 CI 中调用真实模型
+
+本地完整验证：
 
 ```bash
 npm test
-npm run build
-node dist/cli.js init <path> --title "小说名" --json
-node dist/cli.js adopt <path> --dry-run --json
-node dist/cli.js adopt <path> --json
-node dist/cli.js doctor --json
-node dist/cli.js index rebuild --json
-node dist/cli.js context chapter 1 --json
-node dist/cli.js outline show --json
-node dist/cli.js outline impact 1 --json
-node dist/cli.js outline insert --after 1 --title "插入章" --confirm --json
-node dist/cli.js outline move 1 --after 2 --confirm --json
-node dist/cli.js outline split 1 --at-line 12 --title-before "前半章" --title-after "后半章" --confirm --base-hash "sha256:..." --json
-node dist/cli.js outline merge 1 2 --title "合并章" --json
-node dist/cli.js outline merge 1 2 --title "合并章" --confirm --base-hash "sha256:..." --next-base-hash "sha256:..." --json
-node dist/cli.js outline replan --from 3 --task "重规划后续剧情" --json
-node dist/cli.js outline replan --from 3 --task "重规划后续剧情" --from-package notes/replan-package.yaml --confirm --base-hash "sha256:..." --json
-node dist/cli.js outline archive 1 --confirm --base-hash "sha256:..." --json
-node dist/cli.js search text "关键词" --json
-node dist/cli.js search related chapter 1 --json
-node dist/cli.js index rebuild --vector --json
-node dist/cli.js search semantic "旧案钥匙 父亲" --json
-node dist/cli.js assets audit --json
-node dist/cli.js assets sync chapter 1 --from notes/asset-package.yaml --json
-node dist/cli.js assets sync chapter 1 --from notes/asset-package.yaml --confirm --base-hash "sha256:..." --assets-hash "bible/characters.md=sha256:..." --assets-hash "outline/chapters.yaml=sha256:..." --json
-node dist/cli.js style analyze style/samples/sample-001.md --json
-node dist/cli.js style profile show --json
-node dist/cli.js style check chapter 1 --json
-node dist/cli.js style revise chapter 1 --goal "压低直白说明" --json
-node dist/cli.js style revise chapter 1 --goal "压低直白说明" --text "# 第一章\n\n修订正文。" --base-hash "sha256:..." --confirm-write --json
-node dist/cli.js review chapter 1 --task "检查人物动机" --json
-node dist/cli.js draft chapter next --task "写下一章" --text "# 第二章\n\n正文。" --confirm-write --json
-node dist/cli.js revise chapter 1 --task "确认改写" --text "# 第一章\n\n新正文。" --base-hash "sha256:..." --confirm-write --json
-node dist/cli.js canon sync 1 --task "提取新增设定到 pending" --json
-node dist/cli.js skill install pi --json
-node dist/fixture-check.js fixtures/slice-1/adopt-3-chapters --json
-node dist/judge-smoke.js --json
 ```
 
-当前仓库包含产品文档、协议 schema、CLI 实现、fixture 回归样例和 LLM-as-judge smoke：
+GitHub Actions 会在 PR 和 main 上运行文档健康检查、类型检查、schema 校验和构建。
+
+## 仓库结构
 
 ```text
-docs/
-  index.md
-  pre-development.md
-  pre-development/
-  product-shape-pi-agent.md
-  product-shape-pi-agent/
-  project-protocol.md
-  project-protocol/
-  cli-contract.md
-  cli-contract/
-  decisions.md
-  decisions/
-.codex/
-  skills/
-schemas/
-src/
-fixtures/
-AGENTS.md
+src/        TypeScript CLI 和协议实现
+schemas/    OpenAthor 项目协议 schema
+fixtures/   可重复执行的产品回归样例
+docs/       产品形态、项目协议、CLI 合约和决策记录
+.codex/     项目本地 Codex skills
 ```
 
-## 文档入口
+## 重要边界
+
+- OpenAthor 不做自研 TUI。
+- OpenAthor 不做网页编辑器。
+- OpenAthor CLI 不直接生成最终正文，正文由 Pi Agent、Operator Agent 或用户在 CLI 外部生成。
+- OpenAthor CLI 负责上下文、proposal、diff、安全写入、索引、审计和回归验证。
+- 真实 Pi Agent transcript 和 LLM judge scores 作为本地/手动评估证据，不进入必跑 CI。
+
+## 更多文档
 
 - [文档总入口](docs/index.md)
-- [前期准备](docs/pre-development.md)
 - [Pi Agent 优先产品形态](docs/product-shape-pi-agent.md)
 - [项目协议](docs/project-protocol.md)
 - [CLI 合约](docs/cli-contract.md)
 - [产品和架构决策](docs/decisions.md)
-
-## 开发原则
-
-当前实现覆盖 Slice 1 协议内核、Slice 2 的只读 `context` 入口、plan/draft/review/revise/canon sync 的 proposal 入口、确认后的“下一章”安全写入、带 `--base-hash` 冲突保护的已有章节确认改写、确定性 `style analyze/profile show/check`、`style revise` proposal/diff/hash-confirm 写入、结构编辑 show/impact/insert/move/split/merge/replan/archive 最小闭环、文本/相关/semantic 检索、长篇资产 audit、写作后结构化资产 sync，以及 `openathor-judge-smoke` evidence package 自动化。CLI 不调用模型写正文，不做 sub-agent 调度；`assets sync` 接收 agent/用户提供的结构化资产包并负责 pending/确认写入、hash gate 和 run 记录，confirmed sync 会追加新资产并合并更新既有人物、时间线和伏笔资产，确认时必须同时匹配章节 hash 和 proposal 输出的资产源 hashes；多章写作回归要求每章正文确认写入后同步人物、事件、伏笔和 outline links，再用 `assets audit` 验证无 unresolved link、character link drift 和 summary drift；`style analyze` 只生成 pending 抽象画像，不复制参考文本原文；`style revise` 不生成修订正文，只 hash-gate 外部生成的修订文本；`search semantic` 使用本地可重建派生向量索引，真实 LLM judge scores 只作为本地/手动评估证据保存，不进入必跑 CI。进入后续产品切片前，仍需保持以下追溯关系：
-
-- 产品形态
-- 目标用户故事
-- OpenAthor 项目协议
-- CLI 命令合约
-- Pi Skill 行为规范
-- 接管已有小说流程
-- 验收样例和测试夹具策略
-- 产品和架构防偏移规则
+- [LLM-as-Judge Evaluation](docs/llm-as-judge.md)
 
 ## 贡献说明
 
-贡献前请先阅读 [AGENTS.md](AGENTS.md)。当前阶段的主要贡献方向是完善产品文档、项目协议、CLI 合约、目标验收场景和防偏移规则。
+贡献前请先阅读 [AGENTS.md](AGENTS.md)。当前项目坚持 Pi Agent first、明文事实源、CLI 确定性操作和用户确认优先的产品边界。
