@@ -48,6 +48,7 @@ jobs:
           path: |
             release/openathor.tar.gz
             release/openathor.tar.gz.sha256
+            scripts/install.sh
 
       - name: Publish GitHub release
         if: github.ref_type == 'tag'
@@ -58,9 +59,10 @@ jobs:
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" \
               --title "OpenAthor $tag" \
-              --notes "Install with: curl -fsSL https://raw.githubusercontent.com/huanghuoguoguo/openathor/main/scripts/install.sh | sh"
+              --notes "Install with: curl -fsSL https://github.com/huanghuoguoguo/openathor/releases/latest/download/install.sh | sh"
           fi
           gh release upload "$tag" \
             release/openathor.tar.gz \
             release/openathor.tar.gz.sha256 \
+            scripts/install.sh \
             --clobber
