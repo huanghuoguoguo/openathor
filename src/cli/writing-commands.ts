@@ -8,6 +8,8 @@ type ChapterProposalOptions = {
   text?: string;
   confirmWrite?: boolean;
   baseHash?: string;
+  multiAgent?: boolean;
+  reviewRole?: string[];
   json?: boolean;
   dryRun?: boolean;
   diff?: boolean;
@@ -68,6 +70,8 @@ export function registerWritingCommands(program: Command): void {
     .argument("<scope>", "review scope; currently chapter")
     .argument("<target>", "chapter id or display order")
     .requiredOption("--task <text>", "review task")
+    .option("--multi-agent", "create a structured multi-role review pack")
+    .option("--review-role <role>", "include a specific review role; repeat for multiple roles", collectValues, [])
     .option("--json", "emit JSON")
     .option("--dry-run", "show planned writes without changing files")
     .option("--diff", "preview proposal writes without changing files")
@@ -164,8 +168,14 @@ async function emitChapterProposal(
       text: options.text,
       confirmWrite: options.confirmWrite,
       baseHash: options.baseHash,
+      multiAgent: options.multiAgent,
+      reviewRoles: options.reviewRole,
       dryRun: options.dryRun,
       diff: options.diff,
     }),
   );
+}
+
+function collectValues(value: string, previous: string[]): string[] {
+  return [...previous, value];
 }

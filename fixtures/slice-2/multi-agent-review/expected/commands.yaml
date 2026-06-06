@@ -1,0 +1,39 @@
+commands:
+  - run: openathor index rebuild --json
+    ok: true
+  - run: openathor review chapter 1 --task "从连续性、结构、风格和读者体验角度做多角色审稿" --multi-agent --diff --json
+    ok: true
+    expect_no_writes: true
+    expect_data:
+      mode: diff
+      operator_mode: sub-agent
+      target.id: ch_001
+      target.source_path: manuscript/chapter-001.md
+      review_pack.mode: multi_agent_review
+      review_pack.roles.0.id: context-scout
+      review_pack.roles.1.id: continuity-reviewer
+      review_pack.roles.2.id: outline-planner
+      review_pack.roles.3.id: style-editor
+      review_pack.roles.4.id: reader-qa
+      review_pack.roles.5.id: qa-judge
+      review_pack.safety.sub_agents_may_write_manuscript: false
+      review_pack.safety.sub_agents_may_write_confirmed_canon: false
+      planned_writes.1.reason: review_proposal
+    expect_data_path: diff.proposal_text
+  - run: openathor review chapter 1 --task "使用不存在的审稿角色" --review-role nonexistent-reviewer --json
+    ok: false
+    error_code: OA_REVIEW_ROLE_UNKNOWN
+    expect_no_writes: true
+  - run: openathor review chapter 1 --task "只让连续性和风格角色复核本章" --review-role continuity-reviewer --review-role style-editor --json
+    ok: true
+    expect_data:
+      mode: proposal
+      operator_mode: sub-agent
+      target.id: ch_001
+      review_pack.roles.0.id: continuity-reviewer
+      review_pack.roles.1.id: style-editor
+    expect_data_path: proposal_path
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

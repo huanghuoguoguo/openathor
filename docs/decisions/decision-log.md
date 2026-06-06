@@ -537,3 +537,27 @@ Slice 4 增加可选派生向量索引和语义检索入口。
 - `node dist/judge-smoke.js --scenario draft-confirm-write --operator-transcript evals/manual/draft-confirm-write-transcript.md --agent-final-response evals/manual/draft-confirm-write-final.md --judge-scores evals/manual/draft-confirm-write-scores.json --out-dir evals/smoke --json` 通过。
 
 CI 决策不变：真实 Pi Agent transcript 和 LLM judge scores 仍只作为本地/手动评估证据，不进入必跑 CI。
+
+## 2026-06-06: 多角色审稿以 review pack 落地
+
+`openathor review` 增加多角色审稿包输出：
+
+- `openathor review chapter <target> --task <text> --multi-agent --json`
+- `openathor review chapter <target> --task <text> --review-role <role> --json`
+
+当前行为：
+
+- CLI 只生成确定性的 `review_pack`、role definitions、findings schema、merge policy 和 safety boundary。
+- 默认角色包括 `context-scout`、`continuity-reviewer`、`outline-planner`、`style-editor`、`reader-qa` 和 `qa-judge`。
+- `--review-role` 可重复指定子集；未知角色返回 `OA_REVIEW_ROLE_UNKNOWN`。
+- `--diff` 不落盘；proposal 模式只写 `runs/` 和 `reviews/`。
+- sub-agent 不得直接写用户正文、confirmed canon 或 outline；主 Operator Agent 负责最终合并和用户确认。
+
+原因：
+
+- 多角色审稿适合长篇一致性、结构、风格和读者体验复核，但不应把复杂 agent 调度器变成首个产品闭环依赖。
+- 先把 role pack 和证据格式做成可回归的确定性 CLI 输出，Pi Agent/运行时再按能力执行真实 sub-agent。
+
+验证：
+
+- `fixtures/slice-2/multi-agent-review`

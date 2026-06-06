@@ -1,0 +1,10 @@
+required:
+  - openathor.yaml
+  - manuscript/chapter-001.md
+  - bible/canon.md
+  - bible/canon.pending.md
+  - reviews
+  - runs
+  - .openathor/manuscript.index.yaml
+  - .openathor/index.sqlite
+absent: []

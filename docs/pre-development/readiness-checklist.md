@@ -64,6 +64,7 @@
 - [x] 写作前只读上下文入口：`openathor context`
 - [x] 续写 proposal 入口：`openathor draft`
 - [x] 审稿 proposal 入口：`openathor review`
+- [x] 多角色审稿包：`openathor review --multi-agent`
 - [x] 改稿 proposal 入口：`openathor revise`
 - [x] canon 同步 pending 入口：`openathor canon sync`
 - [x] 写作后结构化资产沉淀入口：`openathor assets sync`
@@ -148,6 +149,7 @@
 - [x] 定义 sub-agent 是可选增强而非基础依赖
 - [x] 定义预留 sub-agent 角色
 - [x] 定义 run 记录中的 `agent_role`
+- [x] 落地多角色审稿包输出，真实 sub-agent 调度仍不作为基础依赖
 - [x] 完成 Pi Agent runtime spike：确认模型调用、显式 skill 加载、CLI/JSON 读取和受控编辑流程可行
 
 ### 后续切片准备项

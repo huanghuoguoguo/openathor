@@ -82,6 +82,7 @@ Use these commands as task packages:
 openathor plan --task "<task>" --json
 openathor draft chapter <id-or-order> --task "<task>" --json
 openathor review chapter <id-or-order> --task "<task>" --json
+openathor review chapter <id-or-order> --task "<task>" --multi-agent --json
 openathor revise chapter <id-or-order> --task "<task>" --json
 openathor canon sync <id-or-order> --task "<task>" --json
 \`\`\`
@@ -115,6 +116,9 @@ When using proposal commands:
 - do not pretend OpenAthor has generated or revised manuscript text
 - use \`openathor context --json\` or \`openathor context chapter <id-or-order> --json\` before writing advice
 - do not overwrite user manuscript files
+- use \`openathor review ... --multi-agent --json\` for high-stakes or broad chapter review; dispatch the returned \`review_pack.roles\` as separate review passes, then merge structured findings yourself
+- sub-agent review roles may return findings, questions, and suggestions only; they must not write manuscript files, confirmed canon, or outline files
+- preserve source-backed disagreements from role findings as questions instead of silently resolving them
 - use confirmed draft writes only for \`chapter next\`; fill planned outline chapters when available and do not overwrite existing chapter files
 - use confirmed revision only when the source hash comes from the latest \`openathor context\` or \`openathor doctor\` output
 - for writing advice, read relevant plaintext sources and provide suggestions in the conversation

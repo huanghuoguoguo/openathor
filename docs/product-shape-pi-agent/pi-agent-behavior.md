@@ -15,8 +15,10 @@ OpenAthor Pi Skill 应该要求 Pi Agent 遵守以下行为。
 
 - sub-agent 是可选增强，不是 OpenAthor 基础能力的前置条件
 - 主 Pi Agent 对最终用户回复和文件修改负责
+- 对高风险或宽范围审稿，优先调用 `openathor review chapter <target> --task <text> --multi-agent --json` 获取确定性 review pack
 - sub-agent 不应直接写用户正文或 confirmed canon
 - sub-agent 输出应作为 findings、draft suggestions 或 review notes
+- 主 Pi Agent 应合并、去重、分级 sub-agent findings，并把证据不足或角色分歧保留为 question
 - 高风险操作仍需主 Pi Agent 汇总影响并向用户确认
 - run 记录应标明 `agent_role`
 - 开发和测试阶段可以用 sub-agent 并行生成 findings、patch suggestions 和 judge reports，但最终合并前仍必须通过 deterministic checks

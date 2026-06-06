@@ -103,6 +103,7 @@ export type FixtureCommandOptions = {
   strict?: boolean;
   confirmAmbiguous?: boolean;
   global?: boolean;
+  multiAgent?: boolean;
   confirm?: boolean;
   diff?: boolean;
   keepFacts?: boolean;
@@ -112,6 +113,7 @@ export type FixtureCommandOptions = {
   task?: string;
   goal?: string;
   text?: string;
+  reviewRoles?: string[];
   profileId?: string;
   name?: string;
   permission?: string;
