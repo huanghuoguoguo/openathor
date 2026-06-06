@@ -1,11 +1,11 @@
 commands:
   - run: openathor doctor --json
     ok: true
-  - run: openathor outline split 2 --at-line 6 --title-before "潮汐舱门" --title-after "船票空位" --confirm --base-hash current:manuscript/chapter-002.md --json
+  - run: openathor outline split 2 --at-line 5 --title-before "潮汐舱门" --title-after "船票空位" --confirm --base-hash current:manuscript/chapter-002.md --json
     ok: true
     expect_data:
       mode: confirmed_write
-      split_at_line: 6
+      split_at_line: 5
       inserted.id: ch_003_2
       inserted.display_order: 3
       inserted.title: 船票空位
@@ -36,7 +36,19 @@ commands:
       audit.counts.characters: 4
       audit.counts.unresolved_outline_links: 0
       audit.counts.character_link_drifts: 0
+      audit.counts.weak_asset_link_coverages: 3
       audit.counts.weak_character_profile_summaries: 0
+      audit.counts.summary_drift_candidates: 1
+      audit.asset_link_coverage_issues.0.type: weak_character_link_coverage
+      audit.asset_link_coverage_issues.0.chapter_id: ch_002
+      audit.asset_link_coverage_issues.0.link: lin-yan
+      audit.asset_link_coverage_issues.1.type: weak_timeline_event_link_coverage
+      audit.asset_link_coverage_issues.1.link: event-lin-yan-ticket-found
+      audit.asset_link_coverage_issues.2.type: weak_hook_link_coverage
+      audit.asset_link_coverage_issues.2.link: hook-empty-berth-ticket
+    expect_warnings:
+      - OA_ASSET_LINK_WEAK_COVERAGE
+      - OA_ASSET_SUMMARY_DRIFT
   - run: openathor doctor --json --strict
     ok: true
     expect_data:
