@@ -69,7 +69,7 @@ export function checkCommandExpectation(
     expectedCommand.expect_data ?? {},
   )) {
     const actualValue = getDataPath(result.envelope.data, dataPath);
-    if (actualValue !== expectedValue) {
+    if (!isDeepEqual(actualValue, expectedValue)) {
       throw new OpenAthorError(
         "OA_FIXTURE_COMMAND_FAILED",
         `Command ${expectedCommand.run} data path ${dataPath}=${JSON.stringify(actualValue)}, expected ${JSON.stringify(expectedValue)}.`,
@@ -203,4 +203,38 @@ function getDataPath(data: unknown, dataPath: string): unknown {
   }
 
   return current;
+}
+
+function isDeepEqual(left: unknown, right: unknown): boolean {
+  if (left === right) {
+    return true;
+  }
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+
+    return left.every((item, index) => isDeepEqual(item, right[index]));
+  }
+
+  if (isRecord(left) || isRecord(right)) {
+    if (!isRecord(left) || !isRecord(right)) {
+      return false;
+    }
+
+    const leftKeys = Object.keys(left).sort();
+    const rightKeys = Object.keys(right).sort();
+    if (!isDeepEqual(leftKeys, rightKeys)) {
+      return false;
+    }
+
+    return leftKeys.every((key) => isDeepEqual(left[key], right[key]));
+  }
+
+  return false;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

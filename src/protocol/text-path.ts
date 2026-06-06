@@ -6,6 +6,7 @@ export const SKIPPED_TEXT_SCAN_DIRS = new Set([
   "node_modules",
   "dist",
   "coverage",
+  "exports",
 ]);
 
 export function isTextCandidate(relPath: string): boolean {

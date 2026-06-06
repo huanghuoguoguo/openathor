@@ -38,7 +38,7 @@ openathor context chapter <chapter-id-or-display-order> --json
 - `assets.timeline`：`bible/timeline.md`
 - `notes`：`notes/` 下的文本资料摘录
 - `manuscript.indexed_chapters`：章节索引摘要
-- `manuscript.context_chapters`：目标章节及相邻章节正文摘录
+- `manuscript.context_chapters`：目标章节及相邻活跃章节正文摘录
 
 `sources` 必须包含用于生成上下文包的文件和 hash。
 
@@ -59,6 +59,6 @@ openathor context chapter <chapter-id-or-display-order> --json
 ## 当前限制
 
 - 只做确定性上下文包，不做语义检索。
-- `chapter` scope 只包含目标章节前后一章。
+- `chapter` scope 只包含目标章节前后一章中的活跃章节；显式请求 archived 目标章时仍可读取目标章本身，但 archived 章节不会作为其他章节的邻章上下文混入后续写作。
 - 不生成 diff、不改正文、不同步 canon。
 - LLM judge 仍需要后续证据包接入。

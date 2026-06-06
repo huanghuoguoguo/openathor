@@ -33,7 +33,16 @@ export function normalizeContextMaxChars(maxChars: number | undefined): ContextM
 
 export function contextWindow(chapters: IndexedChapter[], targetOrder: number): IndexedChapter[] {
   return chapters
-    .filter((chapter) => Math.abs(chapter.display_order - targetOrder) <= 1)
+    .filter((chapter) => {
+      if (chapter.display_order === targetOrder) {
+        return true;
+      }
+
+      return (
+        chapter.status !== "archived" &&
+        Math.abs(chapter.display_order - targetOrder) <= 1
+      );
+    })
     .sort((a, b) => a.display_order - b.display_order);
 }
 

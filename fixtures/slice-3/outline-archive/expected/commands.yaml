@@ -16,6 +16,35 @@ commands:
   - run: openathor outline show --json
     ok: true
     expect_data_path: outline.archived_chapter_count
+    expect_data:
+      outline.active_chapter_count: 1
+      outline.archived_chapter_count: 1
+  - run: openathor context chapter 2 --json
+    ok: true
+    expect_data:
+      manuscript.context_chapters:
+        - id: ch_002_b620b551
+          display_order: 2
+          title: 追问
+          source_path: 正文/002-追问.md
+          status: existing
+          origin: adopted
+          content_hash: sha256:54bf53835c2de9e5b4bea68a271d2821c069a53388f41e9212537bfd88d971e0
+          detected_title: 追问
+          confidence: high
+          content:
+            path: 正文/002-追问.md
+            hash: sha256:54bf53835c2de9e5b4bea68a271d2821c069a53388f41e9212537bfd88d971e0
+            text: "# 追问\n\n林岚追问雨夜电话的来源，提到第一章的母亲项链。\n"
+            truncated: false
+  - run: openathor export --format markdown --out exports/archive-check.md --json
+    ok: true
+    expect_data:
+      chapter_count: 1
+  - run: openathor search text "archive-check" --json
+    ok: true
+    expect_data:
+      match_count: 0
   - run: openathor doctor --json
     ok: true
   - run: openathor index rebuild --json
