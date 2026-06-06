@@ -5,6 +5,7 @@ import type {
   ManuscriptIndex,
   ProjectConfig,
 } from "./model.js";
+import { buildStyleGuidance } from "./style-guidance.js";
 
 export type ContextSourceText = {
   path: string;
@@ -83,6 +84,12 @@ export function contextData(input: {
   notes: ContextSourceText[];
   manuscriptContext: Array<IndexedChapter & { content: ContextSourceText }>;
 }): Record<string, unknown> {
+  const styleGuidance = buildStyleGuidance({
+    manualStyle: input.style,
+    profiles: input.styleProfiles,
+    references: input.styleReferences,
+  });
+
   return {
     context_pack: {
       version: PROTOCOL_VERSION,
@@ -104,6 +111,7 @@ export function contextData(input: {
         neighbor_chapter: input.maxChars.neighborChapter,
       },
       run_record: "not_written_read_only",
+      style_guidance: styleGuidance,
     },
     project: {
       id: input.config.project.id,
@@ -132,6 +140,7 @@ export function contextData(input: {
       profiles: input.styleProfiles,
       references: input.styleReferences,
     },
+    style_guidance: styleGuidance,
     assets: {
       world: input.world,
       characters: input.characters,

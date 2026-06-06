@@ -19,7 +19,7 @@ style/
 
 `bible/style.md` 是用户可读的主风格说明。`style/profiles.yaml` 保存结构化风格画像。`style/references.yaml` 记录参考文本来源和授权状态。
 
-当前 CLI 已支持 `openathor style analyze <path> --json` 生成 pending style profile 和 reference 记录，支持 `openathor style profile show --json` 读取这些文件，并在 `openathor context` 中暴露 `style_profiles`。`openathor style profile apply <profile> --confirm --base-hash <hash> --json` 已支持把用户审阅后的 profile 标记为 confirmed/active。`openathor style check chapter <target> --json` 已支持确定性风格指标扫描，用于发现句长、对话比例、动作细节和 avoid 规则命中的漂移候选。`openathor style revise chapter <target> --goal <goal>` 已支持 proposal、diff 和 `--confirm-write --base-hash` 安全写入；修订正文由 Pi/Operator Agent 或用户在 CLI 外部生成，CLI 不调用模型。
+当前 CLI 已支持 `openathor style analyze <path> --json` 生成 pending style profile 和 reference 记录，支持 `openathor style profile show --json` 读取这些文件，并在 `openathor context` 中暴露 `style_profiles` 和 `style_guidance`。`openathor style profile apply <profile> --confirm --base-hash <hash> --json` 已支持把用户审阅后的 profile 标记为 confirmed/active。`openathor draft/review/revise` proposal 已读取 confirmed active profile 作为风格指导，并显式排除 pending profile。`openathor style check chapter <target> --json` 已支持确定性风格指标扫描，用于发现句长、对话比例、动作细节和 avoid 规则命中的漂移候选。`openathor style revise chapter <target> --goal <goal>` 已支持 proposal、diff 和 `--confirm-write --base-hash` 安全写入；修订正文由 Pi/Operator Agent 或用户在 CLI 外部生成，CLI 不调用模型。
 
 ## Profile 示例
 

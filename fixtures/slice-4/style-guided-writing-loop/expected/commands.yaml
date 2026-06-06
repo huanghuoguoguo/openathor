@@ -1,0 +1,79 @@
+commands:
+  - run: openathor adopt --json
+    ok: true
+  - run: openathor style analyze style/samples/sample-001.md --profile-id style_sample --name "授权样稿风格" --permission user_owned --source-type user_provided --json
+    ok: true
+    expect_data:
+      mode: pending_profile
+      profile.id: style_sample
+      profile.status: pending
+      result.reference_text_copied: false
+  - run: openathor style profile apply style_sample --confirm --base-hash current:style/profiles.yaml --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      result.applied: true
+      result.active_profile_id: style_sample
+      result.reference_text_copied: false
+  - run: openathor style analyze style/samples/pending-voice.md --profile-id style_pending --name "未确认实验风格" --permission user_owned --source-type user_provided --json
+    ok: true
+    expect_data:
+      mode: pending_profile
+      profile.id: style_pending
+      profile.status: pending
+      result.reference_text_copied: false
+  - run: openathor context chapter 1 --json
+    ok: true
+    expect_data:
+      context_pack.style_guidance.active_profile_present: true
+      context_pack.style_guidance.active_profile_id: style_sample
+      context_pack.style_guidance.pending_profile_ids.0: style_pending
+      context_pack.style_guidance.safety.pending_profiles_excluded: true
+      context_pack.style_guidance.safety.reference_text_included: false
+      style_guidance.active_profile_id: style_sample
+    expect_data_path: context_pack.style_guidance.rules.do.0
+  - run: openathor draft chapter next --task "续写下一章，保持冷静克制，不复制参考文本表达" --diff --json
+    ok: true
+    expect_data:
+      mode: diff
+      context_pack.style_guidance.active_profile_id: style_sample
+      context_pack.style_guidance.pending_profile_ids.0: style_pending
+      context_pack.style_guidance.safety.pending_profiles_excluded: true
+      style_guidance.active_profile_id: style_sample
+    expect_data_path: diff.proposal_text
+    expect_no_writes: true
+  - run: openathor review chapter 1 --task "审查这一章是否偏离项目文风" --diff --json
+    ok: true
+    expect_data:
+      mode: diff
+      target.display_order: 1
+      target.source_path: 正文/001-样章.md
+      context_pack.style_guidance.active_profile_id: style_sample
+      context_pack.style_guidance.pending_profile_ids.0: style_pending
+      style_guidance.active_profile_id: style_sample
+    expect_data_path: diff.proposal_text
+    expect_no_writes: true
+  - run: openathor revise chapter 1 --task "按项目风格把直白说明压低，保留原剧情事实" --diff --json
+    ok: true
+    expect_data:
+      mode: diff
+      target.display_order: 1
+      target.source_path: 正文/001-样章.md
+      context_pack.style_guidance.active_profile_id: style_sample
+      context_pack.style_guidance.pending_profile_ids.0: style_pending
+      style_guidance.active_profile_id: style_sample
+    expect_data_path: diff.proposal_text
+    expect_no_writes: true
+  - run: openathor style check chapter 1 --json
+    ok: true
+    expect_data:
+      method: deterministic_style_metric_scan
+      style_guidance.active_profile_id: style_sample
+      style_guidance.pending_profile_ids.0: style_pending
+      style_guidance.safety.pending_profiles_excluded: true
+      style_guidance.safety.reference_text_included: false
+    expect_data_path: verdict
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --json
+    ok: true

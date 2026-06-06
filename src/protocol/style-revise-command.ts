@@ -17,6 +17,7 @@ import {
 import { inspectProject } from "./project-inspection.js";
 import { runStamp } from "./run-stamp.js";
 import { runStyleCheck } from "./style-check-command.js";
+import { activeStyleProfileStateFromData } from "./style-guidance.js";
 import { detectStyleReferenceCopy } from "./style-reference-copy.js";
 import {
   styleReviseProposalMarkdown,
@@ -28,7 +29,6 @@ import { ensureTrailingNewline } from "./text-format.js";
 import { normalizeSnippetChars } from "./text-analysis.js";
 import { titleFromText } from "./title.js";
 import {
-  asRecordArray,
   readYamlObjectFile,
 } from "./yaml-records.js";
 import type {
@@ -324,15 +324,10 @@ async function activeStyleProfileState(
   const profilesPath = path.join(projectRoot, profilesRelPath);
   const profilesHash = (await pathExists(profilesPath)) ? await sha256File(profilesPath) : null;
   const profilesData = await readYamlObjectFile(profilesPath, { profiles: [] });
-  const profiles = asRecordArray(profilesData.profiles);
-  const activeProfile =
-    profiles.find(
-      (profile) => profile.status === "confirmed" && profile.active === true,
-    ) ?? null;
 
   if (profilesHash) {
     sourceMap.set(profilesRelPath, { path: profilesRelPath, hash: profilesHash });
   }
 
-  return { activeProfile, profilesHash };
+  return activeStyleProfileStateFromData(profilesData, profilesHash);
 }

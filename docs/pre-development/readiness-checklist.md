@@ -55,7 +55,7 @@
 - [x] 移动章节
 - [x] 拆分或合并章节
 - [x] 基于授权参考文本生成风格画像
-- [ ] 按项目风格画像续写、审稿和改稿
+- [x] 按项目风格画像续写、审稿和改稿
 
 参考：[Core Scenarios](../product-shape-pi-agent/core-scenarios.md)
 
@@ -78,6 +78,7 @@
 - [x] 用户确认后拆章写入：`openathor outline split --confirm --base-hash`
 - [x] 合章 proposal：`openathor outline merge`
 - [x] 重规划 proposal：`openathor outline replan`
+- [x] confirmed active style guidance 进入 `context`、`draft`、`review` 和 `revise` proposal；pending style profile 不作为写作指导
 - [x] LLM-as-judge 自动化 smoke：`openathor-judge-smoke`
 
 ## 项目协议
@@ -187,6 +188,7 @@
 - `fixtures/slice-1/scattered-drafts`
 - `fixtures/slice-1/adopt-ambiguous-order`
 - `fixtures/slice-4/adopt-30-chapters`
+- `fixtures/slice-4/style-guided-writing-loop`
 - `openathor-fixture-check` 会复制 fixture input、执行 expected commands、校验 JSON envelope、expected files、disallowed writes，并在最终项目上运行 `openathor doctor --json --strict`。
 - `openathor-judge-smoke` 会复用 fixture replay，为已落地写作/结构场景生成 `openathor.judge_evidence.v1` 证据包。
 - `openathor-judge-smoke --scenario <name> --operator-transcript <path> --agent-final-response <path>` 可以把本地真实 Operator Agent 运行记录和最终回复附加到单个 evidence package。
@@ -221,6 +223,7 @@
 - [x] LLM judge scores 可本地附加到单个 evidence package
 - [x] CI 保持静态和确定性检查，不接入真实 Pi Agent、LLM judge 或外部 API key
 - [x] 真实 Pi Agent transcript 和 LLM judge scores 作为本地/手动评估证据保存
+- [x] style guidance 写作闭环 fixture 覆盖 analyze -> apply -> pending exclusion -> context -> draft/review/revise proposal -> style check
 
 参考：
 
@@ -240,6 +243,6 @@
 
 ### 仓库治理
 
-- [ ] `main` 分支保护已启用
+- [x] `main` 分支保护已启用
 
 参考：[Decisions](../decisions.md)

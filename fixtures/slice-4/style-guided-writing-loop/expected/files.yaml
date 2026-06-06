@@ -1,0 +1,12 @@
+required:
+  - openathor.yaml
+  - 正文/001-样章.md
+  - style/samples/sample-001.md
+  - style/samples/pending-voice.md
+  - style/profiles.yaml
+  - style/references.yaml
+  - reviews
+  - runs
+  - .openathor/manuscript.index.yaml
+  - .openathor/index.sqlite
+absent: []

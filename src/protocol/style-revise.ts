@@ -1,10 +1,7 @@
 import type { EnvelopeWarning } from "./envelope.js";
 import type { IndexedChapter } from "./model.js";
-
-export type ActiveStyleProfileState = {
-  activeProfile: Record<string, unknown> | null;
-  profilesHash: string | null;
-};
+import type { ActiveStyleProfileState } from "./style-guidance.js";
+export type { ActiveStyleProfileState } from "./style-guidance.js";
 
 export function styleReviseTarget(
   chapter: IndexedChapter,

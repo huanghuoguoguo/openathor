@@ -7,11 +7,11 @@ import { OpenAthorError } from "./errors.js";
 import { findProjectRoot } from "./project-files.js";
 import { inspectProject } from "./project-inspection.js";
 import {
-  extractStyleRules,
   styleDriftFindings,
   styleMetrics,
   styleRuleMatches,
 } from "./style-analysis.js";
+import { buildStyleGuidance } from "./style-guidance.js";
 import { normalizeSnippetChars } from "./text-analysis.js";
 import type {
   CommandResult,
@@ -55,6 +55,12 @@ export async function runStyleCheck(
     Number.MAX_SAFE_INTEGER,
     sourceMap,
   );
+  const referenceSource = await readContextSource(
+    projectRoot,
+    "style/references.yaml",
+    Number.MAX_SAFE_INTEGER,
+    sourceMap,
+  );
   const chapterText = await readFile(path.join(projectRoot, targetChapter.source_path), "utf8");
   sourceMap.set(targetChapter.source_path, {
     path: targetChapter.source_path,
@@ -77,7 +83,12 @@ export async function runStyleCheck(
   const targetMetrics = styleMetrics(chapterText);
   const baselineMetrics =
     baselineTexts.length > 0 ? styleMetrics(baselineTexts.join("\n\n")) : null;
-  const styleRules = extractStyleRules(`${styleSource.text}\n${profileSource.text}`);
+  const styleGuidance = buildStyleGuidance({
+    manualStyle: styleSource,
+    profiles: profileSource,
+    references: referenceSource,
+  });
+  const styleRules = styleGuidance.rules;
   const ruleMatches = styleRuleMatches(chapterText, styleRules, maxChars);
   const driftFindings = styleDriftFindings(targetMetrics, baselineMetrics, ruleMatches);
   const warnings = [...inspection.warnings];
@@ -124,7 +135,13 @@ export async function runStyleCheck(
           hash: profileSource.hash,
           present: profileSource.hash !== null,
         },
+        references: {
+          path: referenceSource.path,
+          hash: referenceSource.hash,
+          present: referenceSource.hash !== null,
+        },
       },
+      style_guidance: styleGuidance,
       metrics: {
         target: targetMetrics,
         baseline: baselineMetrics,
