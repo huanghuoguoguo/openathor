@@ -91,14 +91,16 @@ npm test
 
 ## 5 分钟演示
 
+以下演示默认已经完成发布版安装，并使用安装脚本链接出的 `openathor` 命令。源码开发者在仓库根目录执行 `npm run build` 后，也可以用 `node dist/cli.js ...` 调试同一组命令。
+
 ### 创建一个新小说项目
 
 ```bash
-node dist/cli.js init data/demo-novel --title "雾港来信" --json
+openathor init data/demo-novel --title "雾港来信" --json
 cd data/demo-novel
-node ../../dist/cli.js doctor --json
-node ../../dist/cli.js skill install pi --json
-node ../../dist/cli.js context project --json
+openathor doctor --json
+openathor skill install pi --json
+openathor context project --json
 ```
 
 这会创建标准 OpenAthor 项目结构，并安装项目级 Pi Skill 到：
@@ -112,10 +114,10 @@ node ../../dist/cli.js context project --json
 在已有稿件目录中运行：
 
 ```bash
-node /path/to/openathor/dist/cli.js adopt . --dry-run --json
-node /path/to/openathor/dist/cli.js adopt . --json
-node /path/to/openathor/dist/cli.js index rebuild --json
-node /path/to/openathor/dist/cli.js context chapter 1 --json
+openathor adopt . --dry-run --json
+openathor adopt . --json
+openathor index rebuild --json
+openathor context chapter 1 --json
 ```
 
 `adopt` 默认非侵入式接管：只建立 OpenAthor 元数据和派生索引，不改写原始正文文件。
