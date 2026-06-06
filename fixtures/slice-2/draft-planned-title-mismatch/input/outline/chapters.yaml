@@ -1,0 +1,12 @@
+chapters:
+  - id: ch_001
+    display_order: 1
+    title: 雨夜
+    status: drafted
+    manuscript_path: manuscript/chapter-001.md
+    summary: 林岚在雨夜接到匿名电话。
+  - id: ch_002
+    display_order: 2
+    title: 追问
+    status: planned
+    summary: 林岚追问电话来源，并确认旧站台线索。

@@ -1,0 +1,37 @@
+commands:
+  - run: openathor draft chapter next --task "用户确认写入计划中的第二章《偏题标题》" --text "# 偏题标题\n\n林岚沿着雨夜匿名电话留下的旧站台线索，找到废弃候车室里的值班簿。她没有把父亲的名字写成结论，只把广播回声的时间抄在页边。" --confirm-write --json
+    ok: true
+    expect_data:
+      filled_planned_chapter: true
+      target.id: ch_002
+      target.display_order: 2
+      target.title: 追问
+      target.source_path: manuscript/chapter-002.md
+      detected_title: 偏题标题
+      planned_title: 追问
+      title_source: planned
+    expect_warnings:
+      - OA_DRAFT_PLANNED_TITLE_MISMATCH
+  - run: openathor outline show --json
+    ok: true
+    expect_data:
+      outline.chapter_count: 2
+      outline.chapters.1.id: ch_002
+      outline.chapters.1.title: 追问
+      outline.chapters.1.status: drafted
+      outline.chapters.1.manuscript_path: manuscript/chapter-002.md
+  - run: openathor context chapter 2 --json
+    ok: true
+    expect_data:
+      context_pack.target.id: ch_002
+      context_pack.target.title: 追问
+      outline.chapter_count: 2
+  - run: openathor index rebuild --json
+    ok: true
+    expect_data:
+      chapters_indexed: 2
+  - run: openathor doctor --json --strict
+    ok: true
+    expect_data:
+      checks.manuscript_index_matches_outline: true
+      checks.source_paths_exist: true

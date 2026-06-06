@@ -97,6 +97,10 @@ proposal 模式不得写入 `manuscript/` 或接管原稿路径。
 
 确认写入新章标题来源顺序：
 
+如果正在填充 planned outline 章节，confirmed draft 必须保留该 planned 章节的稳定 `id`、`display_order` 和 `title`。正文中检测到的标题只作为 `detected_title` 返回；如果它和 planned title 不一致，命令返回 `OA_DRAFT_PLANNED_TITLE_MISMATCH` warning，不静默覆盖重规划后的章节标题。
+
+如果没有可填充 planned 章节，标题来源顺序为：
+
 1. `--text` 第一行 Markdown H1，例如 `# 第二章`
 2. `--text` 第一条非空行中的章节标题，例如 `第二章 雨夜`、`Chapter 2: Rain`
 3. `--task` 中的书名号标题，例如 `《最后一班车》`
@@ -106,7 +110,9 @@ proposal 模式不得写入 `manuscript/` 或接管原稿路径。
 
 不得覆盖已有 manuscript 文件或接管原稿路径。
 
-如果 outline 中存在最小 `display_order` 的 planned 章节，且该章节没有 `manuscript_path`、未登记到 `.openathor/manuscript.index.yaml`，confirmed draft 会沿用该章节的稳定 `id` 和 `display_order`，把它更新为 `drafted` 并写入对应 `manuscript/chapter-NNN.md`。返回数据中的 `filled_planned_chapter` 为 `true`。
+如果 outline 中存在最小 `display_order` 的 planned 章节，且该章节没有 `manuscript_path`、未登记到 `.openathor/manuscript.index.yaml`，confirmed draft 会沿用该章节的稳定 `id`、`display_order` 和 `title`，把它更新为 `drafted` 并写入对应 `manuscript/chapter-NNN.md`。返回数据中的 `filled_planned_chapter` 为 `true`，并包含 `detected_title`、`planned_title` 和 `title_source`。
+
+真实 shell 调用中如果 `--text` 参数没有实际换行、但包含字面 `\n` / `\r\n` 序列，CLI 会把它还原为正文换行并返回 `OA_TEXT_ESCAPED_NEWLINES_NORMALIZED` warning，避免把整段正文误写成章节标题。
 
 ## `openathor review`
 

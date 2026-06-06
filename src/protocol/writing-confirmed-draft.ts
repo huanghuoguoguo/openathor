@@ -25,12 +25,21 @@ export function buildConfirmedDraftPlan(
   const nextOrder = plannedChapter?.display_order ?? nextDisplayOrder(state.manuscriptIndex);
   const chapterId =
     plannedChapter?.id ?? uniqueNewChapterId(nextOrder, state.manuscriptIndex);
-  const title =
-    titleFromText(text) ??
-    titleFromTask(task) ??
-    plannedChapter?.title ??
-    state.config.project.title ??
-    `Chapter ${nextOrder}`;
+  const detectedTitle = titleFromText(text);
+  const taskTitle = titleFromTask(task);
+  const fallbackTitle = `Chapter ${nextOrder}`;
+  const title = plannedChapter
+    ? plannedChapter.title
+    : detectedTitle ?? taskTitle ?? state.config.project.title ?? fallbackTitle;
+  const titleSource = plannedChapter
+    ? "planned"
+    : detectedTitle
+      ? "text"
+      : taskTitle
+        ? "task"
+        : state.config.project.title
+          ? "project"
+          : "fallback";
   const sourcePath = manuscriptPathForOrder(nextOrder);
   const runRelPath = `runs/run_${stamp}_draft_confirmed.json`;
 
@@ -43,6 +52,9 @@ export function buildConfirmedDraftPlan(
       title,
       source_path: sourcePath,
     },
+    detectedTitle,
+    plannedTitle: plannedChapter?.title ?? null,
+    titleSource,
     filledPlannedChapter: plannedChapter !== null,
     plannedChapterId: plannedChapter?.id ?? null,
     writes: [
@@ -119,7 +131,7 @@ export function confirmedDraftUpdates(input: {
           status: "drafted",
           origin: "created",
           content_hash: input.contentHash,
-          detected_title: target.title,
+          detected_title: input.plan.detectedTitle ?? target.title,
           confidence: "high",
         },
       ],
@@ -142,6 +154,9 @@ export function confirmedDraftRunRecord(input: {
     mode: "confirmed_write",
     filled_planned_chapter: input.plan.filledPlannedChapter,
     target: input.plan.target,
+    detected_title: input.plan.detectedTitle,
+    planned_title: input.plan.plannedTitle,
+    title_source: input.plan.titleSource,
     source_hash: input.contentHash,
     writes: input.plan.writes,
     sources: input.sources,
@@ -162,6 +177,9 @@ export function confirmedDraftResultData(input: {
     task: input.task,
     filled_planned_chapter: input.plan.filledPlannedChapter,
     target: input.plan.target,
+    detected_title: input.plan.detectedTitle,
+    planned_title: input.plan.plannedTitle,
+    title_source: input.plan.titleSource,
     source_hash: input.contentHash,
     planned_writes: input.dryRun ? input.plan.writes : [],
     run_path: input.plan.runRelPath,

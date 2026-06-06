@@ -1,8 +1,10 @@
 import path from "node:path";
 import { resolveContextChapter } from "./chapter-target.js";
 import { detectCanonConflicts } from "./canon-conflict.js";
+import type { EnvelopeWarning } from "./envelope.js";
 import { runContext } from "./context-commands.js";
 import { OpenAthorError } from "./errors.js";
+import { normalizeManuscriptTextInput } from "./manuscript-text.js";
 import { sha256File } from "./paths.js";
 import {
   appendText,
@@ -178,8 +180,8 @@ async function runConfirmedWriting(
     );
   }
 
-  const text = options.text?.trim();
-  if (!text) {
+  const normalizedText = normalizeOptionalManuscriptText(options.text);
+  if (!normalizedText) {
     throw new OpenAthorError(
       "OA_DRAFT_TEXT_REQUIRED",
       "Confirmed draft writes require --text <manuscript text>.",
@@ -188,9 +190,14 @@ async function runConfirmedWriting(
   }
 
   const inspection = await inspectProject(projectRoot, { includeIndexWarning: true });
-  const plan = buildConfirmedDraftPlan(inspection, task, text, runStamp());
+  const plan = buildConfirmedDraftPlan(inspection, task, normalizedText.text, runStamp());
   const fullSourcePath = path.join(projectRoot, plan.sourcePath);
   let writtenContentHash: string | null = null;
+  const warnings = confirmedDraftWarnings(
+    inspection.warnings,
+    plan,
+    normalizedText.convertedEscapedNewlines,
+  );
 
   if (await pathExists(fullSourcePath)) {
     throw new OpenAthorError(
@@ -201,7 +208,7 @@ async function runConfirmedWriting(
   }
 
   if (!dryRun) {
-    await writeText(projectRoot, plan.sourcePath, ensureTrailingNewline(text));
+    await writeText(projectRoot, plan.sourcePath, ensureTrailingNewline(normalizedText.text));
     const contentHash = await sha256File(fullSourcePath);
     writtenContentHash = contentHash;
     const generatedAt = new Date().toISOString();
@@ -232,7 +239,7 @@ async function runConfirmedWriting(
     projectId: inspection.config.project.id,
     sources: inspection.sources,
     writes: dryRun ? [] : plan.writes,
-    warnings: inspection.warnings,
+    warnings,
     data: confirmedDraftResultData({
       dryRun,
       task,
@@ -248,8 +255,8 @@ async function runConfirmedRevision(
   task: string,
   dryRun: boolean,
 ): Promise<CommandResult> {
-  const text = options.text?.trim();
-  if (!text) {
+  const normalizedText = normalizeOptionalManuscriptText(options.text);
+  if (!normalizedText) {
     throw new OpenAthorError(
       "OA_REVISE_TEXT_REQUIRED",
       "Confirmed revision writes require --text <manuscript text>.",
@@ -292,14 +299,14 @@ async function runConfirmedRevision(
   const stamp = runStamp();
   const plan = buildConfirmedRevisionPlan({
     chapter,
-    text,
+    text: normalizedText.text,
     baseHash: options.baseHash,
     stamp,
   });
   let writtenContentHash: string | null = null;
 
   if (!dryRun) {
-    await writeText(projectRoot, chapter.source_path, ensureTrailingNewline(text));
+    await writeText(projectRoot, chapter.source_path, ensureTrailingNewline(normalizedText.text));
     const contentHash = await sha256File(fullSourcePath);
     writtenContentHash = contentHash;
     const generatedAt = new Date().toISOString();
@@ -330,12 +337,73 @@ async function runConfirmedRevision(
     projectId: inspection.config.project.id,
     sources: inspection.sources,
     writes: dryRun ? [] : plan.writes,
-    warnings: inspection.warnings,
+    warnings: confirmedWritingTextWarnings(
+      inspection.warnings,
+      normalizedText.convertedEscapedNewlines,
+    ),
     data: confirmedRevisionResultData({
       dryRun,
       task,
       plan,
       contentHash: writtenContentHash,
     }),
+  };
+}
+
+function normalizeOptionalManuscriptText(
+  text: string | undefined,
+): ReturnType<typeof normalizeManuscriptTextInput> | null {
+  if (!text?.trim()) {
+    return null;
+  }
+
+  const normalized = normalizeManuscriptTextInput(text);
+  return normalized.text.trim() ? normalized : null;
+}
+
+function confirmedDraftWarnings(
+  inspectionWarnings: EnvelopeWarning[],
+  plan: ReturnType<typeof buildConfirmedDraftPlan>,
+  convertedEscapedNewlines: boolean,
+): EnvelopeWarning[] {
+  const warnings = [...inspectionWarnings];
+
+  if (convertedEscapedNewlines) {
+    warnings.push(escapedNewlinesWarning());
+  }
+
+  if (
+    plan.filledPlannedChapter &&
+    plan.detectedTitle &&
+    plan.plannedTitle &&
+    plan.detectedTitle !== plan.plannedTitle
+  ) {
+    warnings.push({
+      code: "OA_DRAFT_PLANNED_TITLE_MISMATCH",
+      message:
+        `Filled planned chapter ${plan.target.id} using outline title ` +
+        `${JSON.stringify(plan.plannedTitle)}; manuscript title was ` +
+        `${JSON.stringify(plan.detectedTitle)}.`,
+      severity: "low",
+    });
+  }
+
+  return warnings;
+}
+
+function confirmedWritingTextWarnings(
+  inspectionWarnings: EnvelopeWarning[],
+  convertedEscapedNewlines: boolean,
+): EnvelopeWarning[] {
+  return convertedEscapedNewlines
+    ? [...inspectionWarnings, escapedNewlinesWarning()]
+    : inspectionWarnings;
+}
+
+function escapedNewlinesWarning(): EnvelopeWarning {
+  return {
+    code: "OA_TEXT_ESCAPED_NEWLINES_NORMALIZED",
+    message: "Converted escaped newline sequences in --text into manuscript line breaks.",
+    severity: "low",
   };
 }
