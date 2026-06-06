@@ -103,6 +103,7 @@ export async function runWritingProposal(
     task,
     stamp,
     target: proposalTarget,
+    contextPack: contextData.context_pack,
   });
 
   if (!dryRun && !diff) {

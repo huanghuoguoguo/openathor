@@ -131,7 +131,7 @@ openathor style revise chapter 5 --goal "更冷静克制" --diff
 - `style check` 可以检查新章节和项目文风是否偏离
 - 重大风格变化需要用户确认后写入 `bible/style.md`
 
-当前实现中，`openathor style analyze <path> --json` 已支持把用户授权参考文本转成 pending style profile 和 reference 记录；`openathor style check chapter <target> --json` 已作为确定性只读检查落地。它比较目标章节与项目其他章节的句长、对话比例、段落长度、动作细节词项和情绪解释词项，并扫描 `bible/style.md` / `style/profiles.yaml` 中的 `avoid` 规则命中。`openathor style revise chapter <target> --goal <goal>` 已支持 proposal、diff 和 `--confirm-write --base-hash` 写入流程，但修订正文仍由 Pi/Operator Agent 或用户在 CLI 外部生成。上述命令都不调用模型，不把参考文本原文复制到写作上下文。
+当前实现中，`openathor style analyze <path> --json` 已支持把用户授权参考文本转成 pending style profile 和 reference 记录；`openathor style profile apply <profile> --confirm --base-hash <hash> --json` 已支持把用户确认后的 profile 激活为 confirmed project style；`openathor context`、`openathor draft`、`openathor review` 和 `openathor revise` 已暴露 `style_guidance`，把 confirmed active profile、do/avoid 规则和 pending 排除状态交给 Pi Agent 使用。`openathor style check chapter <target> --json` 已作为确定性只读检查落地，只把 `bible/style.md` 和 confirmed active profile 作为规则来源。`openathor style revise chapter <target> --goal <goal>` 已支持 proposal、diff 和 `--confirm-write --base-hash` 写入流程，但修订正文仍由 Pi/Operator Agent 或用户在 CLI 外部生成。上述命令都不调用模型，不把参考文本原文复制到写作上下文。
 
 ## 首个纵切边界
 
@@ -144,7 +144,7 @@ openathor style revise chapter 5 --goal "更冷静克制" --diff
 - 用 `openathor style profile show --json` 读取当前 profile
 - 让 `context` 暴露 style profile
 - 用 `openathor style check chapter <target> --json` 做确定性风格漂移复核
-- 在 `draft` 和 `revise` 中使用 style profile
+- 在 `draft`、`review` 和 `revise` proposal 中使用 confirmed active style profile
 - 用 LLM judge 检查风格一致性
 
 暂不做：

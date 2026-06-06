@@ -4,7 +4,7 @@
 
 `openathor style` 命令用于让 Pi Agent 检查和维护项目文风稳定性。
 
-当前实现交付确定性检查、安全的参考文本分析、confirmed style profile 激活，以及 hash 保护的 style revision 写入。CLI 不调用模型，不生成作家仿写规则，不把参考文本原文复制到 profile；修订正文必须由 Pi/Operator Agent 或用户在 CLI 外部生成。
+当前实现交付确定性检查、安全的参考文本分析、confirmed style profile 激活、写作 proposal 的 active style guidance，以及 hash 保护的 style revision 写入。CLI 不调用模型，不生成作家仿写规则，不把参考文本原文复制到 profile；修订正文必须由 Pi/Operator Agent 或用户在 CLI 外部生成。
 
 ## `openathor style analyze`
 
@@ -121,6 +121,9 @@ openathor style check chapter <target> [--json] [--max-chars <count>]
 - `findings`
 - `verdict`
 - `recommendations`
+- `style_guidance`
+
+`style_guidance` 只把 `confirmed` 且 `active` 的 profile 作为写作指导。`pending` profile 会出现在 `pending_profile_ids` 和 `safety.pending_profiles_excluded` 中，但不会进入可执行 `rules`。
 
 `metrics.target` 和 `metrics.baseline` 包含：
 
@@ -215,3 +218,20 @@ confirmed write 写：
 - `OA_STYLE_REFERENCE_TEXT_COPIED`
 - `OA_BASE_HASH_REQUIRED`
 - `OA_MANUSCRIPT_CHANGED`
+
+## 写作 proposal 中的 style guidance
+
+`openathor context`、`openathor draft`、`openathor review` 和 `openathor revise` 会在 `context_pack.style_guidance` 暴露同一份风格指导：
+
+- `active_profile_present`
+- `active_profile_id`
+- `active_profile`
+- `confirmed_profile_ids`
+- `pending_profile_ids`
+- `rules.do`
+- `rules.avoid`
+- `safety.pending_profiles_excluded`
+- `safety.reference_text_included: false`
+- `safety.manuscript_generated_by_cli: false`
+
+普通写作 proposal 不生成正文，只把 confirmed active style profile 变成 Pi/Operator Agent 可执行约束。若只有 pending profile，CLI 会报告 pending 被排除，agent 必须先让用户确认并执行 `openathor style profile apply ... --confirm --base-hash`。

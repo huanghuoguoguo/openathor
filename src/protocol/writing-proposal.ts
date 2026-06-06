@@ -3,6 +3,10 @@ import type {
   WritingProposalKind,
   WritingProposalOptions,
 } from "./model.js";
+import {
+  isPlainRecord,
+  stringArray,
+} from "./value.js";
 import type {
   WritingProposalPlan,
   WritingTarget,
@@ -87,12 +91,19 @@ export function writingProposalText(input: {
   task: string;
   stamp: string;
   target: WritingTarget | null;
+  contextPack?: unknown;
 }): string {
   if (input.kind === "canon_sync") {
     return canonPendingProposalText(input.task, input.stamp, input.target);
   }
 
-  return proposalMarkdown(input.kind, input.task, input.stamp, input.target);
+  return proposalMarkdown(
+    input.kind,
+    input.task,
+    input.stamp,
+    input.target,
+    input.contextPack,
+  );
 }
 
 export function writingProposalData(input: {
@@ -112,6 +123,7 @@ export function writingProposalData(input: {
     task: input.task,
     target: input.target,
     context_pack: input.contextPack,
+    style_guidance: styleGuidanceFromContextPack(input.contextPack),
     planned_writes: input.dryRun || input.diff ? input.plan.writes : [],
     diff: input.diff
       ? {
@@ -157,6 +169,7 @@ function proposalMarkdown(
   task: string,
   stamp: string,
   target: WritingTarget | null,
+  contextPack?: unknown,
 ): string {
   return [
     `# ${proposalTitle(kind)}`,
@@ -175,6 +188,7 @@ function proposalMarkdown(
     "",
     proposalNextAction(kind),
     "",
+    ...proposalStyleGuidanceMarkdown(kind, contextPack),
   ].join("\n");
 }
 
@@ -237,4 +251,62 @@ function proposalNextAction(kind: WritingProposalKind): string {
   }
 
   return "Extract candidate facts into pending canon only; do not modify confirmed canon without user confirmation.";
+}
+
+function proposalStyleGuidanceMarkdown(
+  kind: WritingProposalKind,
+  contextPack: unknown,
+): string[] {
+  if (kind !== "draft" && kind !== "review" && kind !== "revise") {
+    return [];
+  }
+
+  const guidance = styleGuidanceFromContextPack(contextPack);
+  if (!isPlainRecord(guidance)) {
+    return [];
+  }
+
+  const rules = isPlainRecord(guidance.rules) ? guidance.rules : {};
+  const doRules = stringArray(rules.do).slice(0, 8);
+  const avoidRules = stringArray(rules.avoid).slice(0, 8);
+
+  return [
+    "## Style Guidance",
+    "",
+    `- active_profile_present: ${Boolean(guidance.active_profile_present)}`,
+    `- active_profile_id: ${stringOrNone(guidance.active_profile_id)}`,
+    `- pending_profiles_excluded: ${Boolean(readNestedValue(guidance, ["safety", "pending_profiles_excluded"]))}`,
+    `- reference_text_included: ${Boolean(readNestedValue(guidance, ["safety", "reference_text_included"]))}`,
+    "",
+    "### Do",
+    "",
+    ...(doRules.length > 0 ? doRules.map((rule) => `- ${rule}`) : ["- No confirmed do-rules available."]),
+    "",
+    "### Avoid",
+    "",
+    ...(avoidRules.length > 0 ? avoidRules.map((rule) => `- ${rule}`) : ["- No confirmed avoid-rules available."]),
+    "",
+  ];
+}
+
+function styleGuidanceFromContextPack(contextPack: unknown): unknown {
+  return readNestedValue(contextPack, ["style_guidance"]);
+}
+
+function readNestedValue(data: unknown, path: string[]): unknown {
+  let current = data;
+
+  for (const segment of path) {
+    if (!isPlainRecord(current) || !(segment in current)) {
+      return null;
+    }
+
+    current = current[segment];
+  }
+
+  return current;
+}
+
+function stringOrNone(value: unknown): string {
+  return typeof value === "string" && value.trim() ? value.trim() : "none";
 }
