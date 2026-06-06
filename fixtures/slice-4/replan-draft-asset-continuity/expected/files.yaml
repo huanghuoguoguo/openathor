@@ -7,11 +7,13 @@ required:
   - notes/hooks.md
   - notes/replan-package-canary.yaml
   - notes/asset-package-ch4.yaml
+  - notes/asset-package-ch5.yaml
   - outline/chapters.yaml
   - manuscript/chapter-001.md
   - manuscript/chapter-002.md
   - manuscript/chapter-003.md
   - manuscript/chapter-004.md
+  - manuscript/chapter-005.md
   - .openathor/manuscript.index.yaml
   - .openathor/index.sqlite
   - exports/replan-draft-asset-continuity.md

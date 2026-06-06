@@ -6,9 +6,9 @@ import {
 import {
   inspectionWithManuscriptIndex,
   inspectProject,
-  rebuildManuscriptIndexFromOutline,
-  writeSqliteIndex,
 } from "./project-inspection.js";
+import { rebuildManuscriptIndexFromOutline } from "./manuscript-index-rebuild.js";
+import { writeSqliteIndex } from "./sqlite-index.js";
 import {
   findProjectRoot,
   pathExists,

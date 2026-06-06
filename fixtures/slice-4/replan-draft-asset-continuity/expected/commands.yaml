@@ -53,32 +53,94 @@ commands:
       result.hooks_added: 1
       result.outline_modified: true
       result.confirmed_assets_written: true
+  - run: openathor draft chapter next --task "用户确认写入第五章《蓝钥匙回声》" --text "# 蓝钥匙回声\n\n许岚把仓库后墙的回声记录交给林澈。记录里没有写林砚发出第三次雾笛，只写蓝钥匙出现后，空位名单上的号码会在仓库铁门后回响三次。\n\n林澈没有把回声写成父亲的自白。他把蓝钥匙、空位名单和第三次雾笛分成三条证据线，标注它们互相指向，但还不能证明同一个人完成了开锁、藏名单和发出雾笛。\n\n孟夏核对仓库值班表，发现许岚在客轮失火后第二天补过一次登记。许岚承认她替林砚保管蓝钥匙回声记录，但拒绝说出被保护乘客的名字。" --confirm-write --json
+    ok: true
+    expect_data:
+      filled_planned_chapter: true
+      target.id: ch_plan_005
+      target.display_order: 5
+      target.title: 蓝钥匙回声
+      target.source_path: manuscript/chapter-005.md
+      planned_title: 蓝钥匙回声
+      title_source: planned
+  - run: openathor assets sync chapter 5 --from notes/asset-package-ch5.yaml --json
+    ok: true
+    expect_data:
+      mode: proposal
+      result.characters_added: 0
+      result.timeline_events_added: 1
+      result.hooks_added: 1
+      result.outline_modified: true
+      result.confirmed_assets_written: false
+  - run: openathor assets sync chapter 5 --from notes/asset-package-ch5.yaml --confirm --base-hash current:manuscript/chapter-005.md --assets-hash bible/characters.md=current:bible/characters.md --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      sync.summary.existing_characters: 4
+      result.characters_added: 0
+      result.timeline_events_added: 1
+      result.hooks_added: 1
+      result.outline_modified: true
+      result.confirmed_assets_written: true
   - run: openathor index rebuild --json
     ok: true
     expect_data:
-      chapters_indexed: 4
+      chapters_indexed: 5
   - run: openathor assets audit --json
     ok: true
     expect_data:
       audit.counts.chapters: 5
-      audit.counts.indexed_chapters: 4
+      audit.counts.indexed_chapters: 5
       audit.counts.characters: 4
-      audit.counts.timeline_events: 7
-      audit.counts.hooks: 4
+      audit.counts.timeline_events: 8
+      audit.counts.hooks: 5
       audit.counts.unresolved_outline_links: 0
       audit.counts.character_link_drifts: 0
+      audit.counts.weak_asset_link_coverages: 0
+      audit.counts.weak_character_profile_coverages: 0
       audit.counts.weak_character_profile_summaries: 0
-      audit.assets.characters.0.profile.current_state.0: 在星桥仓库核对空位名单，并把第三次雾笛和林砚可能保护的人并列记录。
-  - run: openathor context chapter 4 --json
+      audit.counts.summary_drift_candidates: 0
+      audit.assets.characters.0.profile.current_state.0: 将蓝钥匙、空位名单和第三次雾笛分成三条证据线，仍未把它们写成林砚自白。
+      audit.assets.characters.2.profile.current_state.0: 被蓝钥匙回声记录继续指向，但是否发出第三次雾笛仍未确认。
+      audit.assets.characters.3.profile.current_state.0: 承认替林砚保管蓝钥匙回声记录，但拒绝说出被保护乘客的名字。
+      audit.assets.timeline_events.7.id: event-blue-key-echo-record
+      audit.assets.hooks.4.id: hook-blue-key-echo-source
+      audit.character_profile_summary.0.character_id: lin-che
+      audit.character_profile_summary.0.linked_chapter_count: 5
+      audit.character_profile_summary.2.character_id: lin-yan
+      audit.character_profile_summary.2.linked_chapter_count: 5
+      audit.character_profile_summary.3.character_id: xu-lan
+      audit.character_profile_summary.3.linked_chapter_count: 3
+  - run: openathor context chapter 5 --json
     ok: true
     expect_data:
-      context_pack.target.id: ch_plan_004
-      outline.chapters.3.links.hooks.2: hook-protected-passenger
+      context_pack.target.id: ch_plan_005
+      context_pack.target.title: 蓝钥匙回声
+      outline.chapters.4.links.characters.3: meng-xia
+      outline.chapters.4.links.hooks.2: hook-blue-key-echo-source
     expect_data_path: assets.characters.text
+  - run: openathor search text "蓝钥匙回声" --json
+    ok: true
+    expect_data_path: matches
+  - run: openathor search related chapter 5 --json
+    ok: true
+    expect_data:
+      target.id: ch_plan_005
+    expect_data_path: matches
+  - run: openathor index rebuild --vector --json
+    ok: true
+    expect_data:
+      chapters_indexed: 5
+      vector_index: .openathor/vector/index.json
+  - run: openathor search semantic "蓝钥匙 空位名单 第三次雾笛" --json
+    ok: true
+    expect_data:
+      method: deterministic_hash_embedding_v1
+    expect_data_path: matches
   - run: openathor export --format markdown --out exports/replan-draft-asset-continuity.md --json
     ok: true
     expect_data:
-      chapter_count: 4
+      chapter_count: 5
   - run: openathor doctor --json --strict
     ok: true
     expect_data:
