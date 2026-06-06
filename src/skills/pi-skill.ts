@@ -23,6 +23,7 @@ openathor index rebuild --json
 openathor index rebuild --vector --json
 openathor assets audit --json
 openathor assets sync chapter <id-or-order> --from <asset-package.yaml|json> --json
+openathor assets link-backfill characters --json
 openathor search text "<query>" --json
 openathor search related chapter <id-or-order> --json
 openathor search semantic "<query>" --json
@@ -53,11 +54,12 @@ Before writing or advising on project state:
 6. Use \`openathor index rebuild --vector --json\` and \`openathor search semantic "<query>" --json\` when the user asks for looser thematic or similarity retrieval.
 7. Use \`openathor assets audit --json\` after longform asset, outline, or manuscript changes to check unresolved links, drift, and project-level character profile summary.
 8. Use \`openathor assets sync chapter <id-or-order> --from <asset-package> --json\` after drafting a chapter when new characters, events, hooks, or chapter summary links should be reviewed for persistence.
-9. Use \`openathor style check chapter <id-or-order> --json\` after drafting or revising a chapter when style consistency matters.
-10. Use \`openathor style revise chapter <id-or-order> --goal "<goal>" --json\` when style drift should become a proposal, then provide revised prose externally and confirm only with a fresh source hash.
-11. Use \`openathor outline impact <id-or-order> --json\` before proposing any chapter archive/delete action.
-12. Use \`openathor style analyze <path> --json\` only for user-owned, licensed, public-domain, or otherwise authorized reference text.
-13. Use \`openathor style profile apply <profile-id> --confirm --base-hash <sha256:...> --json\` only after the user approves a pending style profile.
+9. Use \`openathor assets link-backfill characters --json\` when an adopted longform project already has confirmed character assets but older chapters are missing deterministic outline character links.
+10. Use \`openathor style check chapter <id-or-order> --json\` after drafting or revising a chapter when style consistency matters.
+11. Use \`openathor style revise chapter <id-or-order> --goal "<goal>" --json\` when style drift should become a proposal, then provide revised prose externally and confirm only with a fresh source hash.
+12. Use \`openathor outline impact <id-or-order> --json\` before proposing any chapter archive/delete action.
+13. Use \`openathor style analyze <path> --json\` only for user-owned, licensed, public-domain, or otherwise authorized reference text.
+14. Use \`openathor style profile apply <profile-id> --confirm --base-hash <sha256:...> --json\` only after the user approves a pending style profile.
 
 ## Adopting Existing Manuscripts
 
@@ -150,6 +152,8 @@ chapter:
 - only after explicit user confirmation, rerun asset sync with \`--confirm --base-hash "sha256:..."\`; use the latest source hash from context, sync proposal, or doctor output
 - confirmed asset sync writes new assets and merges updates for existing character, timeline, and hook assets; expect existing character \`current_state\` to change and earlier states to remain as \`note: previous_state: ...\`
 - run \`openathor assets audit --json\` after confirmed asset sync and report unresolved outline links, character link drift, summary drift, and weak character profile summaries
+- if \`assets audit\` reports character link drift in already adopted chapters and the relevant people already exist in \`bible/characters.md\`, run \`openathor assets link-backfill characters --json\`; after user confirmation, rerun with \`--confirm --base-hash "sha256:..."\` using the latest \`outline/chapters.yaml\` hash
+- \`assets link-backfill\` only adds outline \`links.characters\` for confirmed character names that already appear in chapter text; do not use it to create new characters, infer relationships, or change canon
 - after writing or revising chapter prose, run \`openathor style check chapter <id-or-order> --json\` when style stability is part of the task; treat findings as review prompts, not automatic edits
 - use \`openathor style revise\` for style-specific proposal/diff/hash-confirm workflow; do not claim the CLI generated the revised prose
 - do not treat a pending style profile as confirmed guidance; show it to the user and apply it with \`openathor style profile apply ... --confirm --base-hash\` only after explicit approval
@@ -205,6 +209,7 @@ Never physically delete, move, or rename manuscript files for an archive request
 - Confirmed canon belongs in \`bible/canon.md\`.
 - Unverified inference belongs in \`bible/canon.pending.md\` or questions.
 - New or changed longform assets should be persisted through \`openathor assets sync\`: proposal first, confirmed write only with user approval and a matching chapter hash.
+- Adopted longform projects with confirmed characters but missing old chapter links may use \`openathor assets link-backfill characters\`: proposal first, confirmed write only with user approval and a matching outline hash.
 - Confirmed asset sync may update existing confirmed character, timeline, and hook files from a structured package; report those writes explicitly.
 - Style references require user authorization before analysis.
 - \`openathor style analyze\` creates a pending abstract style profile and reference record; do not treat it as confirmed project style until the user approves it.

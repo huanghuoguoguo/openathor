@@ -12,7 +12,9 @@
 
 `openathor assets sync` 提供写作后资产沉淀入口。它接收 Pi Agent、Operator 或用户生成的结构化资产包，默认写入 pending proposal；只有用户确认且章节 source hash 匹配时，才把新人物、时间线事件、伏笔、既有资产状态更新和章节 outline links 写入明文事实源。
 
-search 和 assets audit 命令只读，不写用户文件。assets sync 是受确认和 hash gate 保护的写命令。
+`openathor assets link-backfill` 提供已确认人物的确定性 outline link 回填入口。它用于接管长篇既有正文后，人物档案已经存在但旧章节 outline links 为空或不全的场景。
+
+search 和 assets audit 命令只读，不写用户文件。assets sync 和 assets link-backfill 是受确认和 hash gate 保护的写命令。
 
 ## `openathor search text`
 
@@ -240,6 +242,67 @@ openathor assets audit [--json] [--max-chars <count>]
 - 对人物资产，`assets audit` 会解析 `role`、`traits`、`current_state`、`note`、`背景`、`性格`、`秘密` 等档案字段，并为已链接章节输出 `character_profile_coverage`，为每个人物输出项目级 `character_profile_summary`。章节级 `weak_character_profile_coverages` 只统计术语覆盖很低且命中字段过少的章节，避免把人物后续状态回扫早期章节时的正常演进误报成漂移。项目级 weak summary 仍用于判断人物设定、事迹和当前状态是否被多章持续承接；这些数据只作为确定性文本覆盖证据，不替代人工或 LLM judge 的语义判断。
 - `character_profile_summary` 按人物资产顺序输出，包含 `linked_chapter_count`、`mentioned_chapter_count`、`matched_profile_field_count`、`coverage_ratio` 和相关章节明细，用于复核一个人物在多章写作后是否仍有稳定可追踪的档案承接。
 - `summary_drift` 是复核提示，不代表自动判定正文错误。
+
+## `openathor assets link-backfill`
+
+### 参数
+
+```bash
+openathor assets link-backfill characters [--json] [--dry-run]
+openathor assets link-backfill characters --confirm --base-hash <sha256:...> [--json] [--dry-run]
+```
+
+该命令只支持 `characters`。它读取 `bible/characters.md` 中已确认、可解析出 ID 的人物资产，并扫描每个非 planned 章节的标题、摘要和正文。若章节文本直接出现人物名称，但 `outline/chapters.yaml` 的 `links.characters` 没有该人物 ID 或名称，命令会提出把该人物 ID 加入该章节 links。
+
+### Proposal 模式
+
+不带 `--confirm` 时：
+
+- 写 `runs/run_*_assets_link_backfill.json`
+- 不修改 `outline/chapters.yaml`
+- 不修改 `bible/characters.md`
+- 不修改 `bible/timeline.md`
+- 不修改 `notes/hooks.md`
+- 不修改任何正文文件
+
+输出包含：
+
+- `source_hash`：当前 `outline/chapters.yaml` hash
+- `result.chapters_scanned`
+- `result.chapters_modified`
+- `result.character_links_added`
+- `proposed_changes`
+- `user_confirmation_required: true`
+
+### Confirmed write
+
+带 `--confirm --base-hash` 且 hash 匹配时可以写：
+
+- `outline/chapters.yaml`：只补充 `links.characters`
+- `runs/run_*_assets_link_backfill.json`
+
+hash 不匹配时返回 `OA_OUTLINE_CHANGED` 且不得写入。
+
+该命令不会新增人物、时间线、伏笔或 canon，也不会从正文推断复杂事实。它只把“已确认人物名称在章节文本中出现”转换为 outline link，作为 adopted 长篇项目的确定性清理工具。
+
+### Expected writes
+
+proposal 模式：
+
+- `runs/run_*_assets_link_backfill.json`
+
+confirmed write 模式：
+
+- `runs/run_*_assets_link_backfill.json`
+- `outline/chapters.yaml`
+
+### Errors
+
+- `OA_PROJECT_NOT_FOUND`
+- `OA_SCHEMA_INVALID`
+- `OA_ASSETS_LINK_BACKFILL_UNSUPPORTED_KIND`
+- `OA_BASE_HASH_REQUIRED`
+- `OA_OUTLINE_CHANGED`
 
 ## `openathor assets sync`
 

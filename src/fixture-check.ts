@@ -11,6 +11,7 @@ import { OpenAthorError } from "./protocol/errors.js";
 import {
   runAdopt,
   runAssetsAudit,
+  runAssetsLinkBackfill,
   runAssetsSync,
   runContext,
   runDoctor,
@@ -483,6 +484,18 @@ async function dispatchCommand(
     });
   }
 
+  if (parsed.name === "assets link-backfill") {
+    return runAssetsLinkBackfill({
+      cwd,
+      kind: parsed.pathArg,
+      confirm: parsed.options.confirm,
+      dryRun: parsed.options.dryRun,
+      baseHash: parsed.options.baseHash
+        ? await resolveFixtureHash(cwd, parsed.options.baseHash)
+        : undefined,
+    });
+  }
+
   if (parsed.name === "outline show") {
     return runOutlineShow({ cwd });
   }
@@ -703,6 +716,7 @@ function parseCommand(command: string): {
     | "search semantic"
     | "assets audit"
     | "assets sync"
+    | "assets link-backfill"
     | "outline show"
     | "outline impact"
     | "outline insert"
@@ -1110,6 +1124,15 @@ function parseCommand(command: string): {
       display: "openathor assets sync",
       name: "assets sync",
       pathArg: positional[3],
+      options,
+    };
+  }
+
+  if (positional[0] === "assets" && positional[1] === "link-backfill") {
+    return {
+      display: "openathor assets link-backfill",
+      name: "assets link-backfill",
+      pathArg: positional[2],
       options,
     };
   }
