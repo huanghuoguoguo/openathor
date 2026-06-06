@@ -1,15 +1,12 @@
+import { matchingCanonConflictTerms } from "./canon-conflict-match.js";
+import { confirmedCanonRules } from "./canon-conflict-rules.js";
+
 export type CanonConflict = {
   canon_id: string | null;
   source: string;
   statement: string;
   user_request: string;
   matched_terms: string[];
-};
-
-type CanonRule = {
-  id: string | null;
-  statement: string;
-  terms: string[];
 };
 
 export function detectCanonConflicts(contextData: unknown, task: string): CanonConflict[] {
@@ -20,7 +17,7 @@ export function detectCanonConflicts(contextData: unknown, task: string): CanonC
   const conflicts: CanonConflict[] = [];
 
   for (const rule of rules) {
-    const matchedTerms = rule.terms.filter((term) => task.includes(term));
+    const matchedTerms = matchingCanonConflictTerms(rule, task);
     if (matchedTerms.length === 0) {
       continue;
     }
@@ -35,97 +32,6 @@ export function detectCanonConflicts(contextData: unknown, task: string): CanonC
   }
 
   return conflicts;
-}
-
-function confirmedCanonRules(text: string): CanonRule[] {
-  const rules = [];
-  let currentId: string | null = null;
-  let pendingRule: CanonRule | null = null;
-
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line) {
-      continue;
-    }
-
-    const headingId = line.match(/^#+\s+([a-z0-9_]+)\b/i)?.[1] ?? null;
-    if (headingId) {
-      currentId = headingId;
-    }
-
-    const explicitTerms = explicitConflictTerms(line);
-    if (explicitTerms.length > 0 && pendingRule) {
-      pendingRule.terms = uniqueTerms([...pendingRule.terms, ...explicitTerms]);
-      continue;
-    }
-
-    if (!isConstraintLine(line)) {
-      continue;
-    }
-
-    const rule = {
-      id: currentId,
-      statement: line.replace(/^[-*0-9.\s]+/, "").trim(),
-      terms: uniqueTerms([...explicitTerms, ...constraintLineTerms(line)]),
-    };
-
-    if (rule.terms.length === 0) {
-      pendingRule = rule;
-      rules.push(rule);
-      continue;
-    }
-
-    pendingRule = rule;
-    rules.push(rule);
-  }
-
-  return rules.filter((rule) => rule.terms.length > 0);
-}
-
-function isConstraintLine(line: string): boolean {
-  return /禁忌|禁止|不能|不可|绝不可|不得|规则|avoid|must not|forbid/i.test(line);
-}
-
-function explicitConflictTerms(line: string): string[] {
-  const match = line.match(/^(?:terms|关键词|冲突词)\s*[：:]\s*(.+)$/iu);
-  if (!match) {
-    return [];
-  }
-
-  return match[1]
-    .split(/[,，、]/u)
-    .map((term) => term.trim())
-    .filter(Boolean);
-}
-
-function constraintLineTerms(line: string): string[] {
-  const terms = new Set<string>();
-  const normalized = line.toLowerCase();
-  const domainTerms = [
-    "通灵",
-    "预知",
-    "超自然",
-    "鬼魂",
-    "灵异",
-    "客轮",
-    "电子密钥",
-    "电子钥匙",
-    "尖叫",
-    "无助",
-    "机械一窍不通",
-  ];
-
-  for (const term of domainTerms) {
-    if (normalized.includes(term.toLowerCase())) {
-      terms.add(term);
-    }
-  }
-
-  return [...terms];
-}
-
-function uniqueTerms(values: string[]): string[] {
-  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 
 function readNestedRecord(

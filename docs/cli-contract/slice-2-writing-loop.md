@@ -13,9 +13,12 @@ Slice 2 写作闭环让 Pi Agent 在 OpenAthor 项目中执行规划、续写准
 ```bash
 --json
 --dry-run
+--diff
 ```
 
 默认不修改用户正文，不修改 confirmed canon。
+
+`--dry-run` 和 `--diff` 都不得写文件。`--dry-run` 只返回 planned writes；`--diff` 还返回 `data.diff.proposal_text`，用于让 Pi Agent 或用户预览将写入的 proposal/pending 内容。`--diff` 不能和 `--confirm-write` 同时使用。
 
 确认写入目前只支持：
 
@@ -52,7 +55,7 @@ openathor revise chapter <target> --task <text> --text <manuscript> --base-hash 
 ### 参数
 
 ```bash
-openathor plan [target] --task <text> [--json] [--dry-run]
+openathor plan [target] --task <text> [--json] [--dry-run] [--diff]
 ```
 
 ### Expected writes
@@ -69,7 +72,7 @@ openathor plan [target] --task <text> [--json] [--dry-run]
 ### 参数
 
 ```bash
-openathor draft chapter <target> --task <text> [--json] [--dry-run]
+openathor draft chapter <target> --task <text> [--json] [--dry-run] [--diff]
 ```
 
 确认写入新章：
@@ -114,7 +117,7 @@ proposal 模式不得写入 `manuscript/` 或接管原稿路径。
 ### 参数
 
 ```bash
-openathor review chapter <target> --task <text> [--json] [--dry-run]
+openathor review chapter <target> --task <text> [--json] [--dry-run] [--diff]
 ```
 
 ### Expected writes
@@ -131,7 +134,7 @@ openathor review chapter <target> --task <text> [--json] [--dry-run]
 ### 参数
 
 ```bash
-openathor revise chapter <target> --task <text> [--json] [--dry-run]
+openathor revise chapter <target> --task <text> [--json] [--dry-run] [--diff]
 ```
 
 确认改写已有章节：
@@ -162,7 +165,7 @@ proposal 模式只写 review proposal。
 
 如果用户任务明显要求违反 confirmed canon 中的硬约束，命令应返回 `OA_CANON_CONFLICT`，且不得写入 run record、proposal、pending canon 或正文。
 
-当前实现是确定性 hard-rule gate，只扫描 confirmed canon 中包含 `禁忌`、`禁止`、`不能`、`不可`、`绝不可`、`规则` 等措辞的约束行，并匹配明确领域词，例如 `通灵`、`超自然`、`电子密钥`、`客轮`、`机械一窍不通`。它不是完整语义冲突判断，复杂冲突仍需要 Pi Agent 和后续 judge 评估。
+当前实现是确定性 hard-rule gate，只扫描 confirmed canon 中包含 `禁忌`、`禁止`、`不能`、`不可`、`绝不可`、`规则` 等措辞的约束行。冲突词优先来自相邻的 `terms:`、`关键词:` 或 `冲突词:` 行；没有显式声明时，CLI 只从禁止动作后的对象短语做有限提取。它不是完整语义冲突判断，复杂冲突仍需要 Pi Agent 和后续 judge 评估。
 
 ## `openathor canon sync`
 
@@ -173,7 +176,7 @@ proposal 模式只写 review proposal。
 ### 参数
 
 ```bash
-openathor canon sync [target] --task <text> [--json] [--dry-run]
+openathor canon sync [target] --task <text> [--json] [--dry-run] [--diff]
 ```
 
 ### Expected writes
@@ -186,6 +189,7 @@ openathor canon sync [target] --task <text> [--json] [--dry-run]
 - CLI 不调用模型，不保证生成最终文学文本。
 - `draft chapter next --confirm-write` 优先填充下一个 planned outline 章节；没有可填充 planned 章节时才追加新章。
 - `revise chapter --confirm-write` 只能在 `--base-hash` 匹配时改写目标章节。
+- `--diff` 是 proposal preview，不是语义级 manuscript diff；它用于预览将写入的 proposal/pending 文本。
 - proposal 写入前会拦截确定性 confirmed canon 冲突。
 - `canon sync` 不直接写 `bible/canon.md`。
 - LLM-as-judge 自动评分仍待接入。

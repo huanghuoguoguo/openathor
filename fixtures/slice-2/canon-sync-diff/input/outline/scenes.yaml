@@ -1,0 +1,5 @@
+scenes:
+  - id: sc_001_01
+    chapter_id: ch_001
+    status: drafted
+    purpose: 建立铜钥匙的物理机械属性。

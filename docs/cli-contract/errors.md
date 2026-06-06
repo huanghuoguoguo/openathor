@@ -21,6 +21,7 @@ OA_JUDGE_SCORES_INVALID
 OA_MANUSCRIPT_INDEX_STALE
 OA_MANUSCRIPT_CHANGED
 OA_CANON_CONFLICT
+OA_DIFF_CONFIRM_CONFLICT
 OA_STYLE_REFERENCE_TEXT_COPIED
 OA_OUTLINE_BROKEN_REFERENCE
 ```
@@ -37,7 +38,7 @@ OA_OUTLINE_BROKEN_REFERENCE
 - `OA_MANUSCRIPT_*`：正文源文件、稿件索引和 hash 状态
 - `OA_CANON_*`：canon 状态、冲突和确认
 - `OA_STYLE_*`：style profile、参考文本安全和风格修订
-- `OA_WRITE_*`：写入、diff、hash 冲突
+- `OA_WRITE_*` / `OA_DIFF_*`：写入、diff、hash 冲突
 - `OA_INTERNAL_*`：不可恢复内部错误
 
 ## 退出码

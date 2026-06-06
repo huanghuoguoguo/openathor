@@ -1,0 +1,11 @@
+chapters:
+  - id: ch_001
+    display_order: 1
+    title: 开端
+    status: drafted
+    manuscript_path: manuscript/chapter-001.md
+    summary: 许临风把铜钥匙作为物理证物封存，沈沅确认它是机械结构。
+    scenes: [sc_001_01]
+    links:
+      characters: [char_xu_linfeng, char_shen_yuan]
+      items: [item_copper_key]
