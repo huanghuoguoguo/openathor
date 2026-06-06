@@ -1,52 +1,29 @@
-import { mkdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { PROTOCOL_VERSION } from "./constants.js";
-import type {
-  EnvelopeSource,
-  EnvelopeWarning,
-} from "./envelope.js";
+import type { EnvelopeWarning } from "./envelope.js";
 import { OpenAthorError } from "./errors.js";
 import type {
   ChapterOutline,
-  ChapterOutlineEntry,
-  IndexedChapter,
   ManuscriptIndex,
   ProjectConfig,
 } from "./model.js";
+import { ensureSafeRelativePath } from "./paths.js";
 import {
-  ensureSafeRelativePath,
-  sha256File,
-} from "./paths.js";
-import {
-  hashSources,
   isDirectory,
   pathExists,
 } from "./project-files.js";
-import { STANDARD_ASSET_FILES } from "./project-layout.js";
+export type {
+  ProjectChecks,
+  ProjectInspection,
+} from "./project-inspection-model.js";
+import type { ProjectInspection } from "./project-inspection-model.js";
+import {
+  inspectionWarnings,
+  isIndexStale,
+  missingStandardAssets,
+  projectSources,
+} from "./project-inspection-state.js";
 import { readYamlFile, validateSchema } from "./schema.js";
-
-export type ProjectChecks = {
-  openathor_yaml: boolean;
-  protocol_version: boolean;
-  required_directories: boolean;
-  outline_chapters: boolean;
-  manuscript_index: boolean;
-  chapter_ids_unique: boolean;
-  display_order_unique: boolean;
-  source_paths_exist: boolean;
-  standard_assets_present: boolean;
-  manuscript_index_matches_outline: boolean;
-  derived_index_current: boolean;
-};
-
-export type ProjectInspection = {
-  config: ProjectConfig;
-  chapters: ChapterOutline;
-  manuscriptIndex: ManuscriptIndex;
-  sources: EnvelopeSource[];
-  warnings: EnvelopeWarning[];
-  checks: ProjectChecks;
-};
 
 export async function inspectProject(
   projectRoot: string,
@@ -185,50 +162,6 @@ export async function inspectProject(
   };
 }
 
-export async function rebuildManuscriptIndexFromOutline(
-  projectRoot: string,
-  chapters: ChapterOutline,
-  currentIndex: ManuscriptIndex,
-): Promise<ManuscriptIndex> {
-  const currentById = new Map(currentIndex.chapters.map((chapter) => [chapter.id, chapter]));
-  const rebuilt: IndexedChapter[] = [];
-
-  for (const chapter of [...chapters.chapters].sort((a, b) => a.display_order - b.display_order)) {
-    if (chapter.status === "planned" || !chapter.manuscript_path) {
-      continue;
-    }
-
-    ensureSafeRelativePath(chapter.manuscript_path, "chapters.manuscript_path");
-    const fullPath = path.join(projectRoot, chapter.manuscript_path);
-    if (!(await pathExists(fullPath))) {
-      throw new OpenAthorError(
-        "OA_MANUSCRIPT_MISSING_SOURCE",
-        `Missing manuscript source file: ${chapter.manuscript_path}`,
-        { exitCode: 3 },
-      );
-    }
-
-    const existing = currentById.get(chapter.id);
-    rebuilt.push({
-      id: chapter.id,
-      display_order: chapter.display_order,
-      title: chapter.title,
-      source_path: chapter.manuscript_path,
-      status: outlineStatusToIndexStatus(chapter.status),
-      origin: existing?.origin ?? currentIndex.source_mode,
-      content_hash: await sha256File(fullPath),
-      detected_title: existing?.detected_title ?? chapter.title,
-      confidence: existing?.confidence ?? "high",
-    });
-  }
-
-  return {
-    ...currentIndex,
-    generated_at: new Date().toISOString(),
-    chapters: rebuilt,
-  };
-}
-
 export async function inspectionWithManuscriptIndex(
   projectRoot: string,
   inspection: ProjectInspection,
@@ -258,164 +191,8 @@ export async function inspectionWithManuscriptIndex(
   };
 }
 
-export async function writeSqliteIndex(
-  sqlitePath: string,
-  inspection: ProjectInspection,
-): Promise<void> {
-  await mkdir(path.dirname(sqlitePath), { recursive: true });
-  await rm(sqlitePath, { force: true });
-
-  const emitWarning = process.emitWarning;
-  process.emitWarning = (() => undefined) as typeof process.emitWarning;
-  const sqlite = await import("node:sqlite");
-  process.emitWarning = emitWarning;
-  const db = new sqlite.DatabaseSync(sqlitePath);
-
-  try {
-    db.exec(`
-      CREATE TABLE project (
-        id TEXT PRIMARY KEY,
-        title TEXT NOT NULL,
-        protocol_version TEXT NOT NULL,
-        source_policy TEXT NOT NULL
-      );
-      CREATE TABLE chapters (
-        id TEXT PRIMARY KEY,
-        display_order INTEGER NOT NULL,
-        source_path TEXT NOT NULL,
-        content_hash TEXT NOT NULL,
-        status TEXT NOT NULL,
-        origin TEXT NOT NULL,
-        confidence TEXT NOT NULL
-      );
-    `);
-
-    db.prepare(
-      "INSERT INTO project (id, title, protocol_version, source_policy) VALUES (?, ?, ?, ?)",
-    ).run(
-      inspection.config.project.id,
-      inspection.config.project.title,
-      inspection.config.protocol_version,
-      inspection.config.project.source_policy,
-    );
-
-    const insertChapter = db.prepare(
-      `INSERT INTO chapters
-       (id, display_order, source_path, content_hash, status, origin, confidence)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    );
-
-    for (const chapter of inspection.manuscriptIndex.chapters) {
-      insertChapter.run(
-        chapter.id,
-        chapter.display_order,
-        chapter.source_path,
-        chapter.content_hash,
-        chapter.status,
-        chapter.origin,
-        chapter.confidence,
-      );
-    }
-  } finally {
-    db.close();
-  }
-}
-
 export async function readProjectId(projectRoot: string): Promise<string | null> {
   const rawConfig = await readYamlFile(path.join(projectRoot, "openathor.yaml"));
   await validateSchema("openathor", rawConfig, "openathor.yaml");
   return (rawConfig as ProjectConfig).project.id;
-}
-
-function outlineStatusToIndexStatus(status: ChapterOutlineEntry["status"]): IndexedChapter["status"] {
-  if (status === "archived") {
-    return "archived";
-  }
-
-  if (status === "revised") {
-    return "revised";
-  }
-
-  return "drafted";
-}
-
-async function projectSources(
-  projectRoot: string,
-  config: ProjectConfig,
-  manuscriptIndex: ManuscriptIndex,
-): Promise<EnvelopeSource[]> {
-  return hashSources(projectRoot, [
-    "openathor.yaml",
-    path.join(config.paths.outline, "chapters.yaml"),
-    path.join(config.paths.outline, "volumes.yaml"),
-    path.join(config.paths.outline, "scenes.yaml"),
-    config.paths.manuscript_index,
-    ...STANDARD_ASSET_FILES,
-    ...manuscriptIndex.chapters.map((chapter) => chapter.source_path),
-  ]);
-}
-
-async function inspectionWarnings(
-  projectRoot: string,
-  chapters: ChapterOutline,
-  manuscriptIndex: ManuscriptIndex,
-): Promise<EnvelopeWarning[]> {
-  const warnings: EnvelopeWarning[] = [];
-
-  for (const relPath of await missingStandardAssets(projectRoot)) {
-    warnings.push({
-      code: "OA_PROJECT_ASSET_MISSING",
-      message: `Standard project asset is missing: ${relPath}`,
-      severity: "medium",
-    });
-  }
-
-  const indexedChapterIds = new Set(manuscriptIndex.chapters.map((chapter) => chapter.id));
-  for (const chapter of chapters.chapters) {
-    const shouldBeIndexed = chapter.status !== "planned" && chapter.manuscript_path;
-    if (shouldBeIndexed && !indexedChapterIds.has(chapter.id)) {
-      warnings.push({
-        code: "OA_MANUSCRIPT_INDEX_STALE",
-        message: `Manuscript index is missing outlined chapter ${chapter.id}.`,
-        severity: "medium",
-      });
-    }
-  }
-
-  return warnings;
-}
-
-async function missingStandardAssets(projectRoot: string): Promise<string[]> {
-  const missing = [];
-
-  for (const relPath of STANDARD_ASSET_FILES) {
-    if (!(await pathExists(path.join(projectRoot, relPath)))) {
-      missing.push(relPath);
-    }
-  }
-
-  return missing;
-}
-
-async function isIndexStale(
-  root: string,
-  config: ProjectConfig,
-  sources: EnvelopeSource[],
-): Promise<boolean> {
-  const sqlitePath = path.join(root, config.paths.sqlite_index);
-
-  if (!(await pathExists(sqlitePath))) {
-    return true;
-  }
-
-  const sqliteStat = await stat(sqlitePath);
-
-  for (const source of sources) {
-    const sourceStat = await stat(path.join(root, source.path));
-    if (sourceStat.mtimeMs > sqliteStat.mtimeMs + 1) {
-      return true;
-    }
-  }
-
-  return false;
 }

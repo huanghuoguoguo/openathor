@@ -1,0 +1,64 @@
+characters:
+  - id: lin-che
+    name: 林澈
+    role: 调查记者
+    traits:
+      - 克制
+      - 证据优先
+      - 不急于下结论
+    current_state: 将蓝钥匙、空位名单和第三次雾笛分成三条证据线，仍未把它们写成林砚自白。
+    notes:
+      - 继续拒绝把回声记录当成父亲承认发出第三次雾笛的证据。
+  - id: meng-xia
+    name: 孟夏
+    role: 船务档案员
+    traits:
+      - 谨慎
+      - 只相信盖章记录
+      - 对客轮旧案保持距离
+    current_state: 核对仓库值班表，发现许岚在客轮失火后第二天补过一次登记。
+    notes:
+      - 用登记时间限制林澈的推断范围。
+  - id: lin-yan
+    name: 林砚
+    role: 失踪检修员
+    traits:
+      - 熟悉客轮下层线路
+      - 行踪被证据间接指向
+      - 真相未确认
+    current_state: 被蓝钥匙回声记录继续指向，但是否发出第三次雾笛仍未确认。
+    notes:
+      - 回声记录不能证明林砚本人完成开锁、藏名单或发出雾笛。
+  - id: xu-lan
+    name: 许岚
+    role: 星桥仓库管理员
+    traits:
+      - 记日期准确
+      - 保管证物谨慎
+      - 对林砚承诺守口如瓶
+    current_state: 承认替林砚保管蓝钥匙回声记录，但拒绝说出被保护乘客的名字。
+    notes:
+      - 在客轮失火后第二天补过仓库登记。
+timeline_events:
+  - id: event-blue-key-echo-record
+    title: 蓝钥匙回声记录出现
+    summary: 许岚交出仓库后墙的回声记录，记录称蓝钥匙出现后空位名单号码会在仓库铁门后回响三次。
+hooks:
+  - id: hook-blue-key-echo-source
+    title: 蓝钥匙回声记录是谁留下
+    status: opened
+    summary: 蓝钥匙回声记录把空位名单和第三次雾笛连接起来，但留下记录的人仍未确认。
+chapter:
+  summary: 许岚交出蓝钥匙回声记录，林澈把蓝钥匙、空位名单和第三次雾笛拆成三条证据线，林砚是否发出雾笛仍未确认。
+  links:
+    characters:
+      - lin-che
+      - meng-xia
+      - lin-yan
+      - xu-lan
+    timeline_events:
+      - event-blue-key-echo-record
+    hooks:
+      - hook-third-fog-horn
+      - hook-protected-passenger
+      - hook-blue-key-echo-source
