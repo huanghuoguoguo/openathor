@@ -186,6 +186,7 @@
 - `fixtures/slice-1/adopt-3-chapters`
 - `fixtures/slice-1/scattered-drafts`
 - `fixtures/slice-1/adopt-ambiguous-order`
+- `fixtures/slice-4/adopt-30-chapters`
 - `openathor-fixture-check` 会复制 fixture input、执行 expected commands、校验 JSON envelope、expected files、disallowed writes，并在最终项目上运行 `openathor doctor --json --strict`。
 - `openathor-judge-smoke` 会复用 fixture replay，为已落地写作/结构场景生成 `openathor.judge_evidence.v1` 证据包。
 - `openathor-judge-smoke --scenario <name> --operator-transcript <path> --agent-final-response <path>` 可以把本地真实 Operator Agent 运行记录和最终回复附加到单个 evidence package。

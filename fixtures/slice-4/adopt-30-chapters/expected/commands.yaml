@@ -1,0 +1,36 @@
+commands:
+  - run: openathor adopt --dry-run --json
+    ok: true
+    expect_data:
+      detected_chapters.29.order: 30
+      confidence_summary.chapter_count: 30
+  - run: openathor adopt --json
+    ok: true
+    expect_data:
+      confidence_summary.chapter_count: 30
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor index rebuild --vector --json
+    ok: true
+    expect_data_path: vector_index
+  - run: openathor search text "第三次雾笛" --json
+    ok: true
+    expect_data:
+      match_count: 20
+      matches.0.path: 正文/01-雾港档案.md
+  - run: openathor search semantic "林澈 不信任 港务署" --json
+    ok: true
+    expect_data:
+      match_count: 10
+      matches.0.path: 正文/01-雾港档案.md
+  - run: openathor context chapter 30 --max-chars 7000 --json
+    ok: true
+    expect_data:
+      context_pack.target.display_order: 30
+      outline.chapter_count: 30
+      manuscript.context_chapters.1.display_order: 30
+  - run: openathor draft chapter next --task "继续第31章，保持林澈不信任港务署但不能使用通灵解释" --dry-run --json
+    ok: true
+    expect_data:
+      target.display_order: 31
+      planned_writes.1.reason: draft_proposal

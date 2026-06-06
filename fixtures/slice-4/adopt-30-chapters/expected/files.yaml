@@ -1,0 +1,22 @@
+required:
+  - openathor.yaml
+  - 正文/01-雾港档案.md
+  - 正文/30-雾港档案.md
+  - 设定/人物.md
+  - outline/chapters.yaml
+  - .openathor/manuscript.index.yaml
+  - .openathor/index.sqlite
+  - .openathor/vector/index.json
+  - .openathor/import-report.md
+  - notes/import-questions.md
+  - bible/canon.pending.md
+  - bible/characters.md
+  - bible/timeline.md
+  - style/profiles.yaml
+absent: []
+contains:
+  .openathor/import-report.md:
+    - 设定/人物.md
+  outline/chapters.yaml:
+    - "display_order: 30"
+    - 正文/30-雾港档案.md
