@@ -227,7 +227,7 @@ openathor assets audit [--json] [--max-chars <count>]
 - `OA_ASSET_LINK_UNRESOLVED`：outline link 指向不存在的 story asset。
 - `OA_ASSET_CHARACTER_LINK_DRIFT`：正文或章节摘要提到已登记人物，但该章节 outline links 未关联。
 - `OA_ASSET_CHARACTER_PROFILE_WEAK`：人物档案在相关章节的项目级文本覆盖偏弱，且匹配到的档案字段数不足，需要人工复核人物性格、事迹或当前状态是否已经被承接。
-- `OA_ASSET_SUMMARY_DRIFT`：章节摘要词项和正文弱匹配，需要人工复核。
+- `OA_ASSET_SUMMARY_DRIFT`：章节摘要词项和正文弱匹配，或摘要含有正文未支持的否定/降级断言，需要人工复核。
 
 这些 warning 是确定性审计结果，不会自动修改正文、outline 或 confirmed canon。
 
@@ -243,7 +243,7 @@ openathor assets audit [--json] [--max-chars <count>]
 - 人物、timeline 和 hook 支持 `char_` / `ev_` / `event_` / `hook_` 前缀、Markdown 标题、`## 名称 (id)` 以及 Pi 常写的 `- id: ...` + `name:` / `title:` 列表块。
 - 对人物资产，`assets audit` 会解析 `role`、`traits`、`current_state`、`note`、`背景`、`性格`、`秘密` 等档案字段，并为已链接章节输出 `character_profile_coverage`，为每个人物输出项目级 `character_profile_summary`。章节级 `weak_character_profile_coverages` 只统计术语覆盖很低且没有命中任何档案字段的章节，避免把人物稳定身份没有在每章重复写作误报成漂移。项目级 weak summary 需要同时满足词项覆盖偏低和档案字段命中数不足；如果角色身份、性格或状态字段已经被全项目文本命中，只保留 coverage 数据，不发 weak warning。这些数据只作为确定性文本覆盖证据，不替代人工或 LLM judge 的语义判断。
 - `character_profile_summary` 按人物资产顺序输出，包含 `linked_chapter_count`、`mentioned_chapter_count`、`matched_profile_field_count`、`coverage_ratio` 和相关章节明细，用于复核一个人物在多章写作后是否仍有稳定可追踪的档案承接。
-- `summary_drift` 是复核提示，不代表自动判定正文错误。
+- `summary_drift` 是复核提示，不代表自动判定正文错误。每条记录包含 `summary_drift_reasons`；当前可能值包括 `weak_term_coverage` 和 `unsupported_summary_assertion`。
 
 ## `openathor assets link-backfill`
 
