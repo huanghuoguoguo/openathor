@@ -17,6 +17,7 @@ export type ExpectedCommands = {
 export type ExpectedFiles = {
   required?: string[];
   absent?: string[];
+  contains?: Record<string, string[]>;
 };
 
 export type ExpectedDisallowed = {

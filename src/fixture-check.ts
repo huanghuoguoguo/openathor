@@ -11,6 +11,7 @@ import {
   checkAbsentFiles,
   checkCommandExpectation,
   checkDoctorExpectation,
+  checkFileContains,
   checkRequiredFiles,
   checkUnchangedFiles,
   readExpectedJson,
@@ -161,6 +162,7 @@ export async function runFixtureCheck(
       ...(expectedFiles.absent ?? []),
       ...(expectedDisallowed.absent ?? []),
     ]);
+    await checkFileContains(workspace, expectedFiles.contains ?? {});
     await checkUnchangedFiles(workspace, beforeHashes, expectedDisallowed.unchanged ?? []);
 
     if (await pathExists(path.join(workspace, "openathor.yaml"))) {

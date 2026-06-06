@@ -55,6 +55,7 @@ OpenAthor Pi Skill 应该要求 Pi Agent 遵守以下行为。
 - 对新增设定调用或建议调用 `openathor canon sync`
 - 对章节更新摘要、人物状态和伏笔状态
 - 对每个已确认写入的新增章节整理结构化 asset package，并调用 `openathor assets sync chapter <id-or-order> --from <asset-package> --json`
-- 用户确认后，用匹配的章节 source hash 重新调用 `openathor assets sync ... --confirm --base-hash <sha256:...> --json`
+- 用户确认后，用 proposal 输出的章节 `source_hash` 和所有 `asset_hashes` 重新调用 `openathor assets sync ... --confirm --base-hash <sha256:...> --assets-hash <path=sha256:...> --json`
+- 如果确认时返回 `OA_ASSETS_SOURCE_CHANGED`，说明人物、时间线、伏笔或 outline 在 proposal 后被用户/agent 改过；必须停止并让用户复核，不能直接刷新 hash 后覆盖
 - 资产同步后运行 `openathor assets audit --json`，确认没有 unresolved outline link、character link drift 或 summary drift，再声称长篇资产已经沉淀
 - 把运行记录保存到 `runs/`

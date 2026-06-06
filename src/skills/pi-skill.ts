@@ -23,6 +23,7 @@ openathor index rebuild --json
 openathor index rebuild --vector --json
 openathor assets audit --json
 openathor assets sync chapter <id-or-order> --from <asset-package.yaml|json> --json
+openathor assets sync chapter <id-or-order> --from <asset-package.yaml|json> --confirm --base-hash <sha256:...> --assets-hash <path=sha256:...> --json
 openathor assets link-backfill characters --json
 openathor search text "<query>" --json
 openathor search related chapter <id-or-order> --json
@@ -149,7 +150,9 @@ chapter:
 - use \`event-...\`, \`event_...\`, or \`ev_...\` IDs for timeline events; use \`char_...\` or kebab-case IDs for characters; use \`hook-...\` or \`hook_...\` IDs for hooks
 - do not put the only structured assets under vague metadata; OpenAthor accepts common \`links.*\` object arrays and \`updates.*\` entries, but the canonical top-level arrays above are preferred
 - after a confirmed multi-chapter draft, do not stop at manuscript files; for each drafted chapter, sync the chapter summary, character states, timeline events, hooks, and outline links before claiming the longform assets have been persisted
-- only after explicit user confirmation, rerun asset sync with \`--confirm --base-hash "sha256:..."\`; use the latest source hash from context, sync proposal, or doctor output
+- asset sync proposal output includes \`source_hash\` for the target chapter and \`asset_hashes\` for every asset source that the confirmed write would modify
+- only after explicit user confirmation, rerun asset sync with \`--confirm --base-hash "sha256:..." --assets-hash "path=sha256:..."\`; use \`source_hash\` and every \`asset_hashes\` entry from the latest sync proposal, and do not omit asset hashes
+- if confirmed asset sync returns \`OA_ASSETS_SOURCE_CHANGED\`, stop and show the changed asset source to the user; do not regenerate hashes blindly or overwrite user-edited characters, timeline, hooks, or outline
 - confirmed asset sync writes new assets and merges updates for existing character, timeline, and hook assets; expect existing character \`current_state\` to change and earlier states to remain as \`note: previous_state: ...\`
 - run \`openathor assets audit --json\` after confirmed asset sync and report unresolved outline links, character link drift, summary drift, and weak character profile summaries
 - if \`assets audit\` reports character link drift in already adopted chapters and the relevant people already exist in \`bible/characters.md\`, run \`openathor assets link-backfill characters --json\`; after user confirmation, rerun with \`--confirm --base-hash "sha256:..."\` using the latest \`outline/chapters.yaml\` hash
@@ -208,7 +211,7 @@ Never physically delete, move, or rename manuscript files for an archive request
 
 - Confirmed canon belongs in \`bible/canon.md\`.
 - Unverified inference belongs in \`bible/canon.pending.md\` or questions.
-- New or changed longform assets should be persisted through \`openathor assets sync\`: proposal first, confirmed write only with user approval and a matching chapter hash.
+- New or changed longform assets should be persisted through \`openathor assets sync\`: proposal first, confirmed write only with user approval, a matching chapter hash, and matching asset source hashes from the proposal.
 - Adopted longform projects with confirmed characters but missing old chapter links may use \`openathor assets link-backfill characters\`: proposal first, confirmed write only with user approval and a matching outline hash.
 - Confirmed asset sync may update existing confirmed character, timeline, and hook files from a structured package; report those writes explicitly.
 - Style references require user authorization before analysis.
