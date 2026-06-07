@@ -1,4 +1,9 @@
-export const PI_SKILL_TEXT = `# OpenAthor Pi Skill
+export const PI_SKILL_TEXT = `---
+name: openathor
+description: Use when helping a user work inside an OpenAthor novel project with OpenAthor CLI, project protocol, review packs, context, writing proposals, and safety checks.
+---
+
+# OpenAthor Pi Skill
 
 Use this skill when helping a user work inside an OpenAthor novel project.
 

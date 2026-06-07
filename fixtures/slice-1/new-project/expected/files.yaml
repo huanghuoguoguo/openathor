@@ -22,6 +22,8 @@ absent:
   - manuscript/chapter-001.md
 contains:
   .pi/skills/openathor/SKILL.md:
+    - "name: openathor"
+    - "description: Use when helping a user work inside an OpenAthor novel project"
     - asset_hashes
     - --assets-hash
     - OA_ASSETS_SOURCE_CHANGED
