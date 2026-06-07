@@ -112,6 +112,7 @@ openathor export --format markdown
 - `revise chapter --confirm-write --base-hash` 支持 hash 匹配时确认改写已有章节。
 - `context` 暴露 `bible/world.md`、`bible/characters.md`、`bible/timeline.md`、`style/profiles.yaml` 和可执行 `style_guidance`，作为长篇资产沉淀和风格约束入口。
 - proposal 写入前会对 confirmed canon 中的硬约束做确定性冲突拦截，命中时返回 `OA_CANON_CONFLICT` 且不写文件。
+- `review chapter <target> --multi-agent` 已支持生成确定性多角色审稿包，包含 role pack、findings schema、merge policy 和 sub-agent 写入边界；CLI 不调用模型、不调度真实 sub-agent。
 - `style check` 当前是确定性指标和词项扫描，不是 LLM 文风判断；规则扫描只使用 `bible/style.md` 和 confirmed active profile，不把 pending profile 当作写作指导。
 - `style analyze` 当前生成 pending style profile，不生成 confirmed profile，不复制参考文本原文。
 - `style profile apply` 已支持 hash 保护的 confirmed profile 激活；`style revise` 已支持 proposal、diff 和 `--confirm-write --base-hash` 安全写入，但修订正文仍由 Pi/Operator Agent 或用户在 CLI 外部生成，CLI 不调用模型。

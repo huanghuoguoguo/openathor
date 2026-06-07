@@ -1,0 +1,15 @@
+version: "0.1"
+generated_at: "2026-06-05T00:00:00.000Z"
+source_mode: created
+chapters:
+  - id: ch_001
+    display_order: 1
+    title: 开端
+    source_path: manuscript/chapter-001.md
+    status: drafted
+    origin: created
+    content_hash: sha256:d093b4c155d6b408b84693d0afd05a816688e8513bcfc6de23afc6c73e6c041e
+    detected_title: 开端
+    confidence: high
+unclassified: []
+questions: []

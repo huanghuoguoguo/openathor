@@ -120,16 +120,40 @@ proposal 模式不得写入 `manuscript/` 或接管原稿路径。
 
 为章节生成审稿任务记录和 review 文件骨架。
 
+当任务需要多角度审稿时，`review` 可以生成多角色审稿包。CLI 仍不调用模型、不调度真实 sub-agent，只把同一份 context、角色职责、结构化 findings schema 和合并策略交给 Pi Agent。Pi Agent 或运行时负责按角色执行审稿，最终由主 Operator Agent 汇总。
+
 ### 参数
 
 ```bash
 openathor review chapter <target> --task <text> [--json] [--dry-run] [--diff]
+openathor review chapter <target> --task <text> --multi-agent [--review-role <role>...] [--json] [--dry-run] [--diff]
 ```
+
+默认多角色包包含：
+
+- `context-scout`
+- `continuity-reviewer`
+- `outline-planner`
+- `style-editor`
+- `reader-qa`
+- `qa-judge`
+
+`--review-role <role>` 可重复指定，指定后只输出这些角色；未知角色返回 `OA_REVIEW_ROLE_UNKNOWN`。
 
 ### Expected writes
 
 - `runs/run_*.json`
 - `reviews/review-*.md`
+
+`--multi-agent --diff` 不写文件，只在 `data.review_pack` 和 `data.diff.proposal_text` 中返回多角色审稿包。
+
+真实写入 proposal 时，run record 会记录：
+
+- `operator_mode: sub-agent`
+- `review_pack.roles`
+- sub-agent 不得写正文和 confirmed canon 的安全边界
+
+review proposal markdown 会包含每个角色的 phase、focus、required sources、must-not 规则、findings 输出 schema 和 merge policy。
 
 ## `openathor revise`
 

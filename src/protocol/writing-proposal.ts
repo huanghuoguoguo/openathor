@@ -7,6 +7,10 @@ import {
   isPlainRecord,
   stringArray,
 } from "./value.js";
+import {
+  reviewPackNextAction,
+  type ReviewPack,
+} from "./review-pack.js";
 import type {
   WritingProposalPlan,
   WritingTarget,
@@ -72,9 +76,11 @@ export function writingProposalRunRecord(input: {
   target: WritingTarget | null;
   sources: EnvelopeSource[];
   createdAt: string;
+  reviewPack?: ReviewPack | null;
 }): Record<string, unknown> {
   return {
     agent_role: "openathor-cli",
+    operator_mode: input.reviewPack ? "sub-agent" : "single-agent",
     command: input.plan.command,
     created_at: input.createdAt,
     task: input.task,
@@ -82,6 +88,7 @@ export function writingProposalRunRecord(input: {
     sources: input.sources,
     writes: input.plan.writes,
     mode: "proposal",
+    review_pack: input.reviewPack ?? null,
     user_confirmation_required: true,
   };
 }
@@ -92,6 +99,7 @@ export function writingProposalText(input: {
   stamp: string;
   target: WritingTarget | null;
   contextPack?: unknown;
+  reviewPack?: ReviewPack | null;
 }): string {
   if (input.kind === "canon_sync") {
     return canonPendingProposalText(input.task, input.stamp, input.target);
@@ -103,6 +111,7 @@ export function writingProposalText(input: {
     input.stamp,
     input.target,
     input.contextPack,
+    input.reviewPack,
   );
 }
 
@@ -115,15 +124,20 @@ export function writingProposalData(input: {
   contextPack: unknown;
   plan: WritingProposalPlan;
   proposalText: string;
+  reviewPack?: ReviewPack | null;
 }): Record<string, unknown> {
+  const reviewPack = input.reviewPack ?? null;
+
   return {
     dry_run: input.dryRun,
     mode: input.diff ? "diff" : "proposal",
+    operator_mode: reviewPack ? "sub-agent" : "single-agent",
     command: input.plan.command,
     task: input.task,
     target: input.target,
     context_pack: input.contextPack,
     style_guidance: styleGuidanceFromContextPack(input.contextPack),
+    review_pack: reviewPack,
     planned_writes: input.dryRun || input.diff ? input.plan.writes : [],
     diff: input.diff
       ? {
@@ -134,7 +148,7 @@ export function writingProposalData(input: {
     proposal_path: input.plan.proposalRelPath,
     run_path: input.plan.runRelPath,
     user_confirmation_required: true,
-    next_agent_action: proposalNextAction(input.kind),
+    next_agent_action: reviewPackNextAction(reviewPack) ?? proposalNextAction(input.kind),
   };
 }
 
@@ -170,12 +184,14 @@ function proposalMarkdown(
   stamp: string,
   target: WritingTarget | null,
   contextPack?: unknown,
+  reviewPack?: ReviewPack | null,
 ): string {
   return [
     `# ${proposalTitle(kind)}`,
     "",
     `- run: ${stamp}`,
     "- mode: proposal",
+    `- operator_mode: ${reviewPack ? "sub-agent" : "single-agent"}`,
     `- target: ${target ? `${target.id} (${target.title})` : "project"}`,
     `- source_path: ${target?.source_path ?? ""}`,
     "- user_confirmation_required: true",
@@ -188,6 +204,7 @@ function proposalMarkdown(
     "",
     proposalNextAction(kind),
     "",
+    ...proposalReviewPackMarkdown(reviewPack ?? null),
     ...proposalStyleGuidanceMarkdown(kind, contextPack),
   ].join("\n");
 }
@@ -285,6 +302,55 @@ function proposalStyleGuidanceMarkdown(
     "### Avoid",
     "",
     ...(avoidRules.length > 0 ? avoidRules.map((rule) => `- ${rule}`) : ["- No confirmed avoid-rules available."]),
+    "",
+  ];
+}
+
+function proposalReviewPackMarkdown(reviewPack: ReviewPack | null): string[] {
+  if (!reviewPack) {
+    return [];
+  }
+
+  return [
+    "## Multi-agent Review Pack",
+    "",
+    `- mode: ${reviewPack.mode}`,
+    `- coordinator_role: ${reviewPack.coordinator_role}`,
+    "- sub_agents_may_write_manuscript: false",
+    "- sub_agents_may_write_confirmed_canon: false",
+    "",
+    "### Roles",
+    "",
+    ...reviewPack.roles.flatMap((role) => [
+      `#### ${role.id}`,
+      "",
+      `- phase: ${role.phase}`,
+      `- label: ${role.label}`,
+      "- focus:",
+      ...role.focus.map((item) => `  - ${item}`),
+      "- required_sources:",
+      ...role.required_sources.map((item) => `  - ${item}`),
+      "- must_not:",
+      ...role.must_not.map((item) => `  - ${item}`),
+      "",
+    ]),
+    "### Finding Output Schema",
+    "",
+    "```yaml",
+    "role: <role-id>",
+    "findings:",
+    "  - severity: high | medium | low",
+    "    issue: <short issue statement>",
+    "    evidence:",
+    "      - path: <source file path>",
+    "        detail: <brief source-backed detail>",
+    "    suggestion: <actionable next step>",
+    "    status: finding | question",
+    "```",
+    "",
+    "### Merge Policy",
+    "",
+    ...reviewPack.merge_policy.map((item) => `- ${item}`),
     "",
   ];
 }

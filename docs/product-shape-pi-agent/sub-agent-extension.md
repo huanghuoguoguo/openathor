@@ -134,11 +134,12 @@ Judge 只评价最终行为和证据，不因为使用或未使用 sub-agent 而
 
 ## 产品边界
 
-第一阶段只预留：
+第一阶段已经落地/预留：
 
 - sub-agent 角色定义
 - run 记录中的 `agent_role`
 - CLI JSON 输出可被多个 agent 消费
+- `openathor review ... --multi-agent` 生成确定性多角色审稿包
 - 评估体系能记录 sub-agent 模式
 - 开发和测试阶段允许用 sub-agent 并行产出 findings、patch suggestions、fixture reports 和 judge reports
 
@@ -148,6 +149,8 @@ Judge 只评价最终行为和证据，不因为使用或未使用 sub-agent 而
 - 强制创建 `.pi/agents/`
 - 复杂多 agent 调度器
 - 跨 agent 长期记忆同步
+
+`--multi-agent` 的边界是生成 role pack、findings schema、merge policy 和安全约束。CLI 不调用模型，也不并行启动真实 sub-agent；主 Pi Agent 仍对最终用户回复、文件写入和是否进入 revise/canon sync 负责。
 
 ## 开发和测试用法
 

@@ -216,6 +216,8 @@ export type WritingProposalOptions = {
   task?: string;
   dryRun?: boolean;
   diff?: boolean;
+  multiAgent?: boolean;
+  reviewRoles?: string[];
   text?: string;
   confirmWrite?: boolean;
   baseHash?: string;

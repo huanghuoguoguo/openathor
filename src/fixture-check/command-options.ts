@@ -37,6 +37,11 @@ export function parseCommandArguments(tokens: string[]): ParsedFixtureCommandArg
       continue;
     }
 
+    if (token === "--multi-agent") {
+      options.multiAgent = true;
+      continue;
+    }
+
     if (token === "--confirm") {
       options.confirm = true;
       continue;
@@ -120,6 +125,15 @@ export function parseCommandArguments(tokens: string[]): ParsedFixtureCommandArg
     if (token === "--text") {
       index += 1;
       options.text = unescapeFixtureArgument(tokens[index]);
+      continue;
+    }
+
+    if (token === "--review-role") {
+      index += 1;
+      options.reviewRoles = [
+        ...(options.reviewRoles ?? []),
+        unescapeFixtureArgument(tokens[index]),
+      ];
       continue;
     }
 

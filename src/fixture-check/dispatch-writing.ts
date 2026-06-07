@@ -25,6 +25,8 @@ export async function dispatchWritingCommand(
     target: parsed.pathArg,
     task: parsed.options.task,
     text: parsed.options.text,
+    multiAgent: parsed.options.multiAgent,
+    reviewRoles: parsed.options.reviewRoles,
     confirmWrite: parsed.options.confirmWrite,
     baseHash: parsed.options.baseHash
       ? await resolveFixtureHash(cwd, parsed.options.baseHash)

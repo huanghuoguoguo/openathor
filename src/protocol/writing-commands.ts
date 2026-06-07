@@ -10,6 +10,10 @@ import {
   writeYaml,
 } from "./project-files.js";
 import { inspectProject } from "./project-inspection.js";
+import {
+  buildReviewPack,
+  normalizeReviewRoleIds,
+} from "./review-pack.js";
 import { runStamp } from "./run-stamp.js";
 import { runConfirmedWriting } from "./writing-confirmed-command.js";
 import {
@@ -35,6 +39,7 @@ export async function runWritingProposal(
   const dryRun = options.dryRun ?? false;
   const diff = options.diff ?? false;
   const task = options.task?.trim();
+  const reviewRoleIds = normalizeReviewRoleIds(options);
 
   if (!task) {
     throw new OpenAthorError(
@@ -74,6 +79,10 @@ export async function runWritingProposal(
           task,
         )
       : contextData.context_pack.target;
+  const reviewPack = buildReviewPack({
+    target: proposalTarget,
+    roleIds: reviewRoleIds,
+  });
   const conflicts = detectCanonConflicts(context.data, task);
 
   if (conflicts.length > 0) {
@@ -104,6 +113,7 @@ export async function runWritingProposal(
     stamp,
     target: proposalTarget,
     contextPack: contextData.context_pack,
+    reviewPack,
   });
 
   if (!dryRun && !diff) {
@@ -113,6 +123,7 @@ export async function runWritingProposal(
       target: proposalTarget,
       sources: context.sources ?? [],
       createdAt: new Date().toISOString(),
+      reviewPack,
     });
     await writeYaml(projectRoot, plan.runRelPath, runRecord);
 
@@ -138,6 +149,7 @@ export async function runWritingProposal(
       contextPack: contextData.context_pack,
       plan,
       proposalText,
+      reviewPack,
     }),
   };
 }
