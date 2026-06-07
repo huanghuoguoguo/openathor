@@ -1,0 +1,50 @@
+{
+  "manual_e2e_evidence": [
+    {
+      "scenario": "draft-confirm-write",
+      "operator_transcript": "evals/manual/draft-confirm-write-transcript.md",
+      "agent_final_response": "evals/manual/draft-confirm-write-final.md",
+      "judge_scores": "evals/manual/draft-confirm-write-scores.json",
+      "must_include_commands": [
+        "openathor adopt --json",
+        "openathor draft chapter next --task \"用户确认写入《第二章》\" --dry-run --json",
+        "openathor draft chapter next --task \"用户确认写入第二章\" --text \"# 第二章\\n\\n这是用户确认后的新章草稿。\" --confirm-write --json",
+        "openathor doctor --json",
+        "openathor index rebuild --json"
+      ],
+      "must_include_files": [
+        "manuscript/chapter-002.md",
+        "outline/chapters.yaml",
+        ".openathor/manuscript.index.yaml"
+      ],
+      "expected_failed_error_codes": []
+    },
+    {
+      "scenario": "asset-sync-confirm",
+      "operator_transcript": "evals/manual/asset-sync-confirm-transcript.md",
+      "agent_final_response": "evals/manual/asset-sync-confirm-final.md",
+      "judge_scores": "evals/manual/asset-sync-confirm-scores.json",
+      "must_include_commands": [
+        "openathor adopt --json",
+        "openathor draft chapter next --task \"写第一章《钟楼齿轮》\" --text \"# 钟楼齿轮\\n\\n沈砚和顾青禾在旧钟楼齿轮室发现北港纹章铜钥匙。港口蓝灯异常亮起，失踪钟表匠的线索被重新打开。\" --confirm-write --json",
+        "openathor assets sync chapter 2 --from notes/asset-package-ch1.yaml --json",
+        "openathor assets sync chapter 2 --from notes/asset-package-ch1.yaml --confirm --base-hash current:manuscript/chapter-002.md --assets-hash bible/characters.md=sha256:0000000000000000000000000000000000000000000000000000000000000000 --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json",
+        "openathor assets sync chapter 2 --from notes/asset-package-ch1.yaml --confirm --base-hash current:manuscript/chapter-002.md --assets-hash bible/characters.md=current:bible/characters.md --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json",
+        "openathor assets audit --json",
+        "openathor context chapter 2 --json",
+        "openathor doctor --json",
+        "openathor index rebuild --json"
+      ],
+      "must_include_files": [
+        "manuscript/chapter-002.md",
+        "bible/characters.md",
+        "bible/timeline.md",
+        "notes/hooks.md",
+        "outline/chapters.yaml"
+      ],
+      "expected_failed_error_codes": [
+        "OA_ASSETS_SOURCE_CHANGED"
+      ]
+    }
+  ]
+}

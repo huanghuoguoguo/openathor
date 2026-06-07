@@ -166,4 +166,13 @@ fixtures/slice-4/asset-sync-confirm
 fixtures/slice-4/replan-draft-asset-continuity
 ```
 
-这些场景会通过 `openathor-judge-smoke` 生成 `openathor.judge_evidence.v1` 证据包，用于验证 judge 输入结构、CLI 命令证据和文件变化摘要。真实 Pi/Operator transcript 和真实 judge scores 仍作为本地或手动证据附加，不进入必跑 CI。
+这些场景会通过 `openathor-judge-smoke` 生成 `openathor.judge_evidence.v1` 证据包，用于验证 judge 输入结构、CLI 命令证据和文件变化摘要。
+
+当前 `npm test` 还会运行 `test:e2e:evidence`，复放 `evals/manual/e2e-evidence-manifest.json` 中登记的 manual E2E evidence：
+
+```text
+draft-confirm-write
+asset-sync-confirm
+```
+
+这类 evidence 把 transcript、最终回复和 judge scores 绑定到具体 scenario，再复跑 deterministic fixture，防止手动证据和自动化场景脱节。真实 Pi/Operator transcript 和真实模型 judge scores 仍作为本地或手动证据附加；CI 只验证已保存证据的结构、绑定关系和 deterministic replay，不调用外部模型。

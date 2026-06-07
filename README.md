@@ -86,7 +86,7 @@ npm run build
 npm test
 ```
 
-`npm test` 会运行 TypeScript 类型检查、schema 校验、构建、package/bin smoke、fixture checker 自测、44 个 deterministic fixture 回归，以及不调用外部模型的 judge smoke。
+`npm test` 会运行 TypeScript 类型检查、schema 校验、构建、package/bin smoke、fixture checker 自测、manual E2E evidence 复放、44 个 deterministic fixture 回归，以及不调用外部模型的 judge smoke。
 
 如果不想使用 `curl | sh`，可以在 GitHub Releases 页面手动下载 `openathor.tar.gz`，解压后直接运行 `dist/cli.js`，或自行建立软链接。
 
@@ -239,6 +239,7 @@ openathor-judge-smoke
 - Slice 4：30 章长篇接管、检索、导出、风格画像、资产同步、资产漂移、summary drift、索引重建
 - Package/bin smoke：校验 npm package 的 `bin` 映射、shebang、可执行 mode 和三个命令入口
 - Fixture checker self-test：校验漏报实际变更、多报未 backing write 和失败命令写入都会触发门禁失败
+- Manual E2E evidence replay：校验已保存的 transcript、final response 和 judge scores 能绑定到指定场景并复放 deterministic evidence
 - LLM-as-judge smoke：生成可交给 judge 的 evidence package，不在 CI 中调用真实模型
 
 本地完整验证：
@@ -247,7 +248,7 @@ openathor-judge-smoke
 npm test
 ```
 
-GitHub Actions 会在 PR 和 main 上运行文档健康检查、类型检查、schema 校验、构建、package/bin smoke、fixture checker 自测、fixture 回归和 judge smoke。
+GitHub Actions 会在 PR 和 main 上运行文档健康检查、类型检查、schema 校验、构建、package/bin smoke、fixture checker 自测、manual E2E evidence 复放、fixture 回归和 judge smoke。
 
 Release workflow 会在推送 `v*` tag 时自动构建 `openathor.tar.gz`、SHA256 校验文件和 `install.sh`，并发布到 GitHub Releases。发布包内包含 `dist/`、`schemas/` 和生产依赖，因此用户安装时不需要重新构建 TypeScript。
 

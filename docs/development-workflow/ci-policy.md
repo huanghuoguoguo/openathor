@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-当前仓库处于 Slice 2/3/4 能力并行补齐阶段。CI 只覆盖静态和确定性检查：文档仓库基础健康检查、TypeScript tooling 类型检查、schema 校验、构建、package/bin smoke、fixture checker 自测、Slice 1/2/3/4 fixture 回归，以及不调用模型的 LLM-as-judge smoke。
+当前仓库处于 Slice 2/3/4 能力并行补齐阶段。CI 只覆盖静态和确定性检查：文档仓库基础健康检查、TypeScript tooling 类型检查、schema 校验、构建、package/bin smoke、fixture checker 自测、manual E2E evidence 复放、Slice 1/2/3/4 fixture 回归，以及不调用模型的 LLM-as-judge smoke。
 
 CI 不接入真实 Pi Agent、LLM judge、外部模型服务或外部 API key。真实 transcript、judge scores 和人工/模型评估报告只作为本地或手动评估证据保存，不作为 PR 必跑门禁。
 
@@ -36,6 +36,7 @@ tooling
 - CLI 构建
 - package `bin` 映射、shebang、可执行 mode 和安装后命令入口 smoke
 - fixture checker 自测，校验漏报实际变更、多报未 backing write 和失败命令写入都会触发门禁失败
+- manual E2E evidence 复放，校验 `evals/manual/e2e-evidence-manifest.json` 中的 transcript、final response 和 judge scores 能绑定到正确场景并复放 deterministic replay
 - Slice 1/2/3/4 fixture 回归
 - `openathor doctor --json --strict` fixture gate
 - `openathor-judge-smoke` evidence package 结构校验
