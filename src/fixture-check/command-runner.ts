@@ -1,12 +1,20 @@
-import { envelope, errorEnvelope } from "../protocol/envelope.js";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { errorEnvelope } from "../protocol/envelope.js";
 import type { OpenAthorEnvelope } from "../protocol/envelope.js";
 import { OpenAthorError } from "../protocol/errors.js";
-import { parseCommand } from "./command-parser.js";
-import { dispatchCommand } from "./dispatch.js";
+import { resolveFixtureHash } from "./hash-placeholders.js";
+import {
+  tokenizeFixtureCommand,
+  unescapeFixtureArgument,
+} from "./command-tokenizer.js";
 import type {
   FixtureCommandCallResult,
   FixtureCommandEnvelopeResult,
 } from "./types.js";
+
+const execFileAsync = promisify(execFile);
+const cliUrl = new URL("../cli.js", import.meta.url);
 
 export async function executeFixtureCommand(
   command: string,
@@ -33,43 +41,89 @@ export async function callCommand(
   command: string,
   cwd: string,
 ): Promise<FixtureCommandCallResult> {
-  const parsed = parseCommand(command);
+  const args = await fixtureCliArgs(command, cwd);
+  let stdout = "";
 
   try {
-    const result = await dispatchCommand(parsed, cwd);
-    const output = envelope({
-      ok: true,
-      command: parsed.display,
-      projectRoot: result.projectRoot,
-      projectId: result.projectId,
-      sources: result.sources,
-      writes: result.writes,
-      warnings: result.warnings,
-      data: result.data,
+    const result = await execFileAsync(process.execPath, [cliUrl.pathname, ...args], {
+      cwd,
+      maxBuffer: 20 * 1024 * 1024,
     });
-    return {
-      ok: true,
-      error_code: null,
-      wasJsonEnvelope: isJsonEnvelope(output),
-      envelope: output,
-    };
+    stdout = result.stdout;
   } catch (error: unknown) {
-    const openAthorError =
-      error instanceof OpenAthorError
-        ? error
-        : new OpenAthorError("OA_INTERNAL_UNEXPECTED", String(error), {
-            recoverable: false,
-            exitCode: 5,
-          });
-    const output = errorEnvelope(parsed.display, openAthorError);
+    if (isExecErrorWithStdout(error)) {
+      stdout = error.stdout;
+    } else {
+      const openAthorError =
+        error instanceof OpenAthorError
+          ? error
+          : new OpenAthorError("OA_INTERNAL_UNEXPECTED", String(error), {
+              recoverable: false,
+              exitCode: 5,
+            });
+      const output = errorEnvelope(command, openAthorError);
 
-    return {
-      ok: false,
-      error_code: openAthorError.code,
-      wasJsonEnvelope: isJsonEnvelope(output),
-      envelope: output,
-    };
+      return {
+        ok: false,
+        error_code: openAthorError.code,
+        wasJsonEnvelope: isJsonEnvelope(output),
+        envelope: output,
+      };
+    }
   }
+
+  const output = parseJsonEnvelope(stdout, command);
+  return {
+    ok: output.ok,
+    error_code: output.error?.code ?? null,
+    wasJsonEnvelope: isJsonEnvelope(output),
+    envelope: output,
+  };
+}
+
+async function fixtureCliArgs(command: string, cwd: string): Promise<string[]> {
+  const tokens = tokenizeFixtureCommand(command);
+  const args: string[] = [];
+
+  for (const token of tokens.slice(1)) {
+    args.push(await resolveFixtureToken(cwd, token));
+  }
+
+  return args;
+}
+
+async function resolveFixtureToken(cwd: string, token: string): Promise<string> {
+  if (token.startsWith("current:") || token.includes("=current:")) {
+    return resolveFixtureHash(cwd, token);
+  }
+
+  return unescapeFixtureArgument(token);
+}
+
+function parseJsonEnvelope(stdout: string, command: string): OpenAthorEnvelope {
+  try {
+    const output = JSON.parse(stdout) as unknown;
+    if (!isJsonEnvelope(output)) {
+      throw new Error("missing envelope fields");
+    }
+
+    return output;
+  } catch (error: unknown) {
+    throw new OpenAthorError(
+      "OA_FIXTURE_COMMAND_FAILED",
+      `Command ${command} did not produce a valid JSON envelope: ${String(error)}`,
+      { exitCode: 4 },
+    );
+  }
+}
+
+function isExecErrorWithStdout(error: unknown): error is { stdout: string } {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "stdout" in error &&
+    typeof (error as { stdout?: unknown }).stdout === "string"
+  );
 }
 
 function isJsonEnvelope(value: unknown): value is OpenAthorEnvelope {

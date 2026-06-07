@@ -106,25 +106,7 @@
 - 是否只修改目标范围
 - 是否避免“仿某作家本人”的表述
 
-## Fixture 命名
-
-建议命名：
-
-```text
-fixtures/
-  new-project/
-  adopt-3-chapters/
-  adopt-30-chapters/
-  outline-insert/
-  outline-archive/
-  canon-conflict/
-  revise-local/
-  retrieval-context/
-  style-profile/
-  style-revise/
-```
-
-当前已落地 Slice 1 deterministic fixtures：
+## 已落地 Fixture
 
 ```text
 fixtures/slice-1/
@@ -132,24 +114,56 @@ fixtures/slice-1/
   adopt-3-chapters/
   scattered-drafts/
   adopt-ambiguous-order/
-```
 
-当前已落地跨切片 deterministic fixtures：
+fixtures/slice-2/
+  draft-confirm-write/
+  draft-fill-planned-chapter/
+  draft-planned-title-mismatch/
+  draft-title-fallback/
+  revise-confirm-write/
+  revise-hash-conflict/
+  canon-conflict/
+  canon-sync-diff/
+  multi-agent-review/
 
-```text
+fixtures/slice-3/
+  outline-archive/
+  outline-insert/
+  outline-move/
+  outline-split/
+  outline-merge/
+  outline-merge-confirm/
+  outline-replan/
+  outline-replan-confirm/
+  outline-split-confirm/
+
 fixtures/slice-4/
   adopt-30-chapters/
+  search-text/
+  search-semantic/
+  export-markdown/
+  style-*/
+  asset-*/
+  pi-*/
+  multichapter-asset-sedimentation/
+  character-profile-evolution/
+  split-preserves-asset-links/
+  replan-draft-asset-continuity/
+  summary-drift-detection/
+  manuscript-index-rebuild/
 ```
 
-其中 `adopt-30-chapters` 覆盖较长连载稿的非侵入式接管、30 章索引重建、vector 派生索引、文本/semantic 检索、章节 30 context pack，以及继续第 31 章的 dry-run draft proposal。
-
-后续写作、结构变更、检索和风格相关场景仍需要在 Slice 2+ 落地，并接入 LLM-as-judge 证据包。
+当前 `npm test` 已接入 44 个 deterministic fixture，覆盖 Slice 1/2/3/4 的协议内核、写作闭环、结构编辑、检索、风格、资产沉淀、summary drift 和索引重建。
 
 当前已接入自动化 smoke 的场景：
 
 ```text
 fixtures/slice-2/draft-confirm-write
+fixtures/slice-2/multi-agent-review
 fixtures/slice-3/outline-archive
+fixtures/slice-4/style-guided-writing-loop
+fixtures/slice-4/asset-sync-confirm
+fixtures/slice-4/replan-draft-asset-continuity
 ```
 
-这两个场景会通过 `openathor-judge-smoke` 生成 `openathor.judge_evidence.v1` 证据包，用于验证 judge 输入结构、CLI 命令证据和文件变化摘要。
+这些场景会通过 `openathor-judge-smoke` 生成 `openathor.judge_evidence.v1` 证据包，用于验证 judge 输入结构、CLI 命令证据和文件变化摘要。真实 Pi/Operator transcript 和真实 judge scores 仍作为本地或手动证据附加，不进入必跑 CI。

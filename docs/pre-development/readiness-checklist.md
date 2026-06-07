@@ -67,6 +67,7 @@
 - [x] 多角色审稿包：`openathor review --multi-agent`
 - [x] 改稿 proposal 入口：`openathor revise`
 - [x] canon 同步 pending 入口：`openathor canon sync`
+- [x] 用户确认后写入 confirmed canon：`openathor canon sync --confirm --base-hash --text`
 - [x] 写作后结构化资产沉淀入口：`openathor assets sync`
 - [x] 授权参考文本风格画像 pending 入口：`openathor style analyze`
 - [x] 用户确认后写入下一章新正文：`openathor draft chapter next --confirm-write`
@@ -184,15 +185,15 @@
 
 当前验证证据：
 
-- `npm test` 运行 TypeScript 类型检查、schema 校验、构建和 Slice 1 fixture 回归。
+- `npm test` 运行 TypeScript 类型检查、schema 校验、构建、package/bin smoke、fixture checker 自测、Slice 1/2/3/4 fixture 回归和 judge smoke。
 - `fixtures/slice-1/new-project`
 - `fixtures/slice-1/adopt-3-chapters`
 - `fixtures/slice-1/scattered-drafts`
 - `fixtures/slice-1/adopt-ambiguous-order`
 - `fixtures/slice-4/adopt-30-chapters`
 - `fixtures/slice-4/style-guided-writing-loop`
-- `openathor-fixture-check` 会复制 fixture input、执行 expected commands、校验 JSON envelope、expected files、disallowed writes，并在最终项目上运行 `openathor doctor --json --strict`。
-- `openathor-judge-smoke` 会复用 fixture replay，为已落地写作/结构场景生成 `openathor.judge_evidence.v1` 证据包。
+- `openathor-fixture-check` 会复制 fixture input、通过真实 `openathor` CLI 入口执行 expected commands、校验 JSON envelope、expected files、disallowed writes、每条命令 file changes 与该命令文件级 writes 的双向追溯关系、失败命令无实际写入，并在最终项目上运行 `openathor doctor --json --strict`。
+- `openathor-judge-smoke` 会复用 fixture replay，为已落地写作、结构、多角色审稿、风格、资产同步和重规划场景生成 `openathor.judge_evidence.v1` 证据包。
 - `openathor-judge-smoke --scenario <name> --operator-transcript <path> --agent-final-response <path>` 可以把本地真实 Operator Agent 运行记录和最终回复附加到单个 evidence package。
 
 ### 后续切片准备项

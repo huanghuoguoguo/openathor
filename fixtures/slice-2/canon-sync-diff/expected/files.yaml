@@ -9,4 +9,20 @@ contains:
   bible/canon.pending.md:
     - Canon Sync Proposal
     - 把第一章新增的铜钥匙齿纹线索写入 pending canon
+  bible/canon.md:
+    - Confirmed Canon Sync
+    - 铜钥匙齿纹对应旧案档案柜的机械锁编号。
+file_changes:
+  - path: .openathor/index.sqlite
+    change_type: created
+  - path: .openathor/manuscript.index.yaml
+    change_type: modified
+  - path: bible/canon.md
+    change_type: modified
+  - path: bible/canon.pending.md
+    change_type: modified
+  - path: runs/run_*_canon_sync.json
+    change_type: created
+  - path: runs/run_*_canon_sync_confirmed.json
+    change_type: created
 absent: []

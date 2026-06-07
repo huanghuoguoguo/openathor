@@ -15,6 +15,16 @@ type ChapterProposalOptions = {
   diff?: boolean;
 };
 
+type CanonSyncOptions = {
+  task: string;
+  text?: string;
+  confirm?: boolean;
+  baseHash?: string;
+  json?: boolean;
+  dryRun?: boolean;
+  diff?: boolean;
+};
+
 export function registerWritingCommands(program: Command): void {
   program
     .command("plan")
@@ -111,16 +121,19 @@ export function registerWritingCommands(program: Command): void {
     .command("canon")
     .description("Manage canon proposals.")
     .command("sync")
-    .description("Create a pending canon sync proposal.")
+    .description("Create or confirm a canon sync proposal.")
     .argument("[target]", "optional target chapter id or display order")
     .requiredOption("--task <text>", "canon sync task")
+    .option("--text <text>", "confirmed canon text for --confirm")
+    .option("--confirm", "append confirmed canon text if --base-hash matches")
+    .option("--base-hash <hash>", "expected current bible/canon.md hash")
     .option("--json", "emit JSON")
     .option("--dry-run", "show planned writes without changing files")
     .option("--diff", "preview pending canon proposal without changing files")
     .action(
       async (
         target: string | undefined,
-        options: { task: string; json?: boolean; dryRun?: boolean; diff?: boolean },
+        options: CanonSyncOptions,
       ) => {
         await emitResult(
           "openathor canon sync",
@@ -129,6 +142,9 @@ export function registerWritingCommands(program: Command): void {
             kind: "canon_sync",
             target,
             task: options.task,
+            text: options.text,
+            confirm: options.confirm,
+            baseHash: options.baseHash,
             dryRun: options.dryRun,
             diff: options.diff,
           }),

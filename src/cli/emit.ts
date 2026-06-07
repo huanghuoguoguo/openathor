@@ -7,6 +7,8 @@ export async function emitResult(
   json: boolean | undefined,
   promise: Promise<CommandResult>,
 ): Promise<void> {
+  const emitJson = json || process.argv.includes("--json");
+
   try {
     const result = await promise;
     const output = envelope({
@@ -20,7 +22,7 @@ export async function emitResult(
       data: result.data,
     });
 
-    if (json) {
+    if (emitJson) {
       process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
       return;
     }
@@ -29,7 +31,7 @@ export async function emitResult(
   } catch (error: unknown) {
     const openAthorError = toOpenAthorError(error);
 
-    if (json) {
+    if (emitJson) {
       process.stdout.write(
         `${JSON.stringify(errorEnvelope(command, openAthorError), null, 2)}\n`,
       );

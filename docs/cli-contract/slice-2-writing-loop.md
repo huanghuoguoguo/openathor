@@ -16,7 +16,7 @@ Slice 2 写作闭环让 Pi Agent 在 OpenAthor 项目中执行规划、续写准
 --diff
 ```
 
-默认不修改用户正文，不修改 confirmed canon。
+默认不修改用户正文，不修改 confirmed canon。只有显式 confirmed write 命令会改写用户可见事实源。
 
 `--dry-run` 和 `--diff` 都不得写文件。`--dry-run` 只返回 planned writes；`--diff` 还返回 `data.diff.proposal_text`，用于让 Pi Agent 或用户预览将写入的 proposal/pending 内容。`--diff` 不能和 `--confirm-write` 同时使用。
 
@@ -201,18 +201,33 @@ proposal 模式只写 review proposal。
 
 ### 用途
 
-生成 canon 同步 proposal。默认写入 pending，不直接写 confirmed canon。
+生成 canon 同步 proposal。默认写入 pending；只有用户确认后传入 `--confirm --base-hash --text` 才追加 confirmed canon。
 
 ### 参数
 
 ```bash
 openathor canon sync [target] --task <text> [--json] [--dry-run] [--diff]
+openathor canon sync [target] --task <text> --text <confirmed-canon> --confirm --base-hash <sha256:...> [--json] [--dry-run]
 ```
 
 ### Expected writes
 
+Proposal:
+
 - `runs/run_*.json`
 - `bible/canon.pending.md`
+
+Confirmed write:
+
+- `bible/canon.md`
+- `runs/run_*_canon_sync_confirmed.json`
+
+### 写入安全
+
+- `--diff` 只预览 pending proposal，不落盘。
+- `--confirm` 必须同时提供 `--text` 和当前 `bible/canon.md` 的 `--base-hash`。
+- `--base-hash` 不匹配时返回 `OA_CANON_CHANGED`，且不得写文件。
+- confirmed write 只追加用户确认后的 canon 文本，不自动清空 `bible/canon.pending.md`。
 
 ## 当前限制
 
@@ -221,5 +236,5 @@ openathor canon sync [target] --task <text> [--json] [--dry-run] [--diff]
 - `revise chapter --confirm-write` 只能在 `--base-hash` 匹配时改写目标章节。
 - `--diff` 是 proposal preview，不是语义级 manuscript diff；它用于预览将写入的 proposal/pending 文本。
 - proposal 写入前会拦截确定性 confirmed canon 冲突。
-- `canon sync` 不直接写 `bible/canon.md`。
+- `canon sync --confirm` 的 confirmed text 仍由 Pi/Operator Agent 或用户在 CLI 外部生成；CLI 只做 hash-gated append 和 run evidence。
 - LLM-as-judge 自动评分仍待接入。

@@ -214,7 +214,7 @@ Slice 1 已实现为 TypeScript/Node.js CLI，并纳入 `npm test`。
 - 写入 `runs/run_*.json`。
 - plan/draft 写入 `notes/` proposal。
 - review/revise 写入 `reviews/` proposal。
-- canon sync 只追加到 `bible/canon.pending.md`。
+- 当时 canon sync 只追加到 `bible/canon.pending.md`；当前已补充 `canon sync --confirm --base-hash --text`，用于把用户确认后的 canon 文本 hash-gated 追加到 `bible/canon.md`。
 - 不修改正文，不修改 `bible/canon.md`。
 
 原因：
@@ -355,7 +355,7 @@ Slice 1 已实现为 TypeScript/Node.js CLI，并纳入 `npm test`。
 当前行为：
 
 - 复用 deterministic fixture replay。
-- 覆盖 `fixtures/slice-2/draft-confirm-write` 和 `fixtures/slice-3/outline-archive`。
+- 初始覆盖 `fixtures/slice-2/draft-confirm-write` 和 `fixtures/slice-3/outline-archive`；当前已扩展到 `fixtures/slice-2/multi-agent-review`、`fixtures/slice-4/style-guided-writing-loop`、`fixtures/slice-4/asset-sync-confirm` 和 `fixtures/slice-4/replan-draft-asset-continuity`。
 - 收集 CLI commands、writes、warnings、file changes、user task 和 agent final response。
 - 默认不调用模型，judge 字段为 `needs_review`，明确缺少真实 Operator Agent transcript 和 LLM judge scores。
 - 支持通过 `--scenario <name> --operator-transcript <path> --agent-final-response <path>` 把本地真实 Operator Agent transcript 和最终回复附加到单个 evidence package。

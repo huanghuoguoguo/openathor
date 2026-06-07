@@ -59,7 +59,7 @@ Markdown 中的 canon 条目应包含足够证据，方便用户审查：
 
 ## 同步规则
 
-`openathor canon sync` 默认生成 diff，不直接静默写入 confirmed canon。
+`openathor canon sync` 默认生成 diff 或 pending proposal，不直接静默写入 confirmed canon。只有用户确认 exact canon text，并使用 `--confirm --base-hash --text` 通过 `bible/canon.md` hash gate 后，CLI 才能追加 confirmed canon。
 
 允许自动进入 pending：
 

@@ -106,17 +106,18 @@ openathor export --format markdown
 
 当前限制：
 
-- `plan/draft/review/revise/canon sync` 是 proposal 模式，并支持 `--diff` 预览 proposal/pending 文本且不落盘。
+- `plan/draft/review/revise/canon sync` 默认是 proposal 模式，并支持 `--diff` 预览 proposal/pending 文本且不落盘。
 - `draft/review/revise` proposal 会在 `context_pack.style_guidance` 和顶层 `style_guidance` 暴露 confirmed active style profile、do/avoid 规则、pending profile 排除状态和参考文本不进入上下文的安全标记。
 - `draft chapter next --confirm-write` 支持写入用户确认后的下一章文本；若 outline 中已有可写 planned 章，则填充该 planned 章，否则追加新章。
 - `revise chapter --confirm-write --base-hash` 支持 hash 匹配时确认改写已有章节。
+- `canon sync --confirm --base-hash --text` 支持 hash 匹配时把用户确认后的 canon 文本追加到 `bible/canon.md`，并记录 confirmed run。
 - `context` 暴露 `bible/world.md`、`bible/characters.md`、`bible/timeline.md`、`style/profiles.yaml` 和可执行 `style_guidance`，作为长篇资产沉淀和风格约束入口。
 - proposal 写入前会对 confirmed canon 中的硬约束做确定性冲突拦截，命中时返回 `OA_CANON_CONFLICT` 且不写文件。
 - `review chapter <target> --multi-agent` 已支持生成确定性多角色审稿包，包含 role pack、findings schema、merge policy 和 sub-agent 写入边界；CLI 不调用模型、不调度真实 sub-agent。
 - `style check` 当前是确定性指标和词项扫描，不是 LLM 文风判断；规则扫描只使用 `bible/style.md` 和 confirmed active profile，不把 pending profile 当作写作指导。
 - `style analyze` 当前生成 pending style profile，不生成 confirmed profile，不复制参考文本原文。
 - `style profile apply` 已支持 hash 保护的 confirmed profile 激活；`style revise` 已支持 proposal、diff 和 `--confirm-write --base-hash` 安全写入，但修订正文仍由 Pi/Operator Agent 或用户在 CLI 外部生成，CLI 不调用模型。
-- CLI 不调用模型，不覆盖已有正文，不直接修改 confirmed canon。
+- CLI 不调用模型，不覆盖已有正文；confirmed canon 只能在用户确认、提供 confirmed text 且 `bible/canon.md` hash 匹配时修改。
 - 真实 LLM judge scores attachment 已支持；更完整的真实 Pi Agent 场景集仍待扩展。
 
 ### Slice 3: Structural Editing
