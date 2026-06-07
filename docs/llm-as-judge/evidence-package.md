@@ -14,6 +14,22 @@ npm run test:judge:smoke
 
 该命令执行内置 smoke 场景，生成并校验 judge evidence package 的结构，但默认不写文件、不调用模型。
 
+Manual E2E evidence 复放入口：
+
+```bash
+npm run test:e2e:evidence
+```
+
+该命令读取 `evals/manual/e2e-evidence-manifest.json`，把已保存的 operator transcript、agent final response 和 judge scores 附加到指定 smoke 场景，重新运行 deterministic fixture replay，并校验：
+
+- evidence package 场景名与 manifest 绑定一致
+- transcript 明确声明同一场景
+- final response 来自指定附件
+- judge verdict 为 `pass` 且 `missing_evidence` 为空
+- manifest 声明的关键命令、文件证据和预期失败错误码都出现在 deterministic evidence 中
+
+该入口不调用外部模型。`judge_model` 可以是手动 QA 标识，例如 `manual-qa/deterministic-review-v1`；只有真实模型评分文件才应写真实模型名。
+
 需要保存证据包时使用：
 
 ```bash
@@ -109,6 +125,11 @@ openathor.judge_evidence.v1
 如果通过 `--operator-transcript` 附加了真实运行记录，`real_operator_agent_transcript` 会从 `missing_evidence` 中移除；如果通过 `--judge-scores` 附加了真实 judge 分数，`llm_judge_scores` 会从 `missing_evidence` 中移除。
 
 这表示 smoke 已证明证据格式、deterministic replay、本地 transcript attachment 和本地 judge score attachment 可用。真实 Operator Agent transcript 和真实 judge 分数不进入必跑 CI，只作为本地或手动评估证据保存。
+
+当前纳入 manual E2E evidence 复放的场景：
+
+- `draft-confirm-write`
+- `asset-sync-confirm`
 
 ## 真实 Pi Agent 接入方式
 

@@ -1,0 +1,1 @@
+已完成资产沉淀验证：第二章正文已确认写入，资产同步 proposal 已先展示，错误的 `bible/characters.md` hash 被拒绝且未写入文件；使用当前 hash 后，人物、时间线、伏笔和 `outline/chapters.yaml` 链接均已写入。后续 `assets audit`、`context chapter 2`、`doctor` 和 `index rebuild` 均通过，未发现 unresolved links、character link drift 或 summary drift。

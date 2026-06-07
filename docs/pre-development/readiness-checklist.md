@@ -185,7 +185,7 @@
 
 当前验证证据：
 
-- `npm test` 运行 TypeScript 类型检查、schema 校验、构建、package/bin smoke、fixture checker 自测、Slice 1/2/3/4 fixture 回归和 judge smoke。
+- `npm test` 运行 TypeScript 类型检查、schema 校验、构建、package/bin smoke、fixture checker 自测、manual E2E evidence 复放、Slice 1/2/3/4 fixture 回归和 judge smoke。
 - `fixtures/slice-1/new-project`
 - `fixtures/slice-1/adopt-3-chapters`
 - `fixtures/slice-1/scattered-drafts`
@@ -194,6 +194,7 @@
 - `fixtures/slice-4/style-guided-writing-loop`
 - `openathor-fixture-check` 会复制 fixture input、通过真实 `openathor` CLI 入口执行 expected commands、校验 JSON envelope、expected files、disallowed writes、每条命令 file changes 与该命令文件级 writes 的双向追溯关系、失败命令无实际写入，并在最终项目上运行 `openathor doctor --json --strict`。
 - `openathor-judge-smoke` 会复用 fixture replay，为已落地写作、结构、多角色审稿、风格、资产同步和重规划场景生成 `openathor.judge_evidence.v1` 证据包。
+- `test:e2e:evidence` 会复放 `draft-confirm-write` 和 `asset-sync-confirm` 的 manual E2E evidence，确认 transcript、final response、judge scores 与 deterministic replay 绑定一致。
 - `openathor-judge-smoke --scenario <name> --operator-transcript <path> --agent-final-response <path>` 可以把本地真实 Operator Agent 运行记录和最终回复附加到单个 evidence package。
 
 ### 后续切片准备项

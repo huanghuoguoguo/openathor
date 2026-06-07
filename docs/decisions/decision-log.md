@@ -368,6 +368,34 @@ Slice 1 已实现为 TypeScript/Node.js CLI，并纳入 `npm test`。
 后续：
 
 - 将 LLM judge scores 和 blocking failures 保存为本地/手动评估证据。
+
+## 2026-06-08: Manual E2E evidence replay 纳入测试门禁
+
+为避免手动 transcript、最终回复和 judge scores 与 deterministic fixture 脱节，新增 manual E2E evidence manifest 和复放测试入口。
+
+已实现：
+
+- `evals/manual/e2e-evidence-manifest.json`
+- `npm run test:e2e:evidence`
+- `scripts/test-e2e-evidence.mjs`
+
+当前行为：
+
+- 不新增产品功能和 CLI 形态。
+- 不调用外部模型、外部 API key 或真实 Pi runtime。
+- 对 manifest 中登记的场景重新运行 `openathor-judge-smoke` deterministic replay。
+- 校验 transcript、agent final response、judge scores 与指定 scenario 绑定一致。
+- 校验 manifest 声明的关键命令、文件证据和预期失败错误码出现在 evidence package 中。
+- 当前覆盖 `draft-confirm-write` 和 `asset-sync-confirm`。
+
+验证：
+
+- `npm run test:e2e:evidence`
+- `npm test`
+
+后续：
+
+- 继续扩展真实 Pi/Operator transcript 场景集，但不得让依赖网络、外部 key 或模型输出的步骤进入必跑 CI。
 - 保持真实 Pi Agent transcript attachment 为本地/手动评估流程，不进入必跑 CI。
 
 ## 2026-06-05: 真实 Pi Agent 和 LLM Judge 不进入必跑 CI

@@ -125,7 +125,7 @@ fixtures/slice-1/
   adopt-ambiguous-order/
 ```
 
-当前自动化覆盖已经扩展到 Slice 1/2/3/4，并通过 `npm test` 统一运行 44 个 deterministic fixture。
+当前自动化覆盖已经扩展到 Slice 1/2/3/4，并通过 `npm test` 统一运行 44 个 deterministic fixture。`npm test` 还会复放 `evals/manual/e2e-evidence-manifest.json` 中登记的 manual E2E evidence，确认保存的 transcript、最终回复和 judge scores 能绑定到正确场景并重新跑通 deterministic replay。
 
 测试侧入口：
 
