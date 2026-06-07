@@ -50,10 +50,10 @@ const REVIEW_ROLES: ReviewRoleDefinition[] = [
       "return source paths for every important claim",
     ],
     required_sources: [
-      "context_pack.manuscript",
-      "context_pack.confirmed_canon",
-      "context_pack.notes",
-      "context_pack.outline",
+      "manuscript",
+      "canon.confirmed",
+      "notes",
+      "outline",
     ],
     must_not: [
       "judge prose quality",
@@ -71,10 +71,10 @@ const REVIEW_ROLES: ReviewRoleDefinition[] = [
       "mark uncertain model inference as questions instead of facts",
     ],
     required_sources: [
-      "context_pack.confirmed_canon",
-      "context_pack.characters",
-      "context_pack.timeline",
-      "context_pack.manuscript",
+      "canon.confirmed",
+      "assets.characters",
+      "assets.timeline",
+      "manuscript",
     ],
     must_not: [
       "treat pending canon as confirmed",
@@ -92,9 +92,9 @@ const REVIEW_ROLES: ReviewRoleDefinition[] = [
       "keep suggestions local unless the task asks for replan",
     ],
     required_sources: [
-      "context_pack.outline",
-      "context_pack.manuscript",
-      "context_pack.notes",
+      "outline",
+      "manuscript",
+      "notes",
     ],
     must_not: [
       "move or archive chapters",
@@ -113,8 +113,8 @@ const REVIEW_ROLES: ReviewRoleDefinition[] = [
     ],
     required_sources: [
       "context_pack.style_guidance",
-      "context_pack.style",
-      "context_pack.manuscript",
+      "style",
+      "manuscript",
     ],
     must_not: [
       "use pending style profiles as guidance",
@@ -132,9 +132,9 @@ const REVIEW_ROLES: ReviewRoleDefinition[] = [
       "ground each issue in the chapter text",
     ],
     required_sources: [
-      "context_pack.manuscript",
-      "context_pack.outline",
-      "context_pack.notes",
+      "manuscript",
+      "outline",
+      "notes",
     ],
     must_not: [
       "optimize for personal taste without evidence",

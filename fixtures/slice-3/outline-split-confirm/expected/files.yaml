@@ -10,3 +10,50 @@ required:
 absent:
   - manuscript/chapter-001.md
   - manuscript/chapter-002.md
+file_changes:
+  - path: .openathor/import-report.md
+    change_type: created
+  - path: .openathor/index.sqlite
+    change_type: created
+  - path: .openathor/manuscript.index.yaml
+    change_type: created
+  - path: bible/canon.md
+    change_type: created
+  - path: bible/canon.pending.md
+    change_type: created
+  - path: bible/characters.md
+    change_type: created
+  - path: bible/premise.md
+    change_type: created
+  - path: bible/style.md
+    change_type: created
+  - path: bible/timeline.md
+    change_type: created
+  - path: bible/world.md
+    change_type: created
+  - path: notes/hooks.md
+    change_type: created
+  - path: notes/import-questions.md
+    change_type: created
+  - path: notes/unresolved.md
+    change_type: created
+  - path: openathor.yaml
+    change_type: created
+  - path: outline/chapters.yaml
+    change_type: created
+  - path: outline/scenes.yaml
+    change_type: created
+  - path: outline/volumes.yaml
+    change_type: created
+  - path: runs/run_*.json
+    change_type: created
+  - path: runs/run_*_outline_split.json
+    change_type: created
+  - path: style/profiles.yaml
+    change_type: created
+  - path: style/references.yaml
+    change_type: created
+  - path: 正文/001-雨夜-split-002-ch_002.md
+    change_type: created
+  - path: 正文/001-雨夜.md
+    change_type: modified

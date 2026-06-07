@@ -1,15 +1,18 @@
 import path from "node:path";
 import { resolveContextChapter } from "./chapter-target.js";
+import { detectCanonConflicts } from "./canon-conflict.js";
 import type { EnvelopeWarning } from "./envelope.js";
 import { OpenAthorError } from "./errors.js";
 import { normalizeManuscriptTextInput } from "./manuscript-text.js";
 import { sha256File } from "./paths.js";
 import {
+  appendText,
   pathExists,
   writeText,
   writeYaml,
 } from "./project-files.js";
 import { inspectProject } from "./project-inspection.js";
+import { runContext } from "./context-commands.js";
 import { runStamp } from "./run-stamp.js";
 import { ensureTrailingNewline } from "./text-format.js";
 import {
@@ -21,6 +24,7 @@ import {
   confirmedRevisionResultData,
   confirmedRevisionRunRecord,
   confirmedRevisionUpdates,
+  type WritingTarget,
 } from "./writing-operations.js";
 import type {
   CommandResult,
@@ -33,6 +37,10 @@ export async function runConfirmedWriting(
   task: string,
   dryRun: boolean,
 ): Promise<CommandResult> {
+  if (options.kind === "canon_sync") {
+    return runConfirmedCanonSync(options, projectRoot, task, dryRun);
+  }
+
   if (options.kind === "revise") {
     return runConfirmedRevision(options, projectRoot, task, dryRun);
   }
@@ -40,7 +48,7 @@ export async function runConfirmedWriting(
   if (options.kind !== "draft") {
     throw new OpenAthorError(
       "OA_CONFIRMED_WRITE_UNSUPPORTED",
-      "Confirmed writes are currently supported only for draft chapter next and revise chapter.",
+      "Confirmed writes are currently supported only for draft chapter next, revise chapter, and canon sync.",
       { exitCode: 2 },
     );
   }
@@ -119,6 +127,134 @@ export async function runConfirmedWriting(
       task,
       plan,
       contentHash: writtenContentHash,
+    }),
+  };
+}
+
+async function runConfirmedCanonSync(
+  options: WritingProposalOptions,
+  projectRoot: string,
+  task: string,
+  dryRun: boolean,
+): Promise<CommandResult> {
+  const normalizedText = normalizeOptionalManuscriptText(options.text);
+  if (!normalizedText) {
+    throw new OpenAthorError(
+      "OA_CANON_TEXT_REQUIRED",
+      "Confirmed canon sync writes require --text <confirmed canon text>.",
+      { exitCode: 2 },
+    );
+  }
+
+  if (!options.baseHash) {
+    throw new OpenAthorError(
+      "OA_BASE_HASH_REQUIRED",
+      "Confirmed canon sync writes require --base-hash <sha256:...> for bible/canon.md.",
+      { exitCode: 2 },
+    );
+  }
+
+  const context = await runContext({
+    cwd: projectRoot,
+    scope: options.target ? "chapter" : "project",
+    target: options.target,
+  });
+  const conflicts = detectCanonConflicts(context.data, normalizedText.text);
+
+  if (conflicts.length > 0) {
+    throw new OpenAthorError(
+      "OA_CANON_CONFLICT",
+      `Confirmed canon text conflicts with ${conflicts.length} confirmed canon rule(s).`,
+      {
+        exitCode: 4,
+        hints: conflicts.map((conflict) =>
+          `${conflict.source}: ${conflict.statement}`,
+        ),
+      },
+    );
+  }
+
+  const canonRelPath = "bible/canon.md";
+  const canonPath = path.join(projectRoot, canonRelPath);
+  const currentHash = await sha256File(canonPath);
+
+  if (currentHash !== options.baseHash) {
+    throw new OpenAthorError(
+      "OA_CANON_CHANGED",
+      "Refusing to sync confirmed canon because bible/canon.md changed.",
+      {
+        exitCode: 3,
+        hints: [
+          `Expected ${options.baseHash}.`,
+          `Current ${currentHash}.`,
+          "Regenerate canon sync context and ask the user to confirm the latest canon.",
+        ],
+      },
+    );
+  }
+
+  const target = contextTarget(context.data);
+  const stamp = runStamp();
+  const runRelPath = `runs/run_${stamp}_canon_sync_confirmed.json`;
+  const writes = [
+    {
+      path: canonRelPath,
+      change_type: "modified" as const,
+      reason: "confirmed_canon_sync",
+    },
+    {
+      path: runRelPath,
+      change_type: "created" as const,
+      reason: "confirmed_canon_sync_run_record",
+    },
+  ];
+  let contentHash: string | null = null;
+
+  if (!dryRun) {
+    await appendText(
+      projectRoot,
+      canonRelPath,
+      confirmedCanonEntryText({
+        stamp,
+        target,
+        text: normalizedText.text,
+      }),
+    );
+    contentHash = await sha256File(canonPath);
+    await writeYaml(
+      projectRoot,
+      runRelPath,
+      confirmedCanonRunRecord({
+        task,
+        text: normalizedText.text,
+        target,
+        baseHash: options.baseHash,
+        contentHash,
+        sources: context.sources ?? [],
+        writes,
+        createdAt: new Date().toISOString(),
+      }),
+    );
+  }
+
+  return {
+    projectRoot,
+    projectId: context.projectId,
+    sources: context.sources,
+    writes: dryRun ? [] : writes,
+    warnings: confirmedWritingTextWarnings(
+      context.warnings ?? [],
+      normalizedText.convertedEscapedNewlines,
+    ),
+    data: confirmedCanonResultData({
+      dryRun,
+      task,
+      text: normalizedText.text,
+      target,
+      baseHash: options.baseHash,
+      contentHash,
+      runRelPath,
+      writes,
     }),
   };
 }
@@ -233,6 +369,97 @@ function normalizeOptionalManuscriptText(
 
   const normalized = normalizeManuscriptTextInput(text);
   return normalized.text.trim() ? normalized : null;
+}
+
+function contextTarget(data: unknown): WritingTarget | null {
+  const contextPack =
+    typeof data === "object" &&
+    data !== null &&
+    "context_pack" in data &&
+    typeof (data as { context_pack?: unknown }).context_pack === "object" &&
+    (data as { context_pack?: unknown }).context_pack !== null
+      ? (data as { context_pack: { target?: unknown } }).context_pack
+      : null;
+  const target = contextPack?.target;
+
+  return typeof target === "object" && target !== null
+    ? (target as WritingTarget)
+    : null;
+}
+
+function confirmedCanonEntryText(input: {
+  stamp: string;
+  target: WritingTarget | null;
+  text: string;
+}): string {
+  return [
+    "",
+    `## canon_${input.stamp}: Confirmed Canon Sync`,
+    "",
+    "- status: confirmed",
+    `- source_ref: ${input.target?.id ?? "project"}`,
+    `- source: ${input.target?.source_path ?? "context"}`,
+    "",
+    input.text.trim(),
+    "",
+  ].join("\n");
+}
+
+function confirmedCanonRunRecord(input: {
+  task: string;
+  text: string;
+  target: WritingTarget | null;
+  baseHash: string;
+  contentHash: string;
+  sources: NonNullable<CommandResult["sources"]>;
+  writes: NonNullable<CommandResult["writes"]>;
+  createdAt: string;
+}): Record<string, unknown> {
+  return {
+    agent_role: "openathor-cli",
+    command: "openathor canon sync",
+    created_at: input.createdAt,
+    task: input.task,
+    mode: "confirmed_write",
+    target: input.target,
+    confirmed_text: input.text,
+    base_hash: input.baseHash,
+    source_hash: input.contentHash,
+    writes: input.writes,
+    sources: input.sources,
+    user_confirmation_required: false,
+  };
+}
+
+function confirmedCanonResultData(input: {
+  dryRun: boolean;
+  task: string;
+  text: string;
+  target: WritingTarget | null;
+  baseHash: string;
+  contentHash: string | null;
+  runRelPath: string;
+  writes: NonNullable<CommandResult["writes"]>;
+}): Record<string, unknown> {
+  return {
+    dry_run: input.dryRun,
+    mode: "confirmed_write",
+    command: "openathor canon sync",
+    task: input.task,
+    target: input.target,
+    confirmed_text: input.text,
+    canon_path: "bible/canon.md",
+    base_hash: input.baseHash,
+    source_hash: input.contentHash,
+    planned_writes: input.dryRun ? input.writes : [],
+    run_path: input.runRelPath,
+    result: {
+      applied: !input.dryRun,
+      canon_modified: !input.dryRun,
+      pending_canon_modified: false,
+    },
+    user_confirmation_required: false,
+  };
 }
 
 function confirmedDraftWarnings(

@@ -27,4 +27,4 @@ deterministic checks
 
 LLM judge 只判断高层质量和用户体验，不替代 schema 校验、文件 diff 校验、索引一致性检查和 CLI 错误检查。
 
-当前已落地 `openathor-judge-smoke` 自动化入口。第一版 smoke 生成并校验 judge evidence package，覆盖确认写入正文和归档章节两个场景；本地真实 Pi/Operator Agent transcript、最终回复和真实 LLM judge scores 可以附加到单个 evidence package。真实 Pi 和 judge 模型不进入 CI，只作为本地或手动证据保存。
+当前已落地 `openathor-judge-smoke` 自动化入口。smoke 生成并校验 judge evidence package，覆盖确认写入正文、归档章节、多角色审稿、风格写作闭环、资产同步和重规划后资产连续性；本地真实 Pi/Operator Agent transcript、最终回复和真实 LLM judge scores 可以附加到单个 evidence package。真实 Pi 和 judge 模型不进入 CI，只作为本地或手动证据保存。

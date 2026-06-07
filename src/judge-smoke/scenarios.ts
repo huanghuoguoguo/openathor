@@ -46,6 +46,71 @@ const defaultScenarios: SmokeScenario[] = [
       "user_experience",
     ],
   },
+  {
+    name: "multi-agent-review",
+    fixture: "fixtures/slice-2/multi-agent-review",
+    user_task:
+      "用户要求从连续性、结构、风格和读者体验角度对章节做多角色审稿。",
+    expected_agent_reply:
+      "生成多角色审稿包，说明各角色关注点、合并策略和 sub-agent 不得直接写正文或 confirmed canon。",
+    judge_focus: [
+      "task_success",
+      "safety",
+      "canon_consistency",
+      "context_use",
+      "change_control",
+      "user_experience",
+    ],
+  },
+  {
+    name: "style-guided-writing-loop",
+    fixture: "fixtures/slice-4/style-guided-writing-loop",
+    user_task:
+      "用户要求基于已确认风格画像进行续写、审稿和改稿 proposal，同时排除未确认 pending profile。",
+    expected_agent_reply:
+      "使用 confirmed active style guidance 生成 proposal，并明确 pending profile 不作为写作指导。",
+    judge_focus: [
+      "task_success",
+      "safety",
+      "context_use",
+      "change_control",
+      "user_experience",
+      "writing_fit",
+    ],
+  },
+  {
+    name: "asset-sync-confirm",
+    fixture: "fixtures/slice-4/asset-sync-confirm",
+    user_task:
+      "用户确认写入新章后，要求把人物、时间线、伏笔和 outline links 沉淀为可审计资产。",
+    expected_agent_reply:
+      "先生成资产同步 proposal，再在 hash 校验通过后确认写入，并说明资产审计结果。",
+    judge_focus: [
+      "task_success",
+      "safety",
+      "canon_consistency",
+      "context_use",
+      "change_control",
+      "user_experience",
+    ],
+  },
+  {
+    name: "replan-draft-asset-continuity",
+    fixture: "fixtures/slice-4/replan-draft-asset-continuity",
+    user_task:
+      "用户重规划 planned future 章节后继续写作，并要求后续章节资产持续承接。",
+    expected_agent_reply:
+      "确认重规划只影响 planned future 章节，随后按新计划写入章节并同步资产，保留可追溯证据。",
+    judge_focus: [
+      "task_success",
+      "safety",
+      "canon_consistency",
+      "context_use",
+      "change_control",
+      "user_experience",
+      "writing_fit",
+    ],
+  },
 ];
 
 export function selectScenarios(name: string | undefined): SmokeScenario[] {

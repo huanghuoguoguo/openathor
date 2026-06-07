@@ -13,7 +13,7 @@
 1. [Command Index](cli-contract/command-index.md)：目标命令面和实现切片
 2. [Slice 1 Protocol Kernel](cli-contract/slice-1-protocol-kernel.md)：首个实现切片的命令级合约
 3. [Slice 2 Context](cli-contract/slice-2-context.md)：写作闭环的只读上下文包合约
-4. [Slice 2 Writing Loop](cli-contract/slice-2-writing-loop.md)：规划、续写准备、审稿、改稿和 canon sync proposal 合约
+4. [Slice 2 Writing Loop](cli-contract/slice-2-writing-loop.md)：规划、续写准备、审稿、改稿、canon sync proposal 和 confirmed canon 写入合约
 5. [Slice 3 Structural Editing](cli-contract/slice-3-structural-editing.md)：结构查看、影响分析和安全归档合约
 6. [Style Guidance CLI](cli-contract/style-guidance.md)：风格 profile 读取和确定性 style check 合约
 7. [Slice 4 Search](cli-contract/slice-4-search.md)：确定性文本检索合约

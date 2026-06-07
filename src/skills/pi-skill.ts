@@ -108,6 +108,14 @@ Confirmed revision is allowed only with a fresh source hash:
 openathor revise chapter <id-or-order> --task "<task>" --text "<manuscript>" --base-hash "sha256:..." --confirm-write --json
 \`\`\`
 
+Confirmed canon sync is allowed only after the user approves the exact canon text and the current confirmed canon hash is fresh:
+
+\`\`\`bash
+openathor canon sync <id-or-order> --task "<task>" --text "<confirmed canon>" --confirm --base-hash "sha256:..." --json
+\`\`\`
+
+Do not pass the user task itself as confirmed canon. Use \`--text\` only for the final fact text the user has approved.
+
 Confirmed style revision is allowed only with revised prose generated outside the CLI and a fresh source hash:
 
 \`\`\`bash
@@ -220,6 +228,7 @@ Never physically delete, move, or rename manuscript files for an archive request
 
 - Confirmed canon belongs in \`bible/canon.md\`.
 - Unverified inference belongs in \`bible/canon.pending.md\` or questions.
+- Use \`openathor canon sync ... --confirm --base-hash --text\` only after explicit user approval of the exact confirmed canon text.
 - New or changed longform assets should be persisted through \`openathor assets sync\`: proposal first, confirmed write only with user approval, a matching chapter hash, and matching asset source hashes from the proposal.
 - Adopted longform projects with confirmed characters but missing old chapter links may use \`openathor assets link-backfill characters\`: proposal first, confirmed write only with user approval and a matching outline hash.
 - Confirmed asset sync may update existing confirmed character, timeline, and hook files from a structured package; report those writes explicitly.

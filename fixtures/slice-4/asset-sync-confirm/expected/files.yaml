@@ -11,3 +11,52 @@ required:
   - .openathor/manuscript.index.yaml
   - .openathor/index.sqlite
 absent: []
+file_changes:
+  - path: .openathor/import-report.md
+    change_type: created
+  - path: .openathor/index.sqlite
+    change_type: created
+  - path: .openathor/manuscript.index.yaml
+    change_type: created
+  - path: bible/canon.md
+    change_type: created
+  - path: bible/canon.pending.md
+    change_type: created
+  - path: bible/characters.md
+    change_type: created
+  - path: bible/premise.md
+    change_type: created
+  - path: bible/style.md
+    change_type: created
+  - path: bible/timeline.md
+    change_type: created
+  - path: bible/world.md
+    change_type: created
+  - path: manuscript/chapter-002.md
+    change_type: created
+  - path: notes/hooks.md
+    change_type: created
+  - path: notes/import-questions.md
+    change_type: created
+  - path: notes/unresolved.md
+    change_type: created
+  - path: openathor.yaml
+    change_type: created
+  - path: outline/chapters.yaml
+    change_type: created
+  - path: outline/scenes.yaml
+    change_type: created
+  - path: outline/volumes.yaml
+    change_type: created
+  - path: runs/run_*.json
+    change_type: created
+  - path: runs/run_*_assets_sync.json
+    change_type: created
+  - path: runs/run_*_draft_confirmed.json
+    change_type: created
+  - path: runs/run_*_assets_sync.json
+    change_type: created
+  - path: style/profiles.yaml
+    change_type: created
+  - path: style/references.yaml
+    change_type: created

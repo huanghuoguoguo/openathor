@@ -31,7 +31,7 @@ YAML 文件通过解析成 JSON-compatible object 后按 schema 校验。
 
 ## Fixture 目录
 
-Slice 1 fixtures 放在：
+初始 Slice 1 fixtures 放在：
 
 ```text
 fixtures/slice-1/
@@ -40,6 +40,16 @@ fixtures/slice-1/
   scattered-drafts/
   adopt-ambiguous-order/
 ```
+
+当前 deterministic fixture 已扩展到：
+
+```text
+fixtures/slice-2/
+fixtures/slice-3/
+fixtures/slice-4/
+```
+
+这些跨切片 fixture 覆盖写作闭环、结构编辑、检索、风格、资产沉淀、summary drift 和索引重建，并由 `npm test` 统一运行。
 
 每个 fixture 使用：
 
@@ -126,10 +136,14 @@ openathor-fixture-check fixtures/slice-1/adopt-3-chapters
 它应执行：
 
 - fixture input 复制到临时目录
-- 按 `expected/commands.yaml` 运行 CLI
+- 按 `expected/commands.yaml` 通过真实 `openathor` CLI 入口运行命令
 - 校验 JSON envelope
 - 校验 expected files
 - 校验 disallowed writes
+- 校验每条命令的实际 file changes 与同一条命令 envelope 的文件级 `writes` 双向匹配：实际变更不能漏报，报告的文件级写入也必须有可证明的实际内容变化
+- 校验失败命令默认没有实际文件变化
+- 如 fixture 声明 `expected/files.yaml` 的 `file_changes`，校验实际 file changes 与声明完全匹配
+- 如 fixture 声明 `expected/commands.yaml` 的 `expect_writes`，校验命令 envelope 报告了指定 path、change type 和 reason
 - 运行 `openathor doctor --json --strict`
 
 当前已整合到常规 test runner：

@@ -17,4 +17,43 @@ required:
   - .openathor/manuscript.index.yaml
   - .openathor/index.sqlite
   - exports/replan-draft-asset-continuity.md
+file_changes:
+  - path: .openathor/index.sqlite
+    change_type: created
+  - path: .openathor/manuscript.index.yaml
+    change_type: modified
+  - path: .openathor/vector/index.json
+    change_type: created
+  - path: bible/canon.pending.md
+    change_type: modified
+  - path: bible/characters.md
+    change_type: modified
+  - path: bible/timeline.md
+    change_type: modified
+  - path: exports/replan-draft-asset-continuity.md
+    change_type: created
+  - path: manuscript/chapter-004.md
+    change_type: created
+  - path: manuscript/chapter-005.md
+    change_type: created
+  - path: notes/hooks.md
+    change_type: modified
+  - path: outline/chapters.yaml
+    change_type: modified
+  - path: runs/run_*_outline_insert.json
+    change_type: created
+  - path: runs/run_*_outline_insert.json
+    change_type: created
+  - path: runs/run_*_outline_replan.json
+    change_type: created
+  - path: runs/run_*_draft_confirmed.json
+    change_type: created
+  - path: runs/run_*_assets_sync.json
+    change_type: created
+  - path: runs/run_*_draft_confirmed.json
+    change_type: created
+  - path: runs/run_*_assets_sync.json
+    change_type: created
+  - path: runs/run_*_assets_sync.json
+    change_type: created
 absent: []

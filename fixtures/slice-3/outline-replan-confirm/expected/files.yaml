@@ -9,3 +9,12 @@ required:
 absent:
   - manuscript/chapter-003.md
   - manuscript/chapter-004.md
+file_changes:
+  - path: .openathor/index.sqlite
+    change_type: created
+  - path: .openathor/manuscript.index.yaml
+    change_type: modified
+  - path: outline/chapters.yaml
+    change_type: modified
+  - path: runs/run_*_outline_replan.json
+    change_type: created

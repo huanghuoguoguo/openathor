@@ -3,6 +3,14 @@ commands:
     ok: true
   - run: openathor skill install pi --json
     ok: true
+  - run: openathor does-not-exist --json
+    ok: false
+    error_code: OA_COMMAND_NOT_IMPLEMENTED
+    expect_no_writes: true
+  - run: openathor --json does-not-exist
+    ok: false
+    error_code: OA_COMMAND_NOT_IMPLEMENTED
+    expect_no_writes: true
   - run: openathor doctor --json
     ok: true
   - run: openathor index rebuild --json

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { Command } from "commander";
+import { realpath } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { envelope, errorEnvelope } from "./protocol/envelope.js";
 import { OpenAthorError } from "./protocol/errors.js";
 import { readJudgeEvidencePackage } from "./judge-smoke/evidence.js";
@@ -75,7 +76,7 @@ program
     },
   );
 
-if (isDirectRun()) {
+if (await isDirectRun()) {
   program.parseAsync(process.argv).catch((error: unknown) => {
     emitJudgeSmokeError("openathor-judge-smoke", error, false);
   });
@@ -101,10 +102,21 @@ function emitJudgeSmokeError(command: string, error: unknown, json: boolean): vo
   process.exitCode = openAthorError.exitCode;
 }
 
-function isDirectRun(): boolean {
-  return Boolean(
-    process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href,
-  );
+async function isDirectRun(): Promise<boolean> {
+  if (!process.argv[1]) {
+    return false;
+  }
+
+  try {
+    const [argvPath, modulePath] = await Promise.all([
+      realpath(process.argv[1]),
+      realpath(fileURLToPath(import.meta.url)),
+    ]);
+
+    return argvPath === modulePath;
+  } catch {
+    return false;
+  }
 }
 
 export { readJudgeEvidencePackage, runJudgeSmoke };

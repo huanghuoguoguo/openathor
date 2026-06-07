@@ -18,7 +18,7 @@
 4. [CLI Contract](cli-contract.md)：Pi Agent 调用 OpenAthor 的稳定 CLI 合约
 5. [Decisions](decisions.md)：产品、架构和实现切片决策
 6. [LLM-as-Judge Evaluation](llm-as-judge.md)：agent QA、场景回归和 judge 评分体系
-7. [Development Workflow](development-workflow.md)：GitHub issue、PR、CI 和 main 分支保护流程
+7. [Development Workflow](development-workflow.md)：GitHub issue、PR、CI、core-first 交付方法和 main 分支保护流程
 
 ## 文档组织约定
 

@@ -40,6 +40,7 @@ export async function runWritingProposal(
   const diff = options.diff ?? false;
   const task = options.task?.trim();
   const reviewRoleIds = normalizeReviewRoleIds(options);
+  const confirmedWrite = options.confirmWrite || options.confirm;
 
   if (!task) {
     throw new OpenAthorError(
@@ -49,15 +50,15 @@ export async function runWritingProposal(
     );
   }
 
-  if (options.confirmWrite && diff) {
+  if (confirmedWrite && diff) {
     throw new OpenAthorError(
       "OA_DIFF_CONFIRM_CONFLICT",
-      "--diff cannot be combined with --confirm-write.",
+      "--diff cannot be combined with confirmed write options.",
       { exitCode: 2 },
     );
   }
 
-  if (options.confirmWrite) {
+  if (confirmedWrite) {
     return runConfirmedWriting(options, projectRoot, task, dryRun);
   }
 

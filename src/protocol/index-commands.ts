@@ -15,6 +15,7 @@ import {
   writeText,
   writeYaml,
 } from "./project-files.js";
+import { sha256File } from "./paths.js";
 import type {
   CommandResult,
   IndexRebuildOptions,
@@ -36,29 +37,22 @@ export async function runIndexRebuild(
   const sqlitePath = path.join(projectRoot, sqliteRel);
   const vectorRel = path.posix.join(initialInspection.config.paths.vector_index, "index.json");
   const vectorPath = path.join(projectRoot, vectorRel);
-  const writes: EnvelopeWrite[] = [
-    {
-      path: manuscriptIndexRel,
-      change_type: (await pathExists(path.join(projectRoot, manuscriptIndexRel)))
-        ? "replaced"
-        : "created",
-      reason: "manuscript_index_rebuild",
-    },
-    {
-      path: sqliteRel,
-      change_type: (await pathExists(sqlitePath)) ? "replaced" : "created",
-      reason: "derived_index_rebuild",
-    },
+  const manuscriptIndexPath = path.join(projectRoot, manuscriptIndexRel);
+  const plannedWrites: EnvelopeWrite[] = [
+    plannedWrite(
+      manuscriptIndexRel,
+      await pathExists(manuscriptIndexPath),
+      "manuscript_index_rebuild",
+    ),
+    plannedWrite(sqliteRel, await pathExists(sqlitePath), "derived_index_rebuild"),
   ];
-
   if (options.vector) {
-    writes.push({
-      path: vectorRel,
-      change_type: (await pathExists(vectorPath)) ? "replaced" : "created",
-      reason: "derived_vector_index_rebuild",
-    });
+    plannedWrites.push(
+      plannedWrite(vectorRel, await pathExists(vectorPath), "derived_vector_index_rebuild"),
+    );
   }
 
+  const beforeHashes = await hashWriteTargets(projectRoot, plannedWrites);
   const inspection = await inspectionWithManuscriptIndex(
     projectRoot,
     initialInspection,
@@ -77,6 +71,9 @@ export async function runIndexRebuild(
     }
   }
 
+  const writes = dryRun
+    ? []
+    : await actualWritesFromHashes(projectRoot, plannedWrites, beforeHashes);
   const resultInspection = dryRun
     ? inspection
     : await inspectProject(projectRoot, { includeIndexWarning: false });
@@ -85,10 +82,10 @@ export async function runIndexRebuild(
     projectRoot,
     projectId: resultInspection.config.project.id,
     sources: resultInspection.sources,
-    writes: dryRun ? [] : writes,
+    writes,
     data: {
       dry_run: dryRun,
-      planned_writes: dryRun ? writes : [],
+      planned_writes: dryRun ? plannedWrites : [],
       chapters_indexed: resultInspection.manuscriptIndex.chapters.length,
       manuscript_index: manuscriptIndexRel,
       sqlite_index: sqliteRel,
@@ -96,4 +93,58 @@ export async function runIndexRebuild(
       vector_documents_indexed: vectorIndex?.documents.length ?? 0,
     },
   };
+}
+
+function plannedWrite(
+  writePath: string,
+  existed: boolean,
+  reason: string,
+): EnvelopeWrite {
+  return {
+    path: writePath,
+    change_type: existed ? "replaced" : "created",
+    reason,
+  };
+}
+
+async function hashWriteTargets(
+  projectRoot: string,
+  writes: EnvelopeWrite[],
+): Promise<Map<string, string | null>> {
+  const hashes = new Map<string, string | null>();
+
+  for (const write of writes) {
+    const fullPath = path.join(projectRoot, write.path);
+    hashes.set(write.path, (await pathExists(fullPath)) ? await sha256File(fullPath) : null);
+  }
+
+  return hashes;
+}
+
+async function actualWritesFromHashes(
+  projectRoot: string,
+  plannedWrites: EnvelopeWrite[],
+  beforeHashes: Map<string, string | null>,
+): Promise<EnvelopeWrite[]> {
+  const writes: EnvelopeWrite[] = [];
+
+  for (const plannedWrite of plannedWrites) {
+    const fullPath = path.join(projectRoot, plannedWrite.path);
+    if (!(await pathExists(fullPath))) {
+      continue;
+    }
+
+    const beforeHash = beforeHashes.get(plannedWrite.path) ?? null;
+    const afterHash = await sha256File(fullPath);
+    if (beforeHash === afterHash) {
+      continue;
+    }
+
+    writes.push({
+      ...plannedWrite,
+      change_type: beforeHash ? "replaced" : "created",
+    });
+  }
+
+  return writes;
 }

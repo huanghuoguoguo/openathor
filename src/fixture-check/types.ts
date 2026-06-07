@@ -1,4 +1,5 @@
 import type { OpenAthorEnvelope } from "../protocol/envelope.js";
+import type { EnvelopeWrite } from "../protocol/envelope.js";
 
 export type ExpectedCommand = {
   run: string;
@@ -7,7 +8,9 @@ export type ExpectedCommand = {
   expect_data_path?: string;
   expect_data?: Record<string, unknown>;
   expect_warnings?: string[];
+  expect_writes?: ExpectedWrite[];
   expect_no_writes?: boolean;
+  allow_writes_on_error?: boolean;
 };
 
 export type ExpectedCommands = {
@@ -18,6 +21,18 @@ export type ExpectedFiles = {
   required?: string[];
   absent?: string[];
   contains?: Record<string, string[]>;
+  file_changes?: ExpectedFileChange[];
+};
+
+export type ExpectedFileChange = {
+  path: string;
+  change_type?: FixtureFileChange["change_type"];
+};
+
+export type ExpectedWrite = {
+  path: string;
+  change_type?: EnvelopeWrite["change_type"];
+  reason?: string;
 };
 
 export type ExpectedDisallowed = {
@@ -42,6 +57,7 @@ export type FixtureCommandCallResult = FixtureCommandEnvelopeResult & {
 
 export type FixtureCommandResult = FixtureCommandEnvelopeResult & {
   command: string;
+  file_changes: FixtureFileChange[];
 };
 
 export type FixtureFileChange = {
@@ -60,6 +76,7 @@ export type FixtureCheckResult = {
   required_files: string[];
   absent_files: string[];
   unchanged_files: string[];
+  expected_file_changes: ExpectedFileChange[];
   file_changes: FixtureFileChange[];
 };
 

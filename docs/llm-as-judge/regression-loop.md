@@ -19,26 +19,22 @@
 日常快速迭代建议跑：
 
 - `npm run test:judge:smoke`
-- `adopt-3-chapters`
-- `adopt-30-chapters`
-- `outline-insert`
-- `canon-conflict`
-- `revise-local`
+- `npm run fixture -- fixtures/slice-1/adopt-3-chapters`
+- `npm run fixture -- fixtures/slice-4/adopt-30-chapters`
+- `npm run fixture -- fixtures/slice-3/outline-insert`
+- `npm run fixture -- fixtures/slice-2/canon-conflict`
+- `npm run fixture -- fixtures/slice-2/revise-confirm-write`
+- `npm run fixture -- fixtures/slice-4/asset-sync-confirm`
 
-`test:judge:smoke` 当前覆盖已落地的确认写入和归档章节证据包；`adopt-30-chapters` 覆盖长篇接管后的索引、检索、context 和第 31 章 draft proposal；其余目标场景用于后续补齐结构变更、一致性和改稿风险。
+`test:judge:smoke` 当前覆盖确认写入、结构归档、多角色审稿、风格写作、资产同步和重规划后继续写作的证据包；`adopt-30-chapters` 覆盖长篇接管后的索引、检索、context 和第 31 章 draft proposal。
 
 ## 完整目标场景集
 
 发版或重大变更前跑：
 
-- `new-project`
-- `adopt-3-chapters`
-- `adopt-30-chapters`
-- `outline-insert`
-- `outline-archive`
-- `canon-conflict`
-- `revise-local`
-- `retrieval-context`
+- `npm test`
+- `npm run judge:smoke`
+- 手动附加至少一个真实 Pi/Operator transcript 和 judge scores
 
 ## 结果记录
 

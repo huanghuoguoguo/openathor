@@ -2,12 +2,16 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import type { OpenAthorEnvelope } from "../protocol/envelope.js";
+import type { EnvelopeWrite } from "../protocol/envelope.js";
 import { OpenAthorError } from "../protocol/errors.js";
 import { sha256File } from "../protocol/paths.js";
 import { pathExists } from "./workspace-files.js";
 import type {
   ExpectedCommand,
   ExpectedDoctor,
+  ExpectedFileChange,
+  ExpectedWrite,
+  FixtureFileChange,
   FixtureCommandEnvelopeResult,
 } from "./types.js";
 
@@ -32,6 +36,7 @@ export async function readExpectedJson<T>(
 export function checkCommandExpectation(
   expectedCommand: ExpectedCommand,
   result: FixtureCommandEnvelopeResult,
+  fileChanges: FixtureFileChange[] = [],
 ): void {
   const expectedOk = expectedCommand.ok ?? true;
 
@@ -95,6 +100,28 @@ export function checkCommandExpectation(
       { exitCode: 4 },
     );
   }
+
+  if (expectedCommand.expect_no_writes && fileChanges.length > 0) {
+    throw new OpenAthorError(
+      "OA_FIXTURE_COMMAND_FAILED",
+      `Command ${expectedCommand.run} changed files, expected none: ${formatFileChanges(fileChanges)}`,
+      { exitCode: 4 },
+    );
+  }
+
+  if (!result.ok && !expectedCommand.allow_writes_on_error && fileChanges.length > 0) {
+    throw new OpenAthorError(
+      "OA_FIXTURE_ERROR_COMMAND_CHANGED_FILES",
+      `Failed command ${expectedCommand.run} changed files: ${formatFileChanges(fileChanges)}`,
+      { exitCode: 4 },
+    );
+  }
+
+  checkExpectedWrites(
+    expectedCommand.run,
+    result.envelope.writes,
+    expectedCommand.expect_writes ?? [],
+  );
 }
 
 export function checkDoctorExpectation(
@@ -214,6 +241,82 @@ export async function checkUnchangedFiles(
   }
 }
 
+export function checkFileChangesCoveredByWrites(
+  fileChanges: FixtureFileChange[],
+  envelope: OpenAthorEnvelope,
+  command: string,
+): void {
+  for (const fileChange of fileChanges) {
+    if (envelope.writes.some((write) => writeCoversFileChange(write, fileChange))) {
+      continue;
+    }
+
+    throw new OpenAthorError(
+      "OA_FIXTURE_UNREPORTED_FILE_CHANGE",
+      `Command ${command} changed ${fileChange.change_type} ${fileChange.path} without a matching write.`,
+      { exitCode: 4 },
+    );
+  }
+}
+
+export function checkWritesBackedByFileChanges(
+  fileChanges: FixtureFileChange[],
+  envelope: OpenAthorEnvelope,
+  command: string,
+): void {
+  for (const write of envelope.writes) {
+    if (write.path.endsWith("/")) {
+      continue;
+    }
+
+    if (fileChanges.some((fileChange) => writeCoversFileChange(write, fileChange))) {
+      continue;
+    }
+
+    throw new OpenAthorError(
+      "OA_FIXTURE_UNBACKED_WRITE",
+      `Command ${command} reported ${write.change_type} ${write.path} without a matching file change.`,
+      { exitCode: 4 },
+    );
+  }
+}
+
+export function checkExpectedFileChanges(
+  actualChanges: FixtureFileChange[],
+  expectedChanges: ExpectedFileChange[],
+): void {
+  if (expectedChanges.length === 0) {
+    return;
+  }
+
+  const unmatchedActual = [...actualChanges];
+
+  for (const expected of expectedChanges) {
+    const index = unmatchedActual.findIndex((actual) =>
+      fileChangeMatches(expected, actual),
+    );
+    if (index >= 0) {
+      unmatchedActual.splice(index, 1);
+      continue;
+    }
+
+    throw new OpenAthorError(
+      "OA_FIXTURE_EXPECTED_FILE_CHANGE_MISSING",
+      `Expected file change did not occur: ${formatExpectedFileChange(expected)}`,
+      { exitCode: 4 },
+    );
+  }
+
+  if (unmatchedActual.length > 0) {
+    const actual = unmatchedActual[0];
+    throw new OpenAthorError(
+      "OA_FIXTURE_UNEXPECTED_FILE_CHANGE",
+      `Unexpected file change occurred: ${actual.change_type} ${actual.path}`,
+      { exitCode: 4 },
+    );
+  }
+}
+
 function hasDataPath(data: unknown, dataPath: string): boolean {
   return getDataPath(data, dataPath) !== undefined && getDataPath(data, dataPath) !== null;
 }
@@ -260,6 +363,107 @@ function isDeepEqual(left: unknown, right: unknown): boolean {
   }
 
   return false;
+}
+
+function fileChangeMatches(
+  expected: ExpectedFileChange,
+  actual: FixtureFileChange,
+): boolean {
+  return (
+    pathPatternMatches(expected.path, actual.path) &&
+    (!expected.change_type || expected.change_type === actual.change_type)
+  );
+}
+
+function formatExpectedFileChange(expected: ExpectedFileChange): string {
+  return expected.change_type
+    ? `${expected.change_type} ${expected.path}`
+    : expected.path;
+}
+
+function checkExpectedWrites(
+  command: string,
+  actualWrites: EnvelopeWrite[],
+  expectedWrites: ExpectedWrite[],
+): void {
+  if (expectedWrites.length === 0) {
+    return;
+  }
+
+  const unmatchedActual = [...actualWrites];
+
+  for (const expected of expectedWrites) {
+    const index = unmatchedActual.findIndex((actual) =>
+      writeMatchesExpectation(expected, actual),
+    );
+    if (index >= 0) {
+      unmatchedActual.splice(index, 1);
+      continue;
+    }
+
+    throw new OpenAthorError(
+      "OA_FIXTURE_EXPECTED_WRITE_MISSING",
+      `Command ${command} did not report expected write: ${formatExpectedWrite(expected)}`,
+      { exitCode: 4 },
+    );
+  }
+}
+
+function writeMatchesExpectation(expected: ExpectedWrite, actual: EnvelopeWrite): boolean {
+  return (
+    pathPatternMatches(expected.path, actual.path) &&
+    (!expected.change_type || expected.change_type === actual.change_type) &&
+    (!expected.reason || expected.reason === actual.reason)
+  );
+}
+
+function formatExpectedWrite(expected: ExpectedWrite): string {
+  return [
+    expected.change_type,
+    expected.path,
+    expected.reason ? `reason=${expected.reason}` : null,
+  ]
+    .filter((part) => part)
+    .join(" ");
+}
+
+function writeCoversFileChange(
+  write: EnvelopeWrite,
+  fileChange: FixtureFileChange,
+): boolean {
+  return (
+    pathPatternMatches(write.path, fileChange.path) &&
+    writeChangeTypeCovers(write.change_type, fileChange.change_type)
+  );
+}
+
+function writeChangeTypeCovers(
+  writeType: EnvelopeWrite["change_type"],
+  actualType: FixtureFileChange["change_type"],
+): boolean {
+  if (writeType === actualType) {
+    return true;
+  }
+
+  return writeType === "replaced" && (actualType === "created" || actualType === "modified");
+}
+
+function formatFileChanges(fileChanges: FixtureFileChange[]): string {
+  return fileChanges
+    .map((fileChange) => `${fileChange.change_type} ${fileChange.path}`)
+    .join(", ");
+}
+
+function pathPatternMatches(pattern: string, pathValue: string): boolean {
+  if (!pattern.includes("*")) {
+    return pattern === pathValue;
+  }
+
+  const escaped = pattern
+    .split("*")
+    .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+    .join(".*");
+  return new RegExp(`^${escaped}$`).test(pathValue);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

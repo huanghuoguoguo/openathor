@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { cp, mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdtemp, realpath, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { envelope, errorEnvelope } from "./protocol/envelope.js";
 import { OpenAthorError } from "./protocol/errors.js";
 import { callCommand, executeFixtureCommand } from "./fixture-check/command-runner.js";
@@ -11,9 +11,12 @@ import {
   checkAbsentFiles,
   checkCommandExpectation,
   checkDoctorExpectation,
+  checkExpectedFileChanges,
   checkFileContains,
+  checkFileChangesCoveredByWrites,
   checkRequiredFiles,
   checkUnchangedFiles,
+  checkWritesBackedByFileChanges,
   readExpectedJson,
   readExpectedYaml,
 } from "./fixture-check/expectations.js";
@@ -54,7 +57,7 @@ program
       if (!fixture) {
         throw new OpenAthorError(
           "OA_FIXTURE_NOT_FOUND",
-          "Provide a Slice 1 fixture directory.",
+          "Provide a fixture directory.",
           { exitCode: 2 },
         );
       }
@@ -94,7 +97,7 @@ program
     }
   });
 
-if (isDirectRun()) {
+if (await isDirectRun()) {
   program.parseAsync(process.argv).catch((error: unknown) => {
     const openAthorError =
       error instanceof OpenAthorError
@@ -129,6 +132,8 @@ export async function runFixtureCheck(
 
   const beforeHashes = await hashExistingFiles(workspace);
   const beforeExcerpts = await textExcerptsForHashes(workspace, beforeHashes);
+  let commandHashes = beforeHashes;
+  let commandExcerpts = beforeExcerpts;
   const expectedCommands = await readExpectedYaml<ExpectedCommands>(
     expectedDir,
     "commands.yaml",
@@ -146,15 +151,37 @@ export async function runFixtureCheck(
 
   try {
     for (const expectedCommand of expectedCommands.commands ?? []) {
+      const commandBeforeHashes = commandHashes;
+      const commandBeforeExcerpts = commandExcerpts;
       const result = await executeFixtureCommand(expectedCommand.run, workspace);
-      checkCommandExpectation(expectedCommand, result);
+      const commandFileChanges = await collectFileChanges(
+        workspace,
+        commandBeforeHashes,
+        commandBeforeExcerpts,
+      );
+
+      checkCommandExpectation(expectedCommand, result, commandFileChanges);
+      checkFileChangesCoveredByWrites(
+        commandFileChanges,
+        result.envelope,
+        expectedCommand.run,
+      );
+      checkWritesBackedByFileChanges(
+        commandFileChanges,
+        result.envelope,
+        expectedCommand.run,
+      );
 
       commandResults.push({
         command: expectedCommand.run,
         ok: result.ok,
         error_code: result.error_code,
         envelope: result.envelope,
+        file_changes: commandFileChanges,
       });
+
+      commandHashes = await hashExistingFiles(workspace);
+      commandExcerpts = await textExcerptsForHashes(workspace, commandHashes);
     }
 
     await checkRequiredFiles(workspace, expectedFiles.required ?? []);
@@ -166,7 +193,14 @@ export async function runFixtureCheck(
     await checkUnchangedFiles(workspace, beforeHashes, expectedDisallowed.unchanged ?? []);
 
     if (await pathExists(path.join(workspace, "openathor.yaml"))) {
+      const doctorBeforeHashes = commandHashes;
+      const doctorBeforeExcerpts = commandExcerpts;
       const doctorResult = await callCommand("openathor doctor --json --strict", workspace);
+      const doctorFileChanges = await collectFileChanges(
+        workspace,
+        doctorBeforeHashes,
+        doctorBeforeExcerpts,
+      );
       if (!doctorResult.ok) {
         throw new OpenAthorError(
           "OA_FIXTURE_DOCTOR_FAILED",
@@ -176,13 +210,27 @@ export async function runFixtureCheck(
       }
 
       checkDoctorExpectation(doctorResult.envelope, expectedDoctor);
+      checkFileChangesCoveredByWrites(
+        doctorFileChanges,
+        doctorResult.envelope,
+        "openathor doctor --json --strict",
+      );
+      checkWritesBackedByFileChanges(
+        doctorFileChanges,
+        doctorResult.envelope,
+        "openathor doctor --json --strict",
+      );
 
       commandResults.push({
         command: "openathor doctor --json --strict",
         ok: true,
         error_code: null,
         envelope: doctorResult.envelope,
+        file_changes: doctorFileChanges,
       });
+
+      commandHashes = await hashExistingFiles(workspace);
+      commandExcerpts = await textExcerptsForHashes(workspace, commandHashes);
     }
 
     const fileChanges = await collectFileChanges(
@@ -190,6 +238,7 @@ export async function runFixtureCheck(
       beforeHashes,
       beforeExcerpts,
     );
+    checkExpectedFileChanges(fileChanges, expectedFiles.file_changes ?? []);
 
     return {
       fixture: fixtureDir,
@@ -198,6 +247,7 @@ export async function runFixtureCheck(
       required_files: expectedFiles.required ?? [],
       absent_files: [...(expectedFiles.absent ?? []), ...(expectedDisallowed.absent ?? [])],
       unchanged_files: expectedDisallowed.unchanged ?? [],
+      expected_file_changes: expectedFiles.file_changes ?? [],
       file_changes: fileChanges,
     };
   } catch (error) {
@@ -206,8 +256,19 @@ export async function runFixtureCheck(
   }
 }
 
-function isDirectRun(): boolean {
-  return Boolean(
-    process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href,
-  );
+async function isDirectRun(): Promise<boolean> {
+  if (!process.argv[1]) {
+    return false;
+  }
+
+  try {
+    const [argvPath, modulePath] = await Promise.all([
+      realpath(process.argv[1]),
+      realpath(fileURLToPath(import.meta.url)),
+    ]);
+
+    return argvPath === modulePath;
+  } catch {
+    return false;
+  }
 }

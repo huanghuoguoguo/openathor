@@ -61,12 +61,16 @@ node dist/judge-smoke.js \
 
 ## 当前 smoke 场景
 
-第一版 smoke 覆盖两个已落地 fixture：
+当前 smoke 覆盖以下已落地 fixture：
 
 - `fixtures/slice-2/draft-confirm-write`
+- `fixtures/slice-2/multi-agent-review`
 - `fixtures/slice-3/outline-archive`
+- `fixtures/slice-4/style-guided-writing-loop`
+- `fixtures/slice-4/asset-sync-confirm`
+- `fixtures/slice-4/replan-draft-asset-continuity`
 
-选择这两个场景是因为它们分别覆盖确认写入正文和结构变更安全控制。
+这些场景覆盖确认写入正文、结构变更安全控制、多角色审稿包、风格画像写作闭环、资产同步和重规划后的资产连续性。
 
 ## Evidence Package 格式
 

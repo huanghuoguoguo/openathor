@@ -15,6 +15,24 @@ commands:
       mode: proposal
       proposal_path: bible/canon.pending.md
     expect_data_path: run_path
+  - run: openathor canon sync 1 --task "确认铜钥匙齿纹线索进入 confirmed canon" --text "铜钥匙齿纹对应旧案档案柜的机械锁编号。" --confirm --base-hash sha256:0000000000000000000000000000000000000000000000000000000000000000 --json
+    ok: false
+    error_code: OA_CANON_CHANGED
+  - run: openathor canon sync 1 --task "确认铜钥匙齿纹线索进入 confirmed canon" --text "铜钥匙齿纹对应旧案档案柜的机械锁编号。" --confirm --base-hash current:bible/canon.md --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      canon_path: bible/canon.md
+      result.applied: true
+      result.canon_modified: true
+      result.pending_canon_modified: false
+    expect_writes:
+      - path: bible/canon.md
+        change_type: modified
+        reason: confirmed_canon_sync
+      - path: runs/run_*_canon_sync_confirmed.json
+        change_type: created
+        reason: confirmed_canon_sync_run_record
   - run: openathor doctor --json
     ok: true
   - run: openathor index rebuild --json

@@ -219,6 +219,7 @@ export type WritingProposalOptions = {
   multiAgent?: boolean;
   reviewRoles?: string[];
   text?: string;
+  confirm?: boolean;
   confirmWrite?: boolean;
   baseHash?: string;
 };

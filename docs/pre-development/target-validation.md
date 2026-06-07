@@ -113,9 +113,9 @@ OpenAthor 要证明的不是“模型能写小说”，而是：
 - 预期 agent 回复摘要
 - 不允许发生的行为
 
-## Slice 1 Fixture 入口
+## Fixture 入口和当前覆盖
 
-正式实现前先落地 Slice 1 fixture：
+正式实现前先落地 Slice 1 fixture，作为 deterministic check 的最小入口：
 
 ```text
 fixtures/slice-1/
@@ -125,13 +125,15 @@ fixtures/slice-1/
   adopt-ambiguous-order/
 ```
 
+当前自动化覆盖已经扩展到 Slice 1/2/3/4，并通过 `npm test` 统一运行 44 个 deterministic fixture。
+
 测试侧入口：
 
 ```bash
 openathor-fixture-check fixtures/slice-1/adopt-3-chapters
 ```
 
-Slice 1 fixture check 先验证协议、文件、JSON envelope、expected writes 和 disallowed writes。它不评价文笔，也不调用 LLM judge。
+Fixture check 通过真实 `openathor` CLI 入口验证协议、文件、JSON envelope、expected files、disallowed writes，以及每条命令的实际 file changes 与同一条命令 envelope 文件级 `writes` 是否双向匹配。失败命令默认不得产生实际文件变化。关键 fixture 可以在 `expected/files.yaml` 声明精确 `file_changes`，也可以在 `expected/commands.yaml` 声明 `expect_writes`，用于校验实际文件变化集合和高风险写入 envelope。它不评价文笔，也不调用 LLM judge。
 
 ## Blocking Failure
 
