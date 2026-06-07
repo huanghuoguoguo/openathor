@@ -14,7 +14,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/mark-bin-executable.mjs",
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "npm run check && npm run validate:schemas && npm run build && npm run test:bin && npm run test:fixture-check:self && npm run test:fixtures && npm run test:judge:smoke",
     "validate:schemas": "node scripts/validate-schemas.mjs",
