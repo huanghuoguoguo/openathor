@@ -52,5 +52,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Static tooling checks
-        run: npm run check && npm run validate:schemas && npm run build
+      - name: Full deterministic test suite
+        run: npm test
