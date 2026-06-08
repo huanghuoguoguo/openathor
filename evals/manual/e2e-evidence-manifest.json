@@ -45,6 +45,109 @@
       "expected_failed_error_codes": [
         "OA_ASSETS_SOURCE_CHANGED"
       ]
+    },
+    {
+      "scenario": "replan-draft-asset-continuity",
+      "operator_transcript": "evals/manual/replan-draft-asset-continuity-transcript.md",
+      "agent_final_response": "evals/manual/replan-draft-asset-continuity-final.md",
+      "judge_scores": "evals/manual/replan-draft-asset-continuity-scores.json",
+      "must_include_commands": [
+        "openathor outline replan --from 4 --task \"重规划后续 planned 章节，不改已写正文\" --from-package notes/replan-package-canary.yaml --confirm --base-hash current:outline/chapters.yaml --json",
+        "openathor draft chapter next --task \"用户确认写入第四章《空位名单》\" --text \"# 空位名单\\n\\n林澈和孟夏把没有登船签名的空位名单摊在星桥仓库的长桌上。名单里有一个被墨水划掉的号码，号码旁边写着蓝钥匙回声。\\n\\n许岚确认这份名单来自封蜡账册的夹层。她没有说保护对象是谁，只提醒林澈：第三次雾笛响起时，船舱内部开锁的人不一定是林砚。\\n\\n林澈把空位名单、第三次雾笛和林砚可能保护的人并列记录。孟夏继续核对日期，确认名单时间在客轮失火前夜之后，不能把它写成林砚发出雾笛的证据。\" --confirm-write --json",
+        "openathor assets sync chapter 4 --from notes/asset-package-ch4.yaml --confirm --base-hash current:manuscript/chapter-004.md --assets-hash bible/characters.md=current:bible/characters.md --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json",
+        "openathor draft chapter next --task \"用户确认写入第五章《蓝钥匙回声》\" --text \"# 蓝钥匙回声\\n\\n许岚把仓库后墙的回声记录交给林澈。记录里没有写林砚发出第三次雾笛，只写蓝钥匙出现后，空位名单上的号码会在仓库铁门后回响三次。\\n\\n林澈没有把回声写成父亲的自白。他把蓝钥匙、空位名单和第三次雾笛分成三条证据线，标注它们互相指向，但还不能证明同一个人完成了开锁、藏名单和发出雾笛。\\n\\n孟夏核对仓库值班表，发现许岚在客轮失火后第二天补过一次登记。许岚承认她替林砚保管蓝钥匙回声记录，但拒绝说出被保护乘客的名字。\" --confirm-write --json",
+        "openathor assets sync chapter 5 --from notes/asset-package-ch5.yaml --confirm --base-hash current:manuscript/chapter-005.md --assets-hash bible/characters.md=current:bible/characters.md --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json",
+        "openathor assets audit --json",
+        "openathor context chapter 5 --json",
+        "openathor search semantic \"蓝钥匙 空位名单 第三次雾笛\" --json",
+        "openathor export --format markdown --out exports/replan-draft-asset-continuity.md --json",
+        "openathor doctor --json --strict"
+      ],
+      "must_include_files": [
+        "manuscript/chapter-004.md",
+        "manuscript/chapter-005.md",
+        "bible/characters.md",
+        "bible/timeline.md",
+        "notes/hooks.md",
+        "outline/chapters.yaml",
+        ".openathor/vector/index.json",
+        "exports/replan-draft-asset-continuity.md"
+      ],
+      "expected_failed_error_codes": []
+    },
+    {
+      "scenario": "multi-agent-review",
+      "operator_transcript": "evals/manual/multi-agent-review-transcript.md",
+      "agent_final_response": "evals/manual/multi-agent-review-final.md",
+      "judge_scores": "evals/manual/multi-agent-review-scores.json",
+      "must_include_commands": [
+        "openathor review chapter 1 --task \"从连续性、结构、风格和读者体验角度做多角色审稿\" --multi-agent --diff --json",
+        "openathor review chapter 1 --task \"使用不存在的审稿角色\" --review-role nonexistent-reviewer --json",
+        "openathor review chapter 1 --task \"只让连续性和风格角色复核本章\" --review-role continuity-reviewer --review-role style-editor --json",
+        "openathor doctor --json",
+        "openathor index rebuild --json"
+      ],
+      "must_include_files": [
+        "reviews",
+        "runs",
+        ".openathor/index.sqlite"
+      ],
+      "expected_failed_error_codes": [
+        "OA_REVIEW_ROLE_UNKNOWN"
+      ]
+    },
+    {
+      "scenario": "adopt-30-chapters",
+      "operator_transcript": "evals/manual/adopt-30-chapters-transcript.md",
+      "agent_final_response": "evals/manual/adopt-30-chapters-final.md",
+      "judge_scores": "evals/manual/adopt-30-chapters-scores.json",
+      "must_include_commands": [
+        "openathor adopt --dry-run --json",
+        "openathor adopt --json",
+        "openathor index rebuild --vector --json",
+        "openathor search text \"第三次雾笛\" --json",
+        "openathor search semantic \"林澈 不信任 港务署\" --json",
+        "openathor context chapter 30 --max-chars 7000 --json",
+        "openathor draft chapter next --task \"继续第31章，保持林澈不信任港务署但不能使用通灵解释\" --dry-run --json"
+      ],
+      "must_include_files": [
+        "正文/01-雾港档案.md",
+        "正文/30-雾港档案.md",
+        "outline/chapters.yaml",
+        ".openathor/manuscript.index.yaml",
+        ".openathor/index.sqlite",
+        ".openathor/vector/index.json",
+        ".openathor/import-report.md",
+        "bible/canon.pending.md",
+        "style/profiles.yaml"
+      ],
+      "expected_failed_error_codes": []
+    },
+    {
+      "scenario": "style-guided-writing-loop",
+      "operator_transcript": "evals/manual/style-guided-writing-loop-transcript.md",
+      "agent_final_response": "evals/manual/style-guided-writing-loop-final.md",
+      "judge_scores": "evals/manual/style-guided-writing-loop-scores.json",
+      "must_include_commands": [
+        "openathor style analyze style/samples/sample-001.md --profile-id style_sample --name \"授权样稿风格\" --permission user_owned --source-type user_provided --json",
+        "openathor style profile apply style_sample --confirm --base-hash current:style/profiles.yaml --json",
+        "openathor style analyze style/samples/pending-voice.md --profile-id style_pending --name \"未确认实验风格\" --permission user_owned --source-type user_provided --json",
+        "openathor context chapter 1 --json",
+        "openathor draft chapter next --task \"续写下一章，保持冷静克制，不复制参考文本表达\" --diff --json",
+        "openathor review chapter 1 --task \"审查这一章是否偏离项目文风\" --diff --json",
+        "openathor revise chapter 1 --task \"按项目风格把直白说明压低，保留原剧情事实\" --diff --json",
+        "openathor style check chapter 1 --json",
+        "openathor doctor --json",
+        "openathor index rebuild --json"
+      ],
+      "must_include_files": [
+        "style/profiles.yaml",
+        "style/references.yaml",
+        "reviews",
+        "runs",
+        ".openathor/index.sqlite"
+      ],
+      "expected_failed_error_codes": []
     }
   ]
 }

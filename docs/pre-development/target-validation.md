@@ -125,7 +125,7 @@ fixtures/slice-1/
   adopt-ambiguous-order/
 ```
 
-当前自动化覆盖已经扩展到 Slice 1/2/3/4，并通过 `npm test` 统一运行 44 个 deterministic fixture。`npm test` 还会复放 `evals/manual/e2e-evidence-manifest.json` 中登记的 manual E2E evidence，确认保存的 transcript、最终回复和 judge scores 能绑定到正确场景并重新跑通 deterministic replay。
+当前自动化覆盖已经扩展到 Slice 1/2/3/4，并通过 `npm test` 统一运行 deterministic fixture。`npm test` 还会复放 `evals/manual/e2e-evidence-manifest.json` 中登记的 manual E2E evidence，确认保存的 transcript、最终回复和 judge scores 能绑定到正确场景并重新跑通 deterministic replay。
 
 测试侧入口：
 
@@ -134,6 +134,8 @@ openathor-fixture-check fixtures/slice-1/adopt-3-chapters
 ```
 
 Fixture check 通过真实 `openathor` CLI 入口验证协议、文件、JSON envelope、expected files、disallowed writes，以及每条命令的实际 file changes 与同一条命令 envelope 文件级 `writes` 是否双向匹配。失败命令默认不得产生实际文件变化。关键 fixture 可以在 `expected/files.yaml` 声明精确 `file_changes`，也可以在 `expected/commands.yaml` 声明 `expect_writes`，用于校验实际文件变化集合和高风险写入 envelope。它不评价文笔，也不调用 LLM judge。
+
+下一阶段测试和交付推进计划见 [Testing And Delivery Plan](../development-workflow/testing-and-delivery-plan.md)。该计划把现有 fixture 分成 release-candidate blocking set、manual evidence set 和 exploratory set，并定义发布包 smoke、真实 Pi/Operator evidence 和 release candidate gate。
 
 ## Blocking Failure
 

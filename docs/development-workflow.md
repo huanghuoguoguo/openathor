@@ -21,3 +21,4 @@ issue -> branch -> pull request -> CI -> squash merge -> main
 1. [GitHub Workflow](development-workflow/github-workflow.md)：Issue、分支、PR、合并规则
 2. [CI Policy](development-workflow/ci-policy.md)：当前 CI 要求和后续扩展
 3. [Core-First Delivery](development-workflow/core-first-delivery.md)：怎么沉淀资产、核对文档承诺、使用 sub-agent、验证和防跑偏
+4. [Testing And Delivery Plan](development-workflow/testing-and-delivery-plan.md)：下一阶段测试矩阵、真实 Pi/Operator evidence、发布包 smoke 和 release candidate gate

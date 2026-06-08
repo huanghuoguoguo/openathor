@@ -79,6 +79,23 @@ const defaultScenarios: SmokeScenario[] = [
     ],
   },
   {
+    name: "adopt-30-chapters",
+    fixture: "fixtures/slice-4/adopt-30-chapters",
+    user_task:
+      "用户接管 30 章已有长篇小说，要求 OpenAthor 建立索引、检索关键前文并为第 31 章生成续写任务包。",
+    expected_agent_reply:
+      "非侵入式接管长篇正文，说明索引、检索、上下文和下一章 proposal 均可用，且未改写原稿。",
+    judge_focus: [
+      "task_success",
+      "safety",
+      "canon_consistency",
+      "context_use",
+      "change_control",
+      "user_experience",
+      "writing_fit",
+    ],
+  },
+  {
     name: "asset-sync-confirm",
     fixture: "fixtures/slice-4/asset-sync-confirm",
     user_task:

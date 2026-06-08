@@ -1,0 +1,33 @@
+version: "0.1"
+generated_at: 2026-06-05T22:20:57.692Z
+source_mode: created
+chapters:
+  - id: ch_001
+    display_order: 1
+    title: 雾港钥匙
+    source_path: manuscript/chapter-001.md
+    status: drafted
+    origin: created
+    content_hash: sha256:83413f3d005a74b1536be7fe154cfa4fc9b422d61037ee93e3a003ae0141dfcb
+    detected_title: 雾港钥匙
+    confidence: high
+  - id: ch_002
+    display_order: 2
+    title: 潮汐舱门
+    source_path: manuscript/chapter-002.md
+    status: drafted
+    origin: created
+    content_hash: sha256:38da0204d58baf7a438f99129880387f1877d5ab5360138d1fb2dc50e3b23e46
+    detected_title: 潮汐舱门
+    confidence: high
+  - id: ch_003
+    display_order: 3
+    title: 星桥仓库
+    source_path: manuscript/chapter-003.md
+    status: drafted
+    origin: created
+    content_hash: sha256:d27fffc12efebb7c2dc1d89c8ace1be9d6a802d5af1d1d3e9eb78b08ca1a9a2a
+    detected_title: 星桥仓库
+    confidence: high
+unclassified: []
+questions: []

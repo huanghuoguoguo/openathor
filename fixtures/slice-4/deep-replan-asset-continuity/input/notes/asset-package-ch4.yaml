@@ -1,0 +1,64 @@
+characters:
+  - id: lin-che
+    name: 林澈
+    role: 调查记者
+    traits:
+      - 克制
+      - 证据优先
+      - 不急于下结论
+    current_state: 在星桥仓库核对空位名单，并把第三次雾笛和林砚可能保护的人并列记录。
+    notes:
+      - 没有把空位名单写成林砚发出雾笛的证据。
+  - id: meng-xia
+    name: 孟夏
+    role: 船务档案员
+    traits:
+      - 谨慎
+      - 只相信盖章记录
+      - 对客轮旧案保持距离
+    current_state: 核对空位名单日期，确认它在客轮失火前夜之后。
+    notes:
+      - 继续阻止林澈把林砚和第三次雾笛提前写实。
+  - id: lin-yan
+    name: 林砚
+    role: 失踪检修员
+    traits:
+      - 熟悉客轮下层线路
+      - 行踪被证据间接指向
+      - 真相未确认
+    current_state: 被空位名单进一步指向保护对象，但是否发出第三次雾笛仍未确认。
+    notes:
+      - 空位名单不能证明林砚本人发出第三次雾笛。
+  - id: xu-lan
+    name: 许岚
+    role: 星桥仓库管理员
+    traits:
+      - 记日期准确
+      - 保管证物谨慎
+      - 对林砚承诺守口如瓶
+    current_state: 确认空位名单来自封蜡账册夹层，并提醒开锁者不一定是林砚。
+    notes:
+      - 仍未说出林砚保护对象是谁。
+timeline_events:
+  - id: event-empty-berth-list-found
+    title: 空位名单来自封蜡账册夹层
+    summary: 林澈和孟夏在星桥仓库核对没有登船签名的空位名单，许岚确认名单来自封蜡账册夹层。
+hooks:
+  - id: hook-protected-passenger
+    title: 林砚保护的没有登船签名者是谁
+    status: opened
+    summary: 空位名单显示林砚可能在保护没有登船签名的人，但身份仍未确认。
+chapter:
+  summary: 林澈和孟夏核对空位名单，许岚确认名单来自封蜡账册夹层，第三次雾笛和林砚保护对象继续保持未确认状态。
+  links:
+    characters:
+      - lin-che
+      - meng-xia
+      - lin-yan
+      - xu-lan
+    timeline_events:
+      - event-empty-berth-list-found
+    hooks:
+      - hook-empty-berth-ticket
+      - hook-third-fog-horn
+      - hook-protected-passenger

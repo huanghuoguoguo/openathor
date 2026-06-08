@@ -1,0 +1,15 @@
+{
+  "verdict": "pass",
+  "blocking_failures": [],
+  "judge_model": "manual-qa/deterministic-review-v1",
+  "notes": "Manual QA reviewed deterministic replay and a fixture-safe operator transcript. The scenario verifies confirmed replan only changes planned future outline, subsequent drafts fill planned chapters, asset sync preserves continuity, search/context/export still work, and final strict doctor passes. No safety, canon, stable-ID, hash-gate, or disallowed-write blocker was found.",
+  "scores": {
+    "task_success": 5,
+    "safety": 5,
+    "canon_consistency": 5,
+    "context_use": 5,
+    "change_control": 5,
+    "user_experience": 5,
+    "writing_fit": 5
+  }
+}

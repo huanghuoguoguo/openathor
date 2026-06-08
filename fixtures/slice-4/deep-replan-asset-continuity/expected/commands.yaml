@@ -1,0 +1,184 @@
+commands:
+  - run: openathor doctor --json
+    ok: true
+  - run: openathor outline insert --after 3 --title "雾笛后的名单" --confirm --json
+    ok: true
+    expect_data:
+      result.inserted_chapter.id: ch_004
+      result.inserted_chapter.status: planned
+  - run: openathor outline insert --after 4 --title "蓝钥匙回声" --confirm --json
+    ok: true
+    expect_data:
+      result.inserted_chapter.id: ch_005
+      result.inserted_chapter.status: planned
+  - run: openathor outline insert --after 5 --title "登记缺页" --confirm --json
+    ok: true
+    expect_data:
+      result.inserted_chapter.id: ch_006
+      result.inserted_chapter.status: planned
+  - run: openathor outline replan --from 4 --task "重规划后续 planned 章节，不改已写正文" --from-package notes/replan-package-canary.yaml --json
+    ok: true
+    expect_data:
+      mode: proposal
+      result.applied: false
+      result.replaced_chapter_count: 3
+      result.replacement_chapter_count: 3
+      result.manuscript_files_modified: false
+  - run: openathor outline replan --from 4 --task "重规划后续 planned 章节，不改已写正文" --from-package notes/replan-package-canary.yaml --confirm --base-hash current:outline/chapters.yaml --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      result.applied: true
+      result.replaced_chapter_count: 3
+      result.replacement_chapter_count: 3
+      result.manuscript_files_modified: false
+  - run: openathor outline show --json
+    ok: true
+    expect_data:
+      outline.chapter_count: 6
+      outline.chapters.3.id: ch_plan_004
+      outline.chapters.3.status: planned
+      outline.chapters.4.id: ch_plan_005
+      outline.chapters.4.status: planned
+      outline.chapters.5.id: ch_plan_006
+      outline.chapters.5.status: planned
+  - run: openathor draft chapter next --task "用户确认写入第四章《空位名单》" --text "# 空位名单\n\n林澈和孟夏把没有登船签名的空位名单摊在星桥仓库的长桌上。名单里有一个被墨水划掉的号码，号码旁边写着蓝钥匙回声。\n\n许岚确认这份名单来自封蜡账册的夹层。她没有说保护对象是谁，只提醒林澈：第三次雾笛响起时，船舱内部开锁的人不一定是林砚。\n\n林澈把空位名单、第三次雾笛和林砚可能保护的人并列记录。孟夏继续核对日期，确认名单时间在客轮失火前夜之后，不能把它写成林砚发出雾笛的证据。" --confirm-write --json
+    ok: true
+    expect_data:
+      filled_planned_chapter: true
+      target.id: ch_plan_004
+      target.display_order: 4
+      target.title: 空位名单
+      target.source_path: manuscript/chapter-004.md
+  - run: openathor assets sync chapter 4 --from notes/asset-package-ch4.yaml --confirm --base-hash current:manuscript/chapter-004.md --assets-hash bible/characters.md=current:bible/characters.md --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      sync.summary.existing_characters: 4
+      result.characters_added: 0
+      result.timeline_events_added: 1
+      result.hooks_added: 1
+      result.outline_modified: true
+      result.confirmed_assets_written: true
+  - run: openathor draft chapter next --task "用户确认写入第五章《蓝钥匙回声》" --text "# 蓝钥匙回声\n\n许岚把仓库后墙的回声记录交给林澈。记录里没有写林砚发出第三次雾笛，只写蓝钥匙出现后，空位名单上的号码会在仓库铁门后回响三次。\n\n林澈没有把回声写成父亲的自白。他把蓝钥匙、空位名单和第三次雾笛分成三条证据线，标注它们互相指向，但还不能证明同一个人完成了开锁、藏名单和发出雾笛。\n\n孟夏核对仓库值班表，发现许岚在客轮失火后第二天补过一次登记。许岚承认她替林砚保管蓝钥匙回声记录，但拒绝说出被保护乘客的名字。" --confirm-write --json
+    ok: true
+    expect_data:
+      filled_planned_chapter: true
+      target.id: ch_plan_005
+      target.display_order: 5
+      target.title: 蓝钥匙回声
+      target.source_path: manuscript/chapter-005.md
+      planned_title: 蓝钥匙回声
+      title_source: planned
+  - run: openathor assets sync chapter 5 --from notes/asset-package-ch5.yaml --json
+    ok: true
+    expect_data:
+      mode: proposal
+      result.characters_added: 0
+      result.timeline_events_added: 1
+      result.hooks_added: 1
+      result.outline_modified: true
+      result.confirmed_assets_written: false
+  - run: openathor assets sync chapter 5 --from notes/asset-package-ch5.yaml --confirm --base-hash current:manuscript/chapter-005.md --assets-hash bible/characters.md=current:bible/characters.md --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      sync.summary.existing_characters: 4
+      result.characters_added: 0
+      result.timeline_events_added: 1
+      result.hooks_added: 1
+      result.outline_modified: true
+      result.confirmed_assets_written: true
+  - run: openathor draft chapter next --task "用户确认写入第六章《登记缺页》" --text "# 登记缺页\n\n孟夏把仓库登记册摊开，缺失的页码正好跨过客轮失火后第二天的补登记时间。她提醒林澈，缺页只能证明登记链断裂，不能证明林砚销毁证据。\n\n许岚承认那一页不在册中，但坚持她补登记时缺页已经消失。她仍不说被保护乘客的名字，只把蓝钥匙回声记录和空位名单分开放在桌面两侧。\n\n林澈把登记缺页、蓝钥匙回声和第三次雾笛继续列成三条证据线。他没有把缺页直接归咎于林砚，也没有回答林砚保护的没有登船签名者是谁，只在页码旁标注：先找谁最后一次见过这本登记册。" --confirm-write --json
+    ok: true
+    expect_data:
+      filled_planned_chapter: true
+      target.id: ch_plan_006
+      target.display_order: 6
+      target.title: 登记缺页
+      target.source_path: manuscript/chapter-006.md
+      planned_title: 登记缺页
+      title_source: planned
+  - run: openathor assets sync chapter 6 --from notes/asset-package-ch6.yaml --json
+    ok: true
+    expect_data:
+      mode: proposal
+      result.characters_added: 0
+      result.timeline_events_added: 1
+      result.hooks_added: 1
+      result.outline_modified: true
+      result.confirmed_assets_written: false
+  - run: openathor assets sync chapter 6 --from notes/asset-package-ch6.yaml --confirm --base-hash current:manuscript/chapter-006.md --assets-hash bible/characters.md=current:bible/characters.md --assets-hash bible/timeline.md=current:bible/timeline.md --assets-hash notes/hooks.md=current:notes/hooks.md --assets-hash outline/chapters.yaml=current:outline/chapters.yaml --json
+    ok: true
+    expect_data:
+      mode: confirmed_write
+      sync.summary.existing_characters: 4
+      result.characters_added: 0
+      result.timeline_events_added: 1
+      result.hooks_added: 1
+      result.outline_modified: true
+      result.confirmed_assets_written: true
+  - run: openathor index rebuild --json
+    ok: true
+    expect_data:
+      chapters_indexed: 6
+  - run: openathor assets audit --json
+    ok: true
+    expect_data:
+      audit.counts.chapters: 6
+      audit.counts.indexed_chapters: 6
+      audit.counts.characters: 4
+      audit.counts.timeline_events: 9
+      audit.counts.hooks: 6
+      audit.counts.unresolved_outline_links: 0
+      audit.counts.character_link_drifts: 0
+      audit.counts.weak_asset_link_coverages: 0
+      audit.counts.weak_character_profile_coverages: 0
+      audit.counts.weak_character_profile_summaries: 0
+      audit.counts.summary_drift_candidates: 0
+      audit.assets.characters.0.profile.current_state.0: 发现登记缺页后仍把蓝钥匙回声、空位名单和第三次雾笛保持为分离证据线。
+      audit.assets.characters.2.profile.current_state.0: 仍被登记缺页间接指向，但没有直接证据证明他销毁或篡改登记册。
+      audit.assets.characters.3.profile.current_state.0: 承认登记册缺失一页，但坚持缺页早于她补登记之前已经不在册中。
+      audit.assets.timeline_events.8.id: event-ledger-missing-page
+      audit.assets.hooks.5.id: hook-ledger-missing-page
+      audit.character_profile_summary.0.character_id: lin-che
+      audit.character_profile_summary.0.linked_chapter_count: 6
+      audit.character_profile_summary.2.character_id: lin-yan
+      audit.character_profile_summary.2.linked_chapter_count: 6
+      audit.character_profile_summary.3.character_id: xu-lan
+      audit.character_profile_summary.3.linked_chapter_count: 4
+  - run: openathor context chapter 6 --json
+    ok: true
+    expect_data:
+      context_pack.target.id: ch_plan_006
+      context_pack.target.title: 登记缺页
+      outline.chapters.5.links.characters.3: lin-yan
+      outline.chapters.5.links.hooks.2: hook-ledger-missing-page
+    expect_data_path: assets.characters.text
+  - run: openathor search text "登记缺页" --json
+    ok: true
+    expect_data_path: matches
+  - run: openathor search related chapter 6 --json
+    ok: true
+    expect_data:
+      target.id: ch_plan_006
+    expect_data_path: matches
+  - run: openathor index rebuild --vector --json
+    ok: true
+    expect_data:
+      chapters_indexed: 6
+      vector_index: .openathor/vector/index.json
+  - run: openathor search semantic "登记缺页 蓝钥匙 空位名单 第三次雾笛" --json
+    ok: true
+    expect_data:
+      method: deterministic_hash_embedding_v1
+    expect_data_path: matches
+  - run: openathor export --format markdown --out exports/deep-replan-asset-continuity.md --json
+    ok: true
+    expect_data:
+      chapter_count: 6
+  - run: openathor doctor --json --strict
+    ok: true
+    expect_data:
+      checks.manuscript_index_matches_outline: true
+      checks.derived_index_current: true

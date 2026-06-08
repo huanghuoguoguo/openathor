@@ -1,0 +1,71 @@
+required:
+  - openathor.yaml
+  - bible/characters.md
+  - bible/timeline.md
+  - bible/canon.md
+  - bible/canon.pending.md
+  - notes/hooks.md
+  - notes/replan-package-canary.yaml
+  - notes/asset-package-ch4.yaml
+  - notes/asset-package-ch5.yaml
+  - notes/asset-package-ch6.yaml
+  - outline/chapters.yaml
+  - manuscript/chapter-001.md
+  - manuscript/chapter-002.md
+  - manuscript/chapter-003.md
+  - manuscript/chapter-004.md
+  - manuscript/chapter-005.md
+  - manuscript/chapter-006.md
+  - .openathor/manuscript.index.yaml
+  - .openathor/index.sqlite
+  - exports/deep-replan-asset-continuity.md
+file_changes:
+  - path: .openathor/index.sqlite
+    change_type: created
+  - path: .openathor/manuscript.index.yaml
+    change_type: modified
+  - path: .openathor/vector/index.json
+    change_type: created
+  - path: bible/canon.pending.md
+    change_type: modified
+  - path: bible/characters.md
+    change_type: modified
+  - path: bible/timeline.md
+    change_type: modified
+  - path: exports/deep-replan-asset-continuity.md
+    change_type: created
+  - path: manuscript/chapter-004.md
+    change_type: created
+  - path: manuscript/chapter-005.md
+    change_type: created
+  - path: manuscript/chapter-006.md
+    change_type: created
+  - path: notes/hooks.md
+    change_type: modified
+  - path: outline/chapters.yaml
+    change_type: modified
+  - path: runs/run_*_outline_insert.json
+    change_type: created
+  - path: runs/run_*_outline_insert.json
+    change_type: created
+  - path: runs/run_*_outline_insert.json
+    change_type: created
+  - path: runs/run_*_outline_replan.json
+    change_type: created
+  - path: runs/run_*_draft_confirmed.json
+    change_type: created
+  - path: runs/run_*_assets_sync.json
+    change_type: created
+  - path: runs/run_*_draft_confirmed.json
+    change_type: created
+  - path: runs/run_*_assets_sync.json
+    change_type: created
+  - path: runs/run_*_assets_sync.json
+    change_type: created
+  - path: runs/run_*_draft_confirmed.json
+    change_type: created
+  - path: runs/run_*_assets_sync.json
+    change_type: created
+  - path: runs/run_*_assets_sync.json
+    change_type: created
+absent: []

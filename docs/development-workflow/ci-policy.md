@@ -6,6 +6,8 @@
 
 CI 不接入真实 Pi Agent、LLM judge、外部模型服务或外部 API key。真实 transcript、judge scores 和人工/模型评估报告只作为本地或手动评估证据保存，不作为 PR 必跑门禁。
 
+Release candidate 可以在本地额外运行 `npm run test:rc`。该命令跑 release-candidate blocking fixture set，用于发布候选前快速复核核心安全和交付场景；`npm test` 仍是完整 deterministic gate。
+
 ## 必须通过的检查
 
 当前 CI jobs：
@@ -40,6 +42,13 @@ tooling
 - Slice 1/2/3/4 fixture 回归
 - `openathor doctor --json --strict` fixture gate
 - `openathor-judge-smoke` evidence package 结构校验
+
+Release workflow 额外运行：
+
+- `npm run package:release`
+- `npm run smoke:release`
+
+`smoke:release` 解压发布 tarball，并使用打包产物里的 `dist/cli.js`、`dist/fixture-check.js` 和 `dist/judge-smoke.js` 验证代表性安装后工作流。
 
 ## 后续扩展
 
