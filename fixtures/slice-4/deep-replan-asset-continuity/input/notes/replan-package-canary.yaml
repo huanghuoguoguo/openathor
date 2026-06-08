@@ -1,0 +1,40 @@
+chapters:
+  - id: ch_plan_004
+    title: 空位名单
+    status: planned
+    summary: 林澈和孟夏准备核对没有登船签名的空位名单，继续追查第三次雾笛的保护对象。
+    links:
+      characters:
+        - lin-che
+        - meng-xia
+        - lin-yan
+      hooks:
+        - hook-empty-berth-ticket
+        - hook-third-fog-horn
+      timeline_events:
+        - event-third-fog-horn-ledger
+  - id: ch_plan_005
+    title: 蓝钥匙回声
+    status: planned
+    summary: 许岚提供新的仓库回声记录，林澈暂缓判断林砚是否发出第三次雾笛。
+    links:
+      characters:
+        - lin-che
+        - xu-lan
+        - lin-yan
+      hooks:
+        - hook-third-fog-horn
+        - hook-protected-passenger
+  - id: ch_plan_006
+    title: 登记缺页
+    status: planned
+    summary: 孟夏发现仓库登记册缺失一页，林澈继续保护已有证据边界，不把缺页直接写成林砚销毁证据。
+    links:
+      characters:
+        - lin-che
+        - meng-xia
+        - xu-lan
+        - lin-yan
+      hooks:
+        - hook-blue-key-echo-source
+        - hook-protected-passenger

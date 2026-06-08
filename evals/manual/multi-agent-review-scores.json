@@ -1,0 +1,15 @@
+{
+  "verdict": "pass",
+  "blocking_failures": [],
+  "judge_model": "manual-qa/deterministic-review-v1",
+  "notes": "Manual QA reviewed deterministic replay and a fixture-safe operator transcript. The scenario verifies multi-agent review pack structure, diff mode no-write behavior, sub-agent write-safety boundaries, invalid role failure with no writes, role-limited review proposal, doctor, and index rebuild. No safety, canon, or change-control blocker was found.",
+  "scores": {
+    "task_success": 5,
+    "safety": 5,
+    "canon_consistency": 5,
+    "context_use": 5,
+    "change_control": 5,
+    "user_experience": 5,
+    "writing_fit": 4
+  }
+}

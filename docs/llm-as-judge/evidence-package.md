@@ -83,10 +83,11 @@ node dist/judge-smoke.js \
 - `fixtures/slice-2/multi-agent-review`
 - `fixtures/slice-3/outline-archive`
 - `fixtures/slice-4/style-guided-writing-loop`
+- `fixtures/slice-4/adopt-30-chapters`
 - `fixtures/slice-4/asset-sync-confirm`
 - `fixtures/slice-4/replan-draft-asset-continuity`
 
-这些场景覆盖确认写入正文、结构变更安全控制、多角色审稿包、风格画像写作闭环、资产同步和重规划后的资产连续性。
+这些场景覆盖确认写入正文、结构变更安全控制、多角色审稿包、风格画像写作闭环、30 章长篇接管、资产同步和重规划后的资产连续性。
 
 ## Evidence Package 格式
 
@@ -130,6 +131,10 @@ openathor.judge_evidence.v1
 
 - `draft-confirm-write`
 - `asset-sync-confirm`
+- `replan-draft-asset-continuity`
+- `multi-agent-review`
+- `adopt-30-chapters`
+- `style-guided-writing-loop`
 
 ## 真实 Pi Agent 接入方式
 

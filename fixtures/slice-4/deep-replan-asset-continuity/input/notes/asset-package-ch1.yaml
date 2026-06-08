@@ -1,0 +1,55 @@
+characters:
+  - id: lin-che
+    name: 林澈
+    role: 调查记者
+    traits:
+      - 克制
+      - 证据优先
+      - 不急于下结论
+    current_state: 在雾港旧客轮登船口确认蓝钥匙与星桥一号旧编号吻合，并把父亲林砚失踪时间列入证据袋。
+    notes:
+      - 午夜钟声后没有追下甲板，先固化蓝钥匙、星桥一号和父亲林砚的证据链。
+  - id: meng-xia
+    name: 孟夏
+    role: 船务档案员
+    traits:
+      - 谨慎
+      - 只相信盖章记录
+      - 对客轮旧案保持距离
+    current_state: 协助林澈核对乘客名册，并提醒不能把林砚失踪提前写成结论。
+    notes:
+      - 在名册页边记录船舱锁从里面被打开过，但打开者未确认。
+  - id: lin-yan
+    name: 林砚
+    role: 失踪检修员
+    traits:
+      - 熟悉客轮下层线路
+      - 行踪被证据间接指向
+      - 真相未确认
+    current_state: 作为林澈父亲被蓝钥匙和失踪时间指向，但是否回到星桥一号仍未确认。
+    notes:
+      - 第一章只确认林砚留下蓝钥匙和失踪时间，不能把他写成船舱锁打开者。
+timeline_events:
+  - id: event-blue-key-number-match
+    title: 蓝钥匙与星桥一号旧编号吻合
+    summary: 林澈在雾港旧客轮登船口确认蓝钥匙刻着星桥一号旧编号。
+  - id: event-passenger-list-reviewed
+    title: 孟夏核对客轮乘客名册
+    summary: 孟夏摊开客轮失火前的乘客名册，提醒林澈只能记录蓝钥匙和林砚失踪时间。
+hooks:
+  - id: hook-inner-cabin-lock
+    title: 船舱锁从里面被谁打开
+    status: opened
+    summary: 孟夏发现船舱锁从里面被打开过，但打开的人尚未确认。
+chapter:
+  summary: 林澈和孟夏在雾港旧客轮登船口确认蓝钥匙与星桥一号旧编号吻合，林澈把父亲林砚失踪时间列入证据袋，船舱锁从里面被打开成为疑点。
+  links:
+    characters:
+      - lin-che
+      - meng-xia
+      - lin-yan
+    timeline_events:
+      - event-blue-key-number-match
+      - event-passenger-list-reviewed
+    hooks:
+      - hook-inner-cabin-lock

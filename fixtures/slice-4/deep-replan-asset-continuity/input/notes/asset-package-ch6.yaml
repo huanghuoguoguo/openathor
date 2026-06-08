@@ -1,0 +1,64 @@
+characters:
+  - id: lin-che
+    name: 林澈
+    role: 调查记者
+    traits:
+      - 克制
+      - 证据优先
+      - 不急于下结论
+    current_state: 发现登记缺页后仍把蓝钥匙回声、空位名单和第三次雾笛保持为分离证据线。
+    notes:
+      - 没有把登记缺页写成林砚销毁证据。
+  - id: meng-xia
+    name: 孟夏
+    role: 船务档案员
+    traits:
+      - 谨慎
+      - 只相信盖章记录
+      - 对客轮旧案保持距离
+    current_state: 指出登记册缺失页码跨过客轮失火后第二天的补登记时间。
+    notes:
+      - 要求先找页码来源，再判断许岚是否隐瞒。
+  - id: lin-yan
+    name: 林砚
+    role: 失踪检修员
+    traits:
+      - 熟悉客轮下层线路
+      - 行踪被证据间接指向
+      - 真相未确认
+    current_state: 仍被登记缺页间接指向，但没有直接证据证明他销毁或篡改登记册。
+    notes:
+      - 缺页只证明登记链断裂，不证明林砚本人动手。
+  - id: xu-lan
+    name: 许岚
+    role: 星桥仓库管理员
+    traits:
+      - 记日期准确
+      - 保管证物谨慎
+      - 对林砚承诺守口如瓶
+    current_state: 承认登记册缺失一页，但坚持缺页早于她补登记之前已经不在册中。
+    notes:
+      - 仍拒绝透露被保护乘客姓名。
+timeline_events:
+  - id: event-ledger-missing-page
+    title: 仓库登记册缺失一页
+    summary: 孟夏发现登记册缺失页码跨过客轮失火后第二天补登记时间，许岚承认缺页但称早已不在册中。
+hooks:
+  - id: hook-ledger-missing-page
+    title: 登记缺页是谁取走
+    status: opened
+    summary: 登记缺页连接许岚补登记和蓝钥匙回声记录，但取走缺页的人仍未确认。
+chapter:
+  summary: 孟夏发现仓库登记册缺页，林澈继续把登记缺页、蓝钥匙回声和第三次雾笛分开处理，没有把缺页直接归咎于林砚。
+  links:
+    characters:
+      - lin-che
+      - meng-xia
+      - lin-yan
+      - xu-lan
+    timeline_events:
+      - event-ledger-missing-page
+    hooks:
+      - hook-blue-key-echo-source
+      - hook-protected-passenger
+      - hook-ledger-missing-page

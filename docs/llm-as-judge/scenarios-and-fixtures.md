@@ -149,11 +149,12 @@ fixtures/slice-4/
   character-profile-evolution/
   split-preserves-asset-links/
   replan-draft-asset-continuity/
+  deep-replan-asset-continuity/
   summary-drift-detection/
   manuscript-index-rebuild/
 ```
 
-当前 `npm test` 已接入 44 个 deterministic fixture，覆盖 Slice 1/2/3/4 的协议内核、写作闭环、结构编辑、检索、风格、资产沉淀、summary drift 和索引重建。
+当前 `npm test` 已接入 Slice 1/2/3/4 deterministic fixture，覆盖协议内核、写作闭环、结构编辑、检索、风格、资产沉淀、summary drift、深度重规划资产连续性和索引重建。
 
 当前已接入自动化 smoke 的场景：
 
@@ -162,6 +163,7 @@ fixtures/slice-2/draft-confirm-write
 fixtures/slice-2/multi-agent-review
 fixtures/slice-3/outline-archive
 fixtures/slice-4/style-guided-writing-loop
+fixtures/slice-4/adopt-30-chapters
 fixtures/slice-4/asset-sync-confirm
 fixtures/slice-4/replan-draft-asset-continuity
 ```
@@ -173,6 +175,12 @@ fixtures/slice-4/replan-draft-asset-continuity
 ```text
 draft-confirm-write
 asset-sync-confirm
+replan-draft-asset-continuity
+multi-agent-review
+adopt-30-chapters
+style-guided-writing-loop
 ```
 
 这类 evidence 把 transcript、最终回复和 judge scores 绑定到具体 scenario，再复跑 deterministic fixture，防止手动证据和自动化场景脱节。真实 Pi/Operator transcript 和真实模型 judge scores 仍作为本地或手动证据附加；CI 只验证已保存证据的结构、绑定关系和 deterministic replay，不调用外部模型。
+
+下一阶段的 release-candidate 场景矩阵和 manual evidence 扩展顺序见 [Testing And Delivery Plan](../development-workflow/testing-and-delivery-plan.md)。当前 RC evidence set 已补齐并纳入 `test:e2e:evidence` 复放。
