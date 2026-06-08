@@ -33,6 +33,8 @@
 发版或重大变更前跑：
 
 - `npm test`
+- `npm run test:rc`
+- `npm run eval:rc`
 - `npm run judge:smoke`
 - 手动附加至少一个真实 Pi/Operator transcript 和 judge scores
 
@@ -61,6 +63,15 @@ evals/runs/
 ```bash
 npm run judge:smoke
 ```
+
+RC evidence 汇总报告：
+
+```bash
+npm run eval:rc
+npm run eval:rc -- --out-dir evals/runs
+```
+
+`eval:rc` 会复放 `evals/manual/e2e-evidence-manifest.json` 中登记的 manual evidence，汇总场景 verdict、blocking failures、missing evidence、deterministic command/file evidence 和 judge score averages。该入口不调用外部模型。
 
 附加本地真实 Operator transcript 和真实 LLM judge scores 时：
 

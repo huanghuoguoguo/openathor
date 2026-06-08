@@ -240,6 +240,7 @@ openathor-judge-smoke
 - Package/bin smoke：校验 npm package 的 `bin` 映射、shebang、可执行 mode 和三个命令入口
 - Fixture checker self-test：校验漏报实际变更、多报未 backing write 和失败命令写入都会触发门禁失败
 - Manual E2E evidence replay：校验已保存的 transcript、final response 和 judge scores 能绑定到指定场景并复放 deterministic evidence
+- RC eval summary：`npm run eval:rc` 汇总 manual evidence verdict、分数和 deterministic evidence 覆盖
 - Release-candidate scenarios：`npm run test:rc` 跑发布候选前的核心 blocking fixture set
 - Release bundle smoke：`npm run smoke:release` 使用打包后的 tarball 验证代表性安装后工作流
 - LLM-as-judge smoke：生成可交给 judge 的 evidence package，不在 CI 中调用真实模型
@@ -254,6 +255,7 @@ npm test
 
 ```bash
 npm run test:rc
+npm run eval:rc
 npm run package:release
 npm run smoke:release
 ```
