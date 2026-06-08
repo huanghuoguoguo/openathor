@@ -21,6 +21,7 @@ Current completion:
 
 - The RC blocking fixture set has a dedicated runner.
 - The RC evidence set is registered in `evals/manual/e2e-evidence-manifest.json` and replayed by `npm run test:e2e:evidence`.
+- RC evidence can be summarized with `npm run eval:rc` and saved under `evals/runs/`.
 - Release package validation uses the packed tarball through `npm run smoke:release`.
 - Complex replan coverage includes a deeper confirmed replan fixture with planned future outline replacement, subsequent draft fill, asset sync, audit, search, export, and strict doctor.
 
@@ -59,6 +60,7 @@ Current runner:
 
 ```bash
 npm run test:rc
+npm run eval:rc
 ```
 
 ### RC Evidence Set

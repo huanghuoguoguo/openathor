@@ -3,6 +3,7 @@ dist/
 release/
 coverage/
 evals/smoke/
+evals/runs/
 data/
 *.tsbuildinfo
 .DS_Store

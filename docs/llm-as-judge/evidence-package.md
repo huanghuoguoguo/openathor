@@ -30,6 +30,18 @@ npm run test:e2e:evidence
 
 该入口不调用外部模型。`judge_model` 可以是手动 QA 标识，例如 `manual-qa/deterministic-review-v1`；只有真实模型评分文件才应写真实模型名。
 
+RC evidence 汇总入口：
+
+```bash
+npm run eval:rc
+```
+
+该命令复用同一份 manifest 和 evidence replay，输出 `openathor.rc_eval_report.v1` 汇总报告，包含每个场景的 verdict、score average、blocking failures、missing evidence、deterministic command/file 计数和 manifest 覆盖计数。需要保存报告时使用：
+
+```bash
+npm run eval:rc -- --out-dir evals/runs
+```
+
 需要保存证据包时使用：
 
 ```bash

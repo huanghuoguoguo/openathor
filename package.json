@@ -21,6 +21,7 @@
     "test:bin": "node scripts/test-bin-smoke.mjs",
     "test:fixture-check:self": "node scripts/test-fixture-check-self.mjs",
     "test:e2e:evidence": "node scripts/test-e2e-evidence.mjs",
+    "eval:rc": "node scripts/eval-rc.mjs",
     "test:rc": "node scripts/test-rc-scenarios.mjs",
     "test:fixtures": "npm run test:fixtures:slice1 && npm run test:fixtures:slice2 && npm run test:fixtures:slice3 && npm run test:fixtures:slice4",
     "test:fixtures:slice1": "npm run fixture -- fixtures/slice-1/new-project && npm run fixture -- fixtures/slice-1/adopt-3-chapters && npm run fixture -- fixtures/slice-1/scattered-drafts && npm run fixture -- fixtures/slice-1/adopt-ambiguous-order",
